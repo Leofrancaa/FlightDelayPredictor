@@ -1,0 +1,82 @@
+@import "tailwindcss";
+@import "@fontsource/barlow/400.css";
+@import "@fontsource/barlow/500.css";
+@import "@fontsource/barlow/600.css";
+@import "@fontsource/barlow-condensed/500.css";
+@import "@fontsource/barlow-condensed/600.css";
+@import "@fontsource/barlow-condensed/700.css";
+
+:root {
+  --pista: #eef1f4;       /* fundo: concreto claro de pátio */
+  --cartao: #ffffff;
+  --tinta: #1a2633;       /* texto principal */
+  --tinta-2: #4f5d6b;     /* texto secundário */
+  --linha: #d5dbe1;
+  --painel: #172230;      /* painel de partidas */
+  --painel-texto: #e9edf1;
+  --sinal: #f2b705;       /* amarelo de sinalização aeroportuária */
+  --f0: #23866f;          /* até 15 min */
+  --f1: #c99400;          /* 15–30 */
+  --f2: #db6a1d;          /* 30–60 */
+  --f3: #c23a2e;          /* > 60 */
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --pista: #0f161e;
+    --cartao: #17212c;
+    --tinta: #e6ebf0;
+    --tinta-2: #9aa8b5;
+    --linha: #2a3744;
+    --painel: #0a1017;
+    --f0: #3fb394;
+    --f1: #e2b232;
+    --f2: #f0843a;
+    --f3: #e55a4c;
+  }
+}
+
+:root[data-theme="dark"] {
+  --pista: #0f161e;
+  --cartao: #17212c;
+  --tinta: #e6ebf0;
+  --tinta-2: #9aa8b5;
+  --linha: #2a3744;
+  --painel: #0a1017;
+  --f0: #3fb394;
+  --f1: #e2b232;
+  --f2: #f0843a;
+  --f3: #e55a4c;
+}
+
+@theme inline {
+  --color-pista: var(--pista);
+  --color-cartao: var(--cartao);
+  --color-tinta: var(--tinta);
+  --color-tinta-2: var(--tinta-2);
+  --color-linha: var(--linha);
+  --color-painel: var(--painel);
+  --color-painel-texto: var(--painel-texto);
+  --color-sinal: var(--sinal);
+  --font-sans: "Barlow", system-ui, sans-serif;
+  --font-cond: "Barlow Condensed", "Barlow", system-ui, sans-serif;
+}
+
+body {
+  background: var(--pista);
+  color: var(--tinta);
+  font-family: var(--font-sans);
+  font-variant-numeric: tabular-nums;
+}
+
+:focus-visible {
+  outline: 2px solid var(--sinal);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
