@@ -3,8 +3,9 @@
 Horizontes (o modelo só pode usar o que já se sabe no instante de referência):
     "vespera": meia-noite do dia do voo. Programação, histórico do voo/rota, como foi o dia anterior e o clima
                típico daquela hora nos últimos 30 dias. Não há previsão do tempo (TAF) no histórico.
-    "3h":      3 h antes da partida prevista. Tudo da véspera + METAR da origem e do destino nesse instante,
-               tendência do clima nas 3 h anteriores e atraso recente na origem, no destino e na rede.
+    "3h", "1h": 3 h ou 1 h antes da partida prevista. Tudo da véspera + METAR da origem e do destino nesse
+               instante, tendência do clima nas 3 h anteriores, atraso recente na origem, no destino, na rede e
+               da própria companhia, e o atraso já conhecido do voo que deve trazer o avião (voo de chegada).
 
 Os horários do VRA estão em Brasília (UTC-3); o METAR está em UTC.
 """
@@ -18,9 +19,11 @@ from module_decea.vra import carregar_vra, voos_regulares_domesticos
 
 AEROPORTOS = ["SBGR", "SBSP", "SBKP", "SBCF", "SBBR", "SBGL", "SBRJ", "SBPA", "SBCT", "SBRF"]
 
-# Alvo: faixa de atraso da partida (minutos)
-LIMITES = [-np.inf, 15, 30, 60, np.inf]
-FAIXAS = ["até 15 min", "15–30 min", "30–60 min", "> 60 min"]
+# Alvo: faixa de atraso da partida (minutos). Até 30 min = dentro da tolerância usada pela ANAC.
+# A faixa 15–30 min foi unida à primeira: era a mais ruidosa e quase impossível de separar.
+LIMITES = [-np.inf, 30, 60, np.inf]
+FAIXAS = ["até 30 min", "30–60 min", "> 60 min"]
+HORIZONTES = {"vespera": None, "3h": 3, "1h": 1}
 
 # Feriados nacionais de 2025 (inclui Carnaval, ponto facultativo com grande efeito na malha)
 FERIADOS = pd.to_datetime(
@@ -101,7 +104,26 @@ def carregar_voos():
     # Partida real horas antes da prevista (22 voos) = data registrada errada no VRA -> fora
     v["realizado"] = ~v["cancelado"] & v["atraso_partida_min"].ge(-60)
     v["faixa"] = pd.cut(v["atraso_partida_min"], LIMITES, labels=False, right=True)
+    v["atr30"] = v["realizado"] & (v["atraso_partida_min"] > 30)
     return v.reset_index(drop=True)
+
+
+def carregar_chegadas():
+    """Todos os voos regulares domésticos que chegam aos 10 aeroportos (vindos de qualquer origem)."""
+    t = voos_regulares_domesticos(carregar_vra())
+    t = t[t["destino"].isin(AEROPORTOS) & t["chegada_prev"].notna()]
+    cols = {
+        "destino": "origem",
+        "partida_prev": "in_partida_prev",
+        "partida_real": "in_partida_real",
+        "cancelado": "in_cancelado",
+    }
+    return (
+        t[["empresa", "aeronave", "destino", "chegada_prev", "partida_prev", "partida_real", "cancelado"]]
+        .rename(columns=cols)
+        .sort_values("chegada_prev")
+        .reset_index(drop=True)
+    )
 
 
 # --------------------------------------------------------------------------------------------------------------------
@@ -134,7 +156,7 @@ def _historico_mensal(v, chave, nome, suav=20):
 
     Suavizada em direção à média global dos meses anteriores para chaves com poucos voos.
     """
-    r = v[v["realizado"]].assign(mes=lambda d: d["partida_prev"].dt.month, atr=lambda d: d["faixa"] >= 2)
+    r = v[v["realizado"]].assign(mes=lambda d: d["partida_prev"].dt.month, atr=lambda d: d["atr30"])
     meses = range(1, 13)
     # matriz chave x mês, acumulada e deslocada 1 mês -> só meses anteriores
     k = r.pivot_table(index=chave, columns="mes", values="atr", aggfunc="sum", fill_value=0)
@@ -163,7 +185,7 @@ def _historico_mensal(v, chave, nome, suav=20):
 def _voo_ultimos_7_dias(v):
     """Desempenho do mesmo voo (empresa + número) nos 7 dias anteriores."""
     # atraso limitado a [-60, 600] min: o VRA tem registros com data errada (ex.: -2889 min)
-    r = v[v["realizado"]].assign(atr=lambda d: d["faixa"] >= 2, atraso=lambda d: d["atraso_partida_min"].clip(-60, 600))
+    r = v[v["realizado"]].assign(atr=lambda d: d["atr30"], atraso=lambda d: d["atraso_partida_min"].clip(-60, 600))
     d = r.groupby(["voo_id", "dia"]).agg(k=("atr", "sum"), n=("atr", "size"), atraso=("atraso", "mean"))
     dias = pd.date_range(v["dia"].min(), v["dia"].max(), freq="D")
     d = d.reindex(pd.MultiIndex.from_product([d.index.levels[0], dias], names=["voo_id", "dia"]))
@@ -185,7 +207,7 @@ def _voo_ultimos_7_dias(v):
 
 def _dia_anterior(v, metar):
     """Como foi o dia anterior: atraso na origem e na rede, e o tempo na origem."""
-    r = v[v["realizado"]].assign(atr=lambda d: d["faixa"] >= 2)
+    r = v[v["realizado"]].assign(atr=lambda d: d["atr30"])
     org = r.groupby(["origem", "dia"])["atr"].mean().rename("ontem_taxa30_origem").reset_index()
     org["dia"] += pd.Timedelta(days=1)
     rede = r.groupby("dia")["atr"].mean().rename("ontem_taxa30_rede").reset_index()
@@ -255,7 +277,7 @@ def _propagacao(v, h):
     Uma partida programada no intervalo [t, t+1h) só pode ser classificada como "> 30 min atrasada" depois de t+1h30.
     Por isso só entram as horas até (referência - 2 h).
     """
-    r = v.assign(atr=(v["faixa"] >= 2) & v["realizado"])
+    r = v.assign(atr=v["atr30"])
     horas = pd.date_range(v["hora_bin"].min() - pd.Timedelta(hours=12), v["hora_bin"].max(), freq="h")
     por_ap = r.groupby(["origem", "hora_bin"]).agg(k=("atr", "sum"), n=("realizado", "sum"))
     por_ap = por_ap.reindex(pd.MultiIndex.from_product([AEROPORTOS, horas], names=["ap", "hora_bin"]), fill_value=0)
@@ -282,15 +304,76 @@ def _propagacao(v, h):
     return out
 
 
+def _cia_recente(v, h):
+    """Atraso recente da PRÓPRIA companhia na origem e na rede inteira (mesma regra de observabilidade acima)."""
+    r = v.assign(hb=v["partida_prev"].dt.floor("h"))
+    ultima = (v["partida_prev"] - pd.Timedelta(hours=h)).dt.floor("h") - pd.Timedelta(hours=2)
+    out = pd.DataFrame(index=v.index)
+    for chave, nome in [(["origem", "empresa"], "cia_origem"), (["empresa"], "cia_rede")]:
+        g = r.groupby(chave + ["hb"]).agg(k=("atr30", "sum"), n=("realizado", "sum")).reset_index()
+        janela = pd.concat([g.assign(hb=g["hb"] + pd.Timedelta(hours=d)) for d in range(3)])
+        janela = janela.groupby(chave + ["hb"])[["k", "n"]].sum().reset_index()
+        j = v[chave].assign(hb=ultima.values).merge(janela, on=chave + ["hb"], how="left")
+        out[f"recente_taxa30_{nome}"] = (j["k"] / j["n"].replace(0, np.nan)).values
+    return out
+
+
+def _casar_chegada(v, chegadas):
+    """Voo de chegada provável: o último da mesma companhia e mesmo modelo de avião chegando na origem
+    pelo menos 25 min antes da partida (giro mínimo), em até 4 h. Sem a matrícula, é uma aproximação."""
+    esq = v[["empresa", "aeronave", "origem", "partida_prev"]].assign(
+        idx=np.arange(len(v)), chave_t=v["partida_prev"] - pd.Timedelta(minutes=25)
+    )
+    m = pd.merge_asof(
+        esq.sort_values("chave_t"),
+        chegadas,
+        left_on="chave_t",
+        right_on="chegada_prev",
+        by=["empresa", "aeronave", "origem"],
+        direction="backward",
+        tolerance=pd.Timedelta(hours=4),
+    )
+    return m.sort_values("idx").reset_index(drop=True)
+
+
+def _giro(v, m):
+    """Tempo de solo programado entre a chegada provável e a partida (conhecido desde a véspera)."""
+    giro = (v["partida_prev"].values - m["chegada_prev"].values) / np.timedelta64(1, "m")
+    return pd.DataFrame({"chegada_giro_min": giro}, index=v.index)
+
+
+def _voo_chegada(v, m, h):
+    """O que já se sabe do voo de chegada no instante de referência (partida - h)."""
+    ref = (v["partida_prev"] - pd.Timedelta(hours=h)).values
+    pp, pr = m["in_partida_prev"].values, m["in_partida_real"].values
+    partiu = ~pd.isna(pr) & (pr <= ref)
+    # Ainda não decolou mas já passou 30 min do horário: atraso é pelo menos (ref - previsto)
+    preso = ~partiu & ~pd.isna(pp) & (pp + np.timedelta64(30, "m") <= ref)
+    atraso = np.where(partiu, (pr - pp) / np.timedelta64(1, "m"), np.nan)
+    atraso = np.where(preso, (ref - pp) / np.timedelta64(1, "m"), atraso)
+    cancelado_ja_sabido = m["in_cancelado"].fillna(False).values.astype(bool) & ~pd.isna(pp) & (pp <= ref)
+    return pd.DataFrame(
+        {
+            "chegada_atraso_conhecido": np.clip(atraso, -60, 600),
+            "chegada_ainda_nao_partiu": preso.astype(float),
+            "chegada_cancelada": cancelado_ja_sabido.astype(float),
+        },
+        index=v.index,
+    )
+
+
 # --------------------------------------------------------------------------------------------------------------------
 # Montagem
 # --------------------------------------------------------------------------------------------------------------------
-def montar(horizonte="3h", voos=None, metar=None):
-    """Devolve (X, y, info) só com voos realizados. y = faixa 0..3. info = datas e atraso para análise."""
-    if horizonte not in ("vespera", "3h"):
-        raise ValueError("horizonte deve ser 'vespera' ou '3h'")
+def montar(horizonte="3h", voos=None, metar=None, chegadas=None):
+    """Devolve (X, y, info) só com voos realizados. y = faixa 0..2. info = datas e atraso para análise."""
+    if horizonte not in HORIZONTES:
+        raise ValueError(f"horizonte deve ser um de {list(HORIZONTES)}")
+    h = HORIZONTES[horizonte]
     v = carregar_voos() if voos is None else voos
     metar = carregar_metar_horario() if metar is None else metar
+    chegadas = carregar_chegadas() if chegadas is None else chegadas
+    m = _casar_chegada(v, chegadas)
 
     partes = [
         _programacao(v),
@@ -299,9 +382,10 @@ def montar(horizonte="3h", voos=None, metar=None):
         _voo_ultimos_7_dias(v),
         _dia_anterior(v, metar),
         _climatologia(v, metar),
+        _giro(v, m),
     ]
-    if horizonte == "3h":
-        partes += [_clima_no_instante(v, metar, 3), _propagacao(v, 3)]
+    if h is not None:
+        partes += [_clima_no_instante(v, metar, h), _propagacao(v, h), _cia_recente(v, h), _voo_chegada(v, m, h)]
     X = pd.concat(partes, axis=1)
 
     ok = v["realizado"].values

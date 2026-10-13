@@ -3,7 +3,7 @@
 Uso (na raiz do projeto):
     uv run python -m module_decea.exportar_web
 
-Treina os modelos de véspera e de 3 h como no notebook 03 (treino jan–set, teste out–dez) e grava:
+Treina os modelos de véspera, 3 h e 1 h como no notebook 03 (treino jan–set, teste out–dez) e grava:
     resumo.json            métricas, matriz de confusão, importância, análises descritivas (lado do analista)
     indice.json            datas disponíveis, nomes de empresas e aeroportos
     voos/AAAA-MM-DD.json   previsões de cada voo do período de teste (lado do passageiro)
@@ -189,11 +189,17 @@ DESCRICOES = {
     "ontem_imc_origem": "IMC ontem na origem",
     "ontem_trovoada_origem": "Trovoada ontem na origem",
     "clim30d_trovoada_destino": "Trovoada típica no destino",
+    "chegada_atraso_conhecido": "Atraso do voo de chegada",
+    "chegada_ainda_nao_partiu": "Voo de chegada ainda não decolou",
+    "chegada_cancelada": "Voo de chegada cancelado",
+    "chegada_giro_min": "Tempo de solo programado",
+    "recente_taxa30_cia_origem": "Atraso recente da cia na origem",
+    "recente_taxa30_cia_rede": "Atraso recente da cia na rede",
 }
 
 
 def _grupo(col):
-    if col.startswith(("recente", "hoje")):
+    if col.startswith(("recente", "hoje", "chegada_atraso", "chegada_ainda", "chegada_cancelada")):
         return "propagação"
     if col.startswith(("o_", "d_", "clim30d", "ontem_imc", "ontem_trovoada", "ontem_rajada")):
         return "clima"
@@ -211,14 +217,18 @@ def _taxa(df, chave):
     return [{"chave": str(k), "taxa30": _r(m), "voos": int(n)} for k, m, n in g.itertuples(index=False)]
 
 
+HORIZ = {"vespera": ("vespera", "Véspera"), "h3": ("3h", "3 h antes"), "h1": ("1h", "1 h antes")}
+
+
 def main():
     print("montando bases...")
-    voos, metar = F.carregar_voos(), F.carregar_metar_horario()
-    X3, y, info = F.montar("3h", voos, metar)
-    Xv, _, _ = F.montar("vespera", voos, metar)
+    voos, metar, chegadas = F.carregar_voos(), F.carregar_metar_horario(), F.carregar_chegadas()
+    bases = {}
+    for k, (cod, _) in HORIZ.items():
+        bases[k], y, info = F.montar(cod, voos, metar, chegadas)
+    X1 = bases["h1"]
     meses = info["partida_prev"].dt.month.values
     treino, teste = meses <= 9, meses >= 10
-    bases = {"vespera": Xv, "h3": X3}
 
     print("calibrando a decisão em set...")
     pesos = {}
@@ -235,23 +245,20 @@ def main():
 
     yt = y[teste].values
     prior = np.tile(y[treino].value_counts(normalize=True).sort_index().values, (len(yt), 1))
-    tabela = [
-        {"nome": "Chute (proporção do treino)", **M.metricas(yt, prior)},
-        {"nome": "Véspera", **M.metricas(yt, proba["vespera"], pesos["vespera"])},
-        {"nome": "3 h antes", **M.metricas(yt, proba["h3"], pesos["h3"])},
-    ]
+    tabela = [{"nome": "Chute (proporção do treino)", **M.metricas(yt, prior)}]
+    tabela += [{"nome": nome, **M.metricas(yt, proba[k], pesos[k])} for k, (_, nome) in HORIZ.items()]
     pred = {k: M.decidir(proba[k], pesos[k]) for k in bases}
 
     print("importância por permutação...")
     idx = np.random.default_rng(1).choice(np.flatnonzero(teste), 20_000, replace=False)
     imp = permutation_importance(
-        modelos["h3"], X3.iloc[idx], y.iloc[idx], scoring="neg_log_loss", n_repeats=2, random_state=0
+        modelos["h1"], X1.iloc[idx], y.iloc[idx], scoring="neg_log_loss", n_repeats=2, random_state=0
     )
-    imp = pd.Series(imp.importances_mean, index=X3.columns).sort_values(ascending=False).head(20)
+    imp = pd.Series(imp.importances_mean, index=X1.columns).sort_values(ascending=False).head(20)
 
     # Semanal
     semana = info.loc[teste, "partida_prev"].dt.to_period("W").dt.start_time.values
-    atr_t = yt >= 2
+    atr_t = yt >= 1
     semanal = []
     for s in np.unique(semana):
         m = semana == s
@@ -259,30 +266,32 @@ def main():
             {
                 "semana": str(pd.Timestamp(s).date()),
                 "prevalencia": _r(atr_t[m].mean()),
-                **{k: _r(average_precision_score(atr_t[m], proba[k][m][:, 2:].sum(1))) for k in bases},
+                **{k: _r(average_precision_score(atr_t[m], proba[k][m][:, 1:].sum(1))) for k in bases},
             }
         )
 
     # Análise descritiva do ano todo (voos realizados)
     d = info.assign(
-        atr=(y >= 2).values,
+        atr=(y >= 1).values,
         hora=info["partida_prev"].dt.hour,
         mes=info["partida_prev"].dt.month,
         dia_semana=info["partida_prev"].dt.dayofweek,
     )
     condicoes = {
         "Todas as partidas": np.ones(len(d), bool),
-        "IMC na origem": X3["o_imc"].eq(1).values,
-        "Chuva na origem": X3["o_chuva"].eq(1).values,
-        "Rajada ≥ 25 kt": X3["o_rajada_kt"].ge(25).values,
-        "Trovoada na origem": X3["o_trovoada"].eq(1).values,
-        "Abaixo dos mínimos": X3["o_abaixo_minimos"].eq(1).values,
+        "IMC na origem": X1["o_imc"].eq(1).values,
+        "Chuva na origem": X1["o_chuva"].eq(1).values,
+        "Rajada ≥ 25 kt": X1["o_rajada_kt"].ge(25).values,
+        "Trovoada na origem": X1["o_trovoada"].eq(1).values,
+        "Abaixo dos mínimos": X1["o_abaixo_minimos"].eq(1).values,
+        "Voo de chegada saiu > 30 min atrasado": X1["chegada_atraso_conhecido"].gt(30).values,
     }
     clima = [{"chave": n, "taxa30": _r(d.loc[m, "atr"].mean()), "voos": int(m.sum())} for n, m in condicoes.items()]
 
     resumo = {
         "gerado_em": datetime.now(UTC).isoformat(timespec="seconds"),
         "faixas": F.FAIXAS,
+        "horizontes": {k: nome for k, (_, nome) in HORIZ.items()},
         "periodo_treino": ["2025-01-01", "2025-09-30"],
         "periodo_teste": ["2025-10-01", "2025-12-31"],
         "n_treino": int(treino.sum()),
@@ -330,7 +339,7 @@ def main():
     (SAIDA / "resumo.json").write_text(json.dumps(resumo, ensure_ascii=False), encoding="utf-8")
 
     it = info[teste].reset_index(drop=True)
-    xt = X3[teste].reset_index(drop=True)
+    xt = X1[teste].reset_index(drop=True)
     pct = {k: np.rint(proba[k] * 100).astype(int) for k in bases}
     registros = pd.DataFrame(
         {
@@ -342,16 +351,18 @@ def main():
             "dia": it["dia"].dt.strftime("%Y-%m-%d"),
             "a": np.rint(it["atraso_partida_min"]).astype(int),
             "f": yt,
-            "fv": pred["vespera"],
-            "f3": pred["h3"],
         }
     )
+    # Contexto mostrado ao passageiro: o que se sabia 1 h antes da partida
     ctx_cols = {
         "trov": "o_trovoada",
         "raj": "o_rajada_kt",
         "vis": "o_vis_m",
         "teto": "o_teto_ft",
         "rec": "recente_taxa30_origem",
+        "cia": "recente_taxa30_cia_origem",
+        "chg": "chegada_atraso_conhecido",
+        "chgp": "chegada_ainda_nao_partiu",
         "hist": "hist_voo_taxa30",
         "v7": "voo7d_taxa30",
     }
@@ -370,8 +381,10 @@ def main():
                     "f": int(r["f"]),
                     "pv": pct["vespera"][i].tolist(),
                     "p3": pct["h3"][i].tolist(),
-                    "fv": int(r["fv"]),
-                    "f3": int(r["f3"]),
+                    "p1": pct["h1"][i].tolist(),
+                    "fv": int(pred["vespera"][i]),
+                    "f3": int(pred["h3"][i]),
+                    "f1": int(pred["h1"][i]),
                     "c": ctx,
                 }
             )

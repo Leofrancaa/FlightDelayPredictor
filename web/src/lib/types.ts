@@ -1,6 +1,7 @@
 // Formato dos JSON gerados por module_decea/exportar_web.py
 
-export type Faixa = 0 | 1 | 2 | 3;
+export type Faixa = 0 | 1 | 2;
+export type Horizonte = "vespera" | "h3" | "h1";
 
 export interface Indice {
   datas: string[];
@@ -19,14 +20,19 @@ export interface Voo {
   f: Faixa; // faixa real
   pv: number[]; // probabilidades (%) na véspera
   p3: number[]; // probabilidades (%) 3 h antes
+  p1: number[]; // probabilidades (%) 1 h antes
   fv: Faixa; // faixa prevista na véspera
   f3: Faixa; // faixa prevista 3 h antes
+  f1: Faixa; // faixa prevista 1 h antes
   c: {
     trov: number | null;
     raj: number | null;
     vis: number | null;
     teto: number | null;
     rec: number | null;
+    cia: number | null; // atraso recente da própria companhia na origem
+    chg: number | null; // atraso já conhecido do voo de chegada (min)
+    chgp: number | null; // 1 = voo de chegada ainda não tinha decolado e já estava atrasado
     hist: number | null;
     v7: number | null;
   };
@@ -41,13 +47,13 @@ export interface Taxa {
 export interface LinhaModelo {
   nome: string;
   log_loss: number;
-  "ROC-AUC macro (4 faixas)": number;
+  "ROC-AUC macro (faixas)": number;
   "ROC-AUC atraso>30": number;
   "PR-AUC atraso>30": number;
-  "F2 macro": number;
+  "F1 macro": number;
   "recall atraso>30": number;
   "precisão atraso>30": number | null;
-  "erro de no máx. 1 faixa": number;
+  "acerto da faixa": number;
 }
 
 export interface PorFaixa {
@@ -61,18 +67,19 @@ export interface PorFaixa {
 export interface Resumo {
   gerado_em: string;
   faixas: string[];
+  horizontes: Record<Horizonte, string>;
   periodo_treino: [string, string];
   periodo_teste: [string, string];
   n_treino: number;
   n_teste: number;
   distribuicao: { treino: number[]; teste: number[] };
   hiperparametros: Record<string, number>;
-  pesos: { vespera: number[]; h3: number[] };
+  pesos: Record<Horizonte, number[]>;
   modelos: LinhaModelo[];
-  por_faixa: { vespera: PorFaixa[]; h3: PorFaixa[] };
-  confusao: { vespera: number[][]; h3: number[][] };
+  por_faixa: Record<Horizonte, PorFaixa[]>;
+  confusao: Record<Horizonte, number[][]>;
   importancia: { variavel: string; descricao: string; grupo: string; valor: number }[];
-  semanal: { semana: string; prevalencia: number; vespera: number; h3: number }[];
+  semanal: ({ semana: string; prevalencia: number } & Record<Horizonte, number>)[];
   eda: {
     por_hora: Taxa[];
     por_aeroporto: Taxa[];

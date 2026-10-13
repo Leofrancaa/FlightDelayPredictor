@@ -138,7 +138,7 @@ export default function BuscaVoo() {
           <span>Voo</span>
           <span>De</span>
           <span>Para</span>
-          <span>Alerta 3 h antes</span>
+          <span>Alerta 1 h antes</span>
         </div>
         {voos && filtrados.length === 0 && (
           <p className="px-5 py-6 text-white/70">Nenhum voo com esses filtros nesse dia. Tente só o número, sem a companhia.</p>
@@ -167,9 +167,9 @@ export default function BuscaVoo() {
                   <span className="truncate">{nomeAp(v.d)}</span>
                   <span className="col-span-3 flex items-center gap-2 text-[15px] sm:col-span-1">
                     <span className="w-24 shrink-0 sm:w-16">
-                      <BarraProbabilidade p={v.p3} compacta />
+                      <BarraProbabilidade p={v.p1} compacta />
                     </span>
-                    <span style={{ color: COR[v.f3] }}>{ALERTA[v.f3]}</span>
+                    <span style={{ color: COR[v.f1] }}>{ALERTA[v.f1]}</span>
                   </span>
                 </button>
               </li>

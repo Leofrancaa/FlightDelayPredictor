@@ -2,7 +2,7 @@
 
 Next.js 15 (App Router) + TypeScript + Tailwind 4. Duas áreas:
 
-- **Meu voo** (`/passageiro`): o passageiro escolhe o dia e busca pelo número do voo ou pela rota. Vê o alerta de atraso previsto na véspera e 3 h antes, as probabilidades de cada faixa, o que pesou na previsão e o que aconteceu de fato.
+- **Meu voo** (`/passageiro`): o passageiro escolhe o dia e busca pelo número do voo ou pela rota. Vê o alerta de atraso previsto na véspera, 3 h e 1 h antes, as probabilidades de cada faixa, o que pesou na previsão e o que aconteceu de fato.
 - **Análise do modelo** (`/analista`): comparação com o chute, matriz de confusão, desempenho por faixa, importância das variáveis, estabilidade semana a semana e a análise descritiva de 2025.
 
 ## Como funciona
@@ -45,3 +45,4 @@ npm run dev        # http://localhost:3000
 
 - É uma demonstração com voos de 2025. Para prever voos futuros de verdade seria preciso uma fonte de METAR em tempo real (API da REDEMET/AISWEB) e a programação de voos do dia, rodando o modelo num serviço Python à parte.
 - Na véspera não existe previsão do tempo no histórico (TAF), então o modelo da véspera usa só o clima típico e o dia anterior.
+- O voo que traz o avião é aproximado (mesma companhia e mesmo modelo de aeronave), porque o VRA não tem a matrícula.
