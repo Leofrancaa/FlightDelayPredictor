@@ -14,6 +14,8 @@ Depois abra os notebooks em `notebooks/` e selecione o kernel `.venv`:
 1. `01_explorar_aisweb.ipynb`: mapa das rotas da API AISWEB.
 2. `02_insights_ml.ipynb`: exploração dos dados em busca de uma situação-problema de ML. Cruza a AISWEB com METAR histórico (IEM) e os voos da ANAC (VRA) de 2025. Na primeira execução baixa ~330 MB para `data/raw/` (pasta ignorada pelo git).
 
+3. `03_modelo_atraso.ipynb`: modelo que prevê a **faixa de atraso** da partida (até 15 min, 15–30, 30–60, > 60) na véspera e 3 h antes do voo. Gradient boosting em árvores, validação temporal (treino jan–set, teste out–dez). Variáveis em `module_decea/features.py`, treino e métricas em `module_decea/modelagem.py`.
+
 As siglas e os termos técnicos dos notebooks (METAR, NOTAM, IMC, PR-AUC...) estão explicados em [`docs/glossario.md`](docs/glossario.md).
 
 Outros comandos: `make test`, `make lint`, `make format`, `make clean` (`make` sozinho lista todos).
@@ -61,3 +63,7 @@ Cada coleta salva um retrato em `data/raw/notam_coleta/`. No fim, `historico_not
 `localidades`, `rotaer`, `met`, `sol`, `notam`, `cartas`, `suplementos`, `infotemp`, `pub` e `waypoints`. O notebook 01 detalha os parâmetros de cada uma.
 
 > Os links de download das cartas contêm a `apiKey`. Limpe os outputs do notebook antes de commitar.
+
+## App web
+
+`web/` tem um app Next.js (TypeScript + Tailwind) com duas áreas: **Meu voo**, onde o passageiro consulta um voo e vê o alerta de atraso, e **Análise do modelo**, com as métricas e a análise dos dados. Os dados do app são gerados com `uv run python -m module_decea.exportar_web`. Como rodar e publicar no Vercel: [`web/README.md`](web/README.md).
