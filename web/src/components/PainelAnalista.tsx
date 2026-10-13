@@ -3,10 +3,9 @@
 import { useState } from "react";
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { COR, FAIXAS, inteiro, num, pct } from "@/lib/faixas";
-import type { Resumo, Taxa } from "@/lib/types";
+import type { Horizonte, Resumo, Taxa } from "@/lib/types";
 
-type Horizonte = "vespera" | "h3";
-const NOME_H: Record<Horizonte, string> = { vespera: "Véspera", h3: "3 h antes" };
+const NOME_H: Record<Horizonte, string> = { vespera: "Véspera", h3: "3 h antes", h1: "1 h antes" };
 const DIAS = ["seg", "ter", "qua", "qui", "sex", "sáb", "dom"];
 const MESES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
 const COR_GRUPO: Record<string, string> = {
@@ -29,7 +28,7 @@ function Secao({ titulo, children, nota }: { titulo: string; nota?: string; chil
 function Seletor({ valor, onChange }: { valor: Horizonte; onChange: (h: Horizonte) => void }) {
   return (
     <div className="inline-flex rounded-md border border-linha p-0.5" role="group" aria-label="Horizonte de previsão">
-      {(["vespera", "h3"] as const).map((h) => (
+      {(["vespera", "h3", "h1"] as const).map((h) => (
         <button
           key={h}
           type="button"
@@ -66,10 +65,10 @@ function BarrasTaxa({ dados, rotulo, media }: { dados: Taxa[]; rotulo: (c: strin
 }
 
 export default function PainelAnalista({ r }: { r: Resumo }) {
-  const [h, setH] = useState<Horizonte>("h3");
+  const [h, setH] = useState<Horizonte>("h1");
   const media = r.eda.clima[0]?.taxa30 ?? 0;
   const chute = r.modelos[0];
-  const final = r.modelos.find((m) => m.nome === "3 h antes") ?? r.modelos.at(-1)!;
+  const final = r.modelos.find((m) => m.nome === "1 h antes") ?? r.modelos.at(-1)!;
   const maxImp = Math.max(...r.importancia.map((i) => i.valor));
   const porAeroporto = [...r.eda.por_aeroporto].sort((a, b) => (b.taxa30 ?? 0) - (a.taxa30 ?? 0));
   const porEmpresa = r.eda.por_empresa.filter((e) => e.voos > 5000).sort((a, b) => (b.taxa30 ?? 0) - (a.taxa30 ?? 0));
@@ -86,7 +85,7 @@ export default function PainelAnalista({ r }: { r: Resumo }) {
 
       <div className="grid gap-3 sm:grid-cols-3">
         <div className="rounded-lg bg-painel p-5 text-painel-texto">
-          <p className="text-sm text-white/60">PR-AUC de atraso &gt; 30 min, 3 h antes</p>
+          <p className="text-sm text-white/60">PR-AUC de atraso &gt; 30 min, 1 h antes</p>
           <p className="font-cond text-5xl font-semibold text-sinal">{num(final["PR-AUC atraso>30"], 2)}</p>
           <p className="text-sm text-white/70">contra {num(chute["PR-AUC atraso>30"], 2)} de um chute</p>
         </div>
@@ -96,8 +95,8 @@ export default function PainelAnalista({ r }: { r: Resumo }) {
           <p className="text-sm text-tinta-2">com precisão de {pct(final["precisão atraso>30"], 0)} nos alertas</p>
         </div>
         <div className="rounded-lg border border-linha bg-cartao p-5">
-          <p className="text-sm text-tinta-2">Faixa prevista certa ou vizinha</p>
-          <p className="font-cond text-5xl font-semibold">{pct(final["erro de no máx. 1 faixa"], 0)}</p>
+          <p className="text-sm text-tinta-2">Faixa prevista certa</p>
+          <p className="font-cond text-5xl font-semibold">{pct(final["acerto da faixa"], 0)}</p>
           <p className="text-sm text-tinta-2">dos voos do teste</p>
         </div>
       </div>
@@ -116,7 +115,7 @@ export default function PainelAnalista({ r }: { r: Resumo }) {
                 <th className="py-2 pr-3 font-medium">Log loss</th>
                 <th className="py-2 pr-3 font-medium">Recall &gt;30</th>
                 <th className="py-2 pr-3 font-medium">Precisão &gt;30</th>
-                <th className="py-2 font-medium">F2 macro</th>
+                <th className="py-2 font-medium">F1 macro</th>
               </tr>
             </thead>
             <tbody>
@@ -128,7 +127,7 @@ export default function PainelAnalista({ r }: { r: Resumo }) {
                   <td className="py-2 pr-3">{num(m.log_loss)}</td>
                   <td className="py-2 pr-3">{pct(m["recall atraso>30"])}</td>
                   <td className="py-2 pr-3">{pct(m["precisão atraso>30"])}</td>
-                  <td className="py-2">{num(m["F2 macro"])}</td>
+                  <td className="py-2">{num(m["F1 macro"])}</td>
                 </tr>
               ))}
             </tbody>
@@ -179,7 +178,7 @@ export default function PainelAnalista({ r }: { r: Resumo }) {
           </div>
         </Secao>
 
-        <Secao titulo="Desempenho por faixa" nota={`Pesos de decisão (${NOME_H[h]}): ${r.pesos[h].join(", ")}. Peso maior = o modelo aceita mais alarmes falsos naquela faixa.`}>
+        <Secao titulo="Desempenho por faixa" nota={`Pesos de decisão (${NOME_H[h]}): ${r.pesos[h].join(", ")}. Peso maior = o modelo avisa mais naquela faixa. Calibrados em setembro para equilibrar precisão e recall (F1).`}>
           <Seletor valor={h} onChange={setH} />
           <table className="mt-4 w-full text-left text-[15px]">
             <thead className="text-sm text-tinta-2">
@@ -211,7 +210,7 @@ export default function PainelAnalista({ r }: { r: Resumo }) {
 
       <Secao
         titulo="O que o modelo usa"
-        nota="Importância por permutação no modelo de 3 h: quanto o log loss piora quando a variável é embaralhada."
+        nota="Importância por permutação no modelo de 1 h: quanto o log loss piora quando a variável é embaralhada."
       >
         <ul className="mb-4 flex flex-wrap gap-4 text-sm text-tinta-2">
           {Object.entries(COR_GRUPO).map(([g, c]) => (
@@ -254,6 +253,7 @@ export default function PainelAnalista({ r }: { r: Resumo }) {
                 contentStyle={{ background: "var(--cartao)", border: "1px solid var(--linha)", color: "var(--tinta)" }}
               />
               <Legend wrapperStyle={{ fontSize: 13 }} />
+              <Line type="monotone" dataKey="h1" name="1 h antes" stroke="#184f95" strokeWidth={2} dot={false} isAnimationActive={false} />
               <Line type="monotone" dataKey="h3" name="3 h antes" stroke="#2a78d6" strokeWidth={2} dot={false} isAnimationActive={false} />
               <Line type="monotone" dataKey="vespera" name="Véspera" stroke="var(--f2)" strokeWidth={2} dot={false} isAnimationActive={false} />
               <Line type="monotone" dataKey="prevalencia" name="Chute" stroke="var(--tinta-2)" strokeWidth={2} strokeDasharray="4 3" dot={false} isAnimationActive={false} />
@@ -268,7 +268,7 @@ export default function PainelAnalista({ r }: { r: Resumo }) {
       </p>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <Secao titulo="Clima na origem, 3 h antes">
+        <Secao titulo="Condições 1 h antes da partida">
           <BarrasTaxa dados={r.eda.clima} rotulo={(c) => c} media={media} />
           <p className="mt-3 text-sm text-tinta-2">
             {r.eda.clima.map((c) => `${c.chave}: ${inteiro(c.voos)} voos`).slice(1).join("; ")}.

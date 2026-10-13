@@ -20,10 +20,13 @@ function Previsao({ titulo, p, faixa }: { titulo: string; p: number[]; faixa: nu
 function motivos(v: Voo): string[] {
   const m: string[] = [];
   const c = v.c;
-  if (c.trov) m.push("Havia trovoada na origem 3 h antes da partida.");
-  if (c.raj != null && c.raj >= 25) m.push(`Rajadas de ${c.raj} nós na origem 3 h antes.`);
+  if (c.trov) m.push("Havia trovoada na origem 1 h antes da partida.");
+  if (c.raj != null && c.raj >= 25) m.push(`Rajadas de ${c.raj} nós na origem 1 h antes.`);
   if (c.vis != null && c.vis < 5000) m.push(`Visibilidade baixa na origem (${c.vis} m).`);
   if (c.teto != null && c.teto < 1500) m.push(`Teto de nuvens baixo na origem (${c.teto} pés).`);
+  if (c.chgp) m.push("O avião que deve fazer este voo ainda não tinha decolado da origem anterior, já atrasado.");
+  else if (c.chg != null && c.chg > 30) m.push(`O voo que traz o avião saiu ${Math.round(c.chg)} min atrasado da origem anterior.`);
+  if (c.cia != null && c.cia >= 0.2) m.push(`${pct(c.cia, 0)} das partidas recentes da companhia nesse aeroporto atrasaram mais de 30 min.`);
   if (c.rec != null && c.rec >= 0.15) m.push(`${pct(c.rec, 0)} das partidas recentes da origem estavam saindo com mais de 30 min de atraso.`);
   if (c.v7 != null && c.v7 >= 0.3) m.push(`Este voo atrasou mais de 30 min em ${pct(c.v7, 0)} das vezes nos 7 dias anteriores.`);
   if (c.hist != null && c.hist >= 0.12) m.push(`Historicamente, ${pct(c.hist, 0)} das partidas deste voo atrasaram mais de 30 min.`);
@@ -49,19 +52,20 @@ export default function DetalheVoo({ voo, indice, data }: { voo: Voo; indice: In
         </h2>
       </header>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <Previsao titulo="Previsão na véspera" p={voo.pv} faixa={voo.fv} />
-        <Previsao titulo="Previsão 3 h antes da partida" p={voo.p3} faixa={voo.f3} />
+      <div className="grid gap-4 md:grid-cols-3">
+        <Previsao titulo="Na véspera" p={voo.pv} faixa={voo.fv} />
+        <Previsao titulo="3 h antes da partida" p={voo.p3} faixa={voo.f3} />
+        <Previsao titulo="1 h antes da partida" p={voo.p1} faixa={voo.f1} />
       </div>
 
       <p className="mt-3 text-sm text-tinta-2">
-        O alerta dispara mesmo com chance abaixo de 50%: o modelo foi ajustado para avisar cedo, aceitando alguns
-        alarmes falsos em troca de deixar passar menos atrasos.
+        O alerta dispara quando a chance de atraso fica bem acima do normal (cerca de 8% dos voos atrasam mais de 30
+        min), mesmo abaixo de 50%. Quanto mais perto da partida, mais o modelo sabe e mais confiável fica o alerta.
       </p>
 
       <div className="mt-5 grid gap-4 md:grid-cols-2">
         <section>
-          <h3 className="font-semibold">O que pesou na previsão</h3>
+          <h3 className="font-semibold">O que se sabia 1 h antes</h3>
           {sinais.length ? (
             <ul className="mt-2 list-disc space-y-1 pl-5 text-tinta-2">
               {sinais.map((s) => (
@@ -84,11 +88,11 @@ export default function DetalheVoo({ voo, indice, data }: { voo: Voo; indice: In
             ({FAIXAS[voo.f]}): {descreverAtraso(voo.a)}.
           </p>
           <p className="mt-1 text-sm text-tinta-2">
-            {voo.f3 === voo.f
-              ? "O alerta de 3 h antes acertou a faixa."
-              : voo.f3 > voo.f
-                ? "O alerta de 3 h antes foi mais pessimista do que o real."
-                : "O alerta de 3 h antes foi mais otimista do que o real."}
+            {voo.f1 === voo.f
+              ? "O alerta de 1 h antes acertou a faixa."
+              : voo.f1 > voo.f
+                ? "O alerta de 1 h antes foi mais pessimista do que o real."
+                : "O alerta de 1 h antes foi mais otimista do que o real."}
           </p>
         </section>
       </div>

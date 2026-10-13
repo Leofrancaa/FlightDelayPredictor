@@ -2,8 +2,8 @@ import Link from "next/link";
 
 const EXEMPLO = [
   { h: "07:10", voo: "G3 1402", destino: "Congonhas", status: "Sem alerta", cor: "var(--f0)" },
-  { h: "17:45", voo: "LA 3321", destino: "Brasília", status: "Alerta de atraso moderado", cor: "var(--f2)" },
-  { h: "19:20", voo: "AD 4870", destino: "Recife", status: "Alerta de atraso leve", cor: "var(--f1)" },
+  { h: "17:45", voo: "LA 3321", destino: "Brasília", status: "Alerta de atraso", cor: "var(--f2)" },
+  { h: "19:20", voo: "AD 4870", destino: "Recife", status: "Alerta de atraso grave", cor: "var(--f3)" },
 ];
 
 export default function Inicio() {
@@ -15,7 +15,7 @@ export default function Inicio() {
         </h1>
         <p className="mt-5 max-w-xl text-lg text-tinta-2">
           Um modelo treinado com todos os voos domésticos de 2025 nos 10 maiores aeroportos do país estima em que faixa
-          de atraso cada partida deve cair: na véspera e 3 horas antes do embarque.
+          de atraso cada partida deve cair: na véspera, 3 horas e 1 hora antes do embarque.
         </p>
         <div className="mt-8 flex flex-wrap gap-3">
           <Link href="/passageiro" className="rounded-md bg-sinal px-5 py-3 font-semibold text-[#172230] hover:brightness-95">

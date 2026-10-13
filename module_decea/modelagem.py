@@ -47,10 +47,13 @@ def decidir(proba, pesos):
     return np.argmax(proba * np.asarray(pesos)[None, :], axis=1)
 
 
-def ajustar_pesos(proba, y, beta=2, opcoes=(1, 1.5, 2, 3, 4, 6, 8, 12)):
-    """Escolhe os pesos das faixas 1–3 que maximizam o F-beta macro (beta=2: recall vale 2x a precisão)."""
+def ajustar_pesos(proba, y, beta=1, opcoes=(1, 1.25, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10)):
+    """Escolhe os pesos das faixas de atraso que maximizam o F-beta macro.
+
+    beta=1 equilibra precisão e recall (beta=2 daria ao recall o dobro do peso e geraria muitos alarmes falsos).
+    """
     melhor = (-1, None)
-    for w in product(opcoes, repeat=3):
+    for w in product(opcoes, repeat=len(FAIXAS) - 1):
         pesos = (1, *w)
         s = fbeta_score(y, decidir(proba, pesos), beta=beta, average="macro", zero_division=0)
         if s > melhor[0]:
@@ -58,20 +61,22 @@ def ajustar_pesos(proba, y, beta=2, opcoes=(1, 1.5, 2, 3, 4, 6, 8, 12)):
     return melhor[1], melhor[0]
 
 
-def metricas(y, proba, pesos=(1, 1, 1, 1)):
+def metricas(y, proba, pesos=None):
     """Métricas de ranking (não dependem de limiar) + métricas da decisão final."""
-    pred = decidir(proba, pesos)
-    atraso30 = np.asarray(y) >= 2
-    p30 = proba[:, 2] + proba[:, 3]
+    y = np.asarray(y)
+    pred = decidir(proba, pesos if pesos is not None else np.ones(proba.shape[1]))
+    atraso30 = y >= 1
+    p30 = proba[:, 1:].sum(axis=1)
+    alerta = pred >= 1
     return {
         "log_loss": log_loss(y, proba, labels=range(len(FAIXAS))),
-        "ROC-AUC macro (4 faixas)": roc_auc_score(y, proba, multi_class="ovr", average="macro"),
+        "ROC-AUC macro (faixas)": roc_auc_score(y, proba, multi_class="ovr", average="macro"),
         "ROC-AUC atraso>30": roc_auc_score(atraso30, p30),
         "PR-AUC atraso>30": average_precision_score(atraso30, p30),
-        "F2 macro": fbeta_score(y, pred, beta=2, average="macro", zero_division=0),
-        "recall atraso>30": (pred[atraso30] >= 2).mean(),
-        "precisão atraso>30": atraso30[pred >= 2].mean() if (pred >= 2).any() else np.nan,
-        "erro de no máx. 1 faixa": (np.abs(pred - np.asarray(y)) <= 1).mean(),
+        "F1 macro": fbeta_score(y, pred, beta=1, average="macro", zero_division=0),
+        "recall atraso>30": alerta[atraso30].mean(),
+        "precisão atraso>30": atraso30[alerta].mean() if alerta.any() else np.nan,
+        "acerto da faixa": (pred == y).mean(),
     }
 
 

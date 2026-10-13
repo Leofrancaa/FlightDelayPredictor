@@ -15,7 +15,7 @@ export default function BarraProbabilidade({ p, compacta = false }: { p: number[
         ))}
       </div>
       {!compacta && (
-        <ul className="mt-2 grid grid-cols-2 gap-x-6 gap-y-1 text-sm text-tinta-2">
+        <ul className="mt-2 grid grid-cols-1 gap-y-1 text-sm text-tinta-2">
           {FAIXAS.map((f, i) => (
             <li key={f} className="flex items-center gap-1.5">
               <span className="inline-block h-2.5 w-2.5 rounded-sm" style={{ background: COR[i] }} aria-hidden />
