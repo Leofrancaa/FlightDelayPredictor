@@ -7,7 +7,7 @@ import type { Horizonte, Indice, Voo } from "@/lib/types";
 // three.js só carrega no navegador e só quando um voo é aberto.
 const GloboVoo = dynamic(() => import("./GloboVoo"), {
   ssr: false,
-  loading: () => <div className="h-[22rem] rounded-lg bg-painel sm:h-[30rem]" aria-hidden />,
+  loading: () => <div className="h-[32rem] rounded-lg bg-painel sm:h-[44rem]" aria-hidden />,
 });
 
 function Previsao({ titulo, p, alerta, limiar }: { titulo: string; p: number; alerta: 0 | 1; limiar?: number }) {
