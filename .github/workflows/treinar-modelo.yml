@@ -1,0 +1,58 @@
+# Treina o modelo final com todos os anos (2011–2025) na máquina do GitHub (16 GB de RAM) e publica os
+# dados do site e o relatório numa branch nova "dados/modelo-final-<n>".
+# Uso: aba Actions -> "Treinar modelo final" -> Run workflow.
+name: Treinar modelo final
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Branch com o código"
+        default: "main"
+        required: true
+      desde:
+        description: "Primeiro ano de dados"
+        default: "2011"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  treinar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+
+      - uses: astral-sh/setup-uv@v6
+
+      - name: Baixar dados da Release dados-vra
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p data/raw/vra data/raw/metar tmp_metar
+          gh release download dados-vra --repo "$GITHUB_REPOSITORY" -p 'VRA_*.zip' -D data/raw/vra
+          gh release download dados-vra --repo "$GITHUB_REPOSITORY" -p 'METAR_*.zip' -D tmp_metar
+          for z in tmp_metar/*.zip; do unzip -q -o -j "$z" '*.csv' -d data/raw/metar; done
+          ls data/raw/vra | wc -l; ls data/raw/metar | wc -l; free -g
+
+      - name: Instalar dependências
+        run: uv sync
+
+      - name: Treinar e exportar
+        run: /usr/bin/time -v uv run python -m module_decea.exportar_web --desde ${{ inputs.desde }} 2>&1 | tee treino.log
+
+      - name: Publicar resultados numa branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+          destino="dados/modelo-final-${{ github.run_number }}"
+          git checkout -b "$destino"
+          mkdir -p reports/modelo_final && cp treino.log reports/modelo_final/treino.log
+          git add web/public/data reports/modelo_final
+          git commit -m "dados: modelo final treinado com ${{ inputs.desde }}–2025 (run ${{ github.run_number }})"
+          git push origin "$destino"
+          echo "Resultados na branch $destino" >> "$GITHUB_STEP_SUMMARY"
