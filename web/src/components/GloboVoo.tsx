@@ -100,7 +100,7 @@ export default function GloboVoo({ origem, destino, siglaOrigem, siglaDestino, h
     renderer.domElement.style.display = "block";
 
     const cena = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(35, 1, 0.01, 100);
+    const camera = new THREE.PerspectiveCamera(42, 1, 0.01, 100);
 
     // Globo
     cena.add(new THREE.Mesh(new THREE.SphereGeometry(1, 64, 48), new THREE.MeshBasicMaterial({ color: C.oceano })));
@@ -145,8 +145,8 @@ export default function GloboVoo({ origem, destino, siglaOrigem, siglaDestino, h
     const seg = pts.length - 1;
     const radial = 6;
 
-    const distCam = 1 + Math.min(Math.max(angulo * 3.2, 0.6), 2.4);
-    const escala = (distCam - 1) * 0.06;
+    const distCam = 1 + Math.min(Math.max(angulo * 4.5, 1.1), 2.0);
+    const escala = Math.min((distCam - 1) * 0.045, Math.max(angulo * 0.15, 0.014));
 
     const tuboFundo = new THREE.TubeGeometry(curva, seg, escala * 0.05, radial, false);
     const matFundo = new THREE.MeshBasicMaterial({ color: C.rota, transparent: true, opacity: 0.22 });
@@ -320,7 +320,7 @@ export default function GloboVoo({ origem, destino, siglaOrigem, siglaDestino, h
           Repetir
         </button>
       </div>
-      <div ref={caixa} className="relative h-72 w-full cursor-grab active:cursor-grabbing sm:h-96" role="img"
+      <div ref={caixa} className="relative h-[28rem] w-full cursor-grab active:cursor-grabbing sm:h-[40rem]" role="img"
         aria-label={`Animação do voo de ${siglaOrigem} para ${siglaDestino}${atrasou ? `, saindo ${espera} min atrasado` : ", no horário"}`}>
         {[siglaOrigem, siglaDestino].map((s, i) => (
           <span
