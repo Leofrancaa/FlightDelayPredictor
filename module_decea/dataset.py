@@ -1,4 +1,5 @@
 """Download com cache local (pasta data/raw/) das três fontes usadas no notebook 02."""
+
 from datetime import UTC, datetime
 import time
 
@@ -7,6 +8,7 @@ import requests
 
 from module_decea.aisweb import aisweb, itens, listar_paginado, para_df
 from module_decea.config import RAW_DATA_DIR
+from module_decea.vra import arquivos_vra
 
 # Rotas da AISWEB usadas na exploração. A coluna "link" das cartas contém a apiKey e nunca é salva.
 ROTAS_AISWEB = {
@@ -59,12 +61,15 @@ def baixar_metar_iem(estacoes, ano):
     pasta = RAW_DATA_DIR / "metar"
     pasta.mkdir(parents=True, exist_ok=True)
     for icao in estacoes:
-        destino = pasta / f"{icao}.csv"
-        if destino.exists():
+        destino = pasta / f"{icao}_{ano}.csv"  # um arquivo por ano, para poder juntar vários anos
+        antigo = pasta / f"{icao}.csv"  # formato antigo (só 2025), mantido para não baixar de novo
+        if destino.exists() or (ano == 2025 and antigo.exists()):
             continue
-        url = ("https://mesonet.agron.iastate.edu/cgi-bin/request/asos.py"
-               f"?station={icao}&data=metar&year1={ano}&month1=1&day1=1&year2={ano + 1}&month2=1&day2=1"
-               "&tz=Etc/UTC&format=onlycomma&latlon=no&missing=M&trace=T&direct=no&report_type=3&report_type=4")
+        url = (
+            "https://mesonet.agron.iastate.edu/cgi-bin/request/asos.py"
+            f"?station={icao}&data=metar&year1={ano}&month1=1&day1=1&year2={ano + 1}&month2=1&day2=1"
+            "&tz=Etc/UTC&format=onlycomma&latlon=no&missing=M&trace=T&direct=no&report_type=3&report_type=4"
+        )
         resp = requests.get(url, timeout=300)
         resp.raise_for_status()
         destino.write_bytes(resp.content)
@@ -73,12 +78,13 @@ def baixar_metar_iem(estacoes, ano):
 
 
 def baixar_vra(ano, meses=range(1, 13)):
-    """VRA da ANAC: um CSV por mês (~25 MB cada)."""
+    """VRA da ANAC: um CSV por mês (~25 MB cada). Pula o que já existe, solto ou dentro do zip do ano."""
     pasta = RAW_DATA_DIR / "vra"
     pasta.mkdir(parents=True, exist_ok=True)
+    ja_tem = {nome for nome, _ in arquivos_vra(anos=(ano,), pasta=pasta)}
     for mes in meses:
         destino = pasta / f"VRA_{ano}_{mes:02d}.csv"
-        if destino.exists():
+        if destino.name in ja_tem:
             continue
         url = f"https://siros.anac.gov.br/siros/registros/diversos/vra/{ano}/{destino.name}"
         resp = requests.get(url, timeout=600)
