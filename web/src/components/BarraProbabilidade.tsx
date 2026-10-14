@@ -1,28 +1,31 @@
-import { COR, FAIXAS } from "@/lib/faixas";
-
-/** Barra empilhada com a probabilidade (%) de cada faixa. */
-export default function BarraProbabilidade({ p, compacta = false }: { p: number[]; compacta?: boolean }) {
-  const total = p.reduce((a, b) => a + b, 0) || 1;
+/** Barra de risco: chance (%) de atrasar mais de 30 min, com a marca do limiar em que o alerta dispara. */
+export default function BarraProbabilidade({
+  p,
+  limiar,
+  compacta = false,
+}: {
+  p: number;
+  limiar?: number;
+  compacta?: boolean;
+}) {
+  const alerta = limiar != null && p >= limiar * 100;
   return (
-    <div>
+    <div
+      className={`relative w-full rounded bg-[color-mix(in_srgb,var(--f0)_22%,transparent)] ${compacta ? "h-2" : "h-3"}`}
+      role="img"
+      aria-label={`Chance de atrasar mais de 30 min: ${p}%`}
+    >
       <div
-        className={`flex w-full overflow-hidden rounded ${compacta ? "h-2" : "h-4"}`}
-        role="img"
-        aria-label={FAIXAS.map((f, i) => `${f}: ${p[i]}%`).join(", ")}
-      >
-        {p.map((v, i) => (
-          <div key={i} style={{ width: `${(v / total) * 100}%`, background: COR[i] }} />
-        ))}
-      </div>
-      {!compacta && (
-        <ul className="mt-2 grid grid-cols-1 gap-y-1 text-sm text-tinta-2">
-          {FAIXAS.map((f, i) => (
-            <li key={f} className="flex items-center gap-1.5">
-              <span className="inline-block h-2.5 w-2.5 rounded-sm" style={{ background: COR[i] }} aria-hidden />
-              {f} <strong className="ml-auto font-semibold text-tinta">{p[i]}%</strong>
-            </li>
-          ))}
-        </ul>
+        className="absolute inset-y-0 left-0 rounded"
+        style={{ width: `${Math.min(p, 100)}%`, background: alerta ? "var(--f3)" : "var(--f0)" }}
+      />
+      {limiar != null && !compacta && (
+        <div
+          className="absolute -inset-y-1 w-0.5 bg-tinta"
+          style={{ left: `${limiar * 100}%` }}
+          title={`Limiar do alerta: ${Math.round(limiar * 100)}%`}
+          aria-hidden
+        />
       )}
     </div>
   );

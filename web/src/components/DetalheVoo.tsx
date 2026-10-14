@@ -1,18 +1,21 @@
 import BarraProbabilidade from "./BarraProbabilidade";
-import { ALERTA, COR, FAIXAS, STATUS, descreverAtraso, pct, risco30 } from "@/lib/faixas";
-import type { Indice, Voo } from "@/lib/types";
+import { ALERTA, COR, STATUS, descreverAtraso, pct } from "@/lib/faixas";
+import type { Horizonte, Indice, Voo } from "@/lib/types";
 
-function Previsao({ titulo, p, faixa }: { titulo: string; p: number[]; faixa: number }) {
+function Previsao({ titulo, p, alerta, limiar }: { titulo: string; p: number; alerta: 0 | 1; limiar?: number }) {
   return (
     <div className="rounded-md border border-linha p-4">
       <h3 className="text-sm text-tinta-2">{titulo}</h3>
-      <p className="mt-1 font-cond text-2xl font-semibold" style={{ color: COR[faixa] }}>
-        {ALERTA[faixa]}
+      <p className="mt-1 font-cond text-2xl font-semibold" style={{ color: COR[alerta] }}>
+        {ALERTA[alerta]}
       </p>
       <p className="mb-3 text-sm text-tinta-2">
-        Chance de atrasar mais de 30 min: <strong className="text-tinta">{risco30(p)}%</strong>
+        Chance de atrasar mais de 30 min: <strong className="text-tinta">{p}%</strong>
       </p>
-      <BarraProbabilidade p={p} />
+      <BarraProbabilidade p={p} limiar={limiar} />
+      {limiar != null && (
+        <p className="mt-1.5 text-xs text-tinta-2">O traço marca {Math.round(limiar * 100)}%, onde o alerta dispara.</p>
+      )}
     </div>
   );
 }
@@ -33,7 +36,17 @@ function motivos(v: Voo): string[] {
   return m;
 }
 
-export default function DetalheVoo({ voo, indice, data }: { voo: Voo; indice: Indice; data: string }) {
+export default function DetalheVoo({
+  voo,
+  indice,
+  data,
+  limiares,
+}: {
+  voo: Voo;
+  indice: Indice;
+  data: string;
+  limiares?: Partial<Record<Horizonte, number>>;
+}) {
   const [nomeEmpresa, iata] = indice.empresas[voo.e] ?? [voo.e, voo.e];
   const sinais = motivos(voo);
   const dataBr = new Date(`${data}T12:00:00`).toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" });
@@ -53,14 +66,14 @@ export default function DetalheVoo({ voo, indice, data }: { voo: Voo; indice: In
       </header>
 
       <div className="grid gap-4 md:grid-cols-3">
-        <Previsao titulo="Na véspera" p={voo.pv} faixa={voo.fv} />
-        <Previsao titulo="3 h antes da partida" p={voo.p3} faixa={voo.f3} />
-        <Previsao titulo="1 h antes da partida" p={voo.p1} faixa={voo.f1} />
+        <Previsao titulo="Na véspera" p={voo.pv} alerta={voo.fv} limiar={limiares?.vespera} />
+        <Previsao titulo="3 h antes da partida" p={voo.p3} alerta={voo.f3} limiar={limiares?.h3} />
+        <Previsao titulo="1 h antes da partida" p={voo.p1} alerta={voo.f1} limiar={limiares?.h1} />
       </div>
 
       <p className="mt-3 text-sm text-tinta-2">
-        O alerta dispara quando a chance de atraso fica bem acima do normal (cerca de 8% dos voos atrasam mais de 30
-        min), mesmo abaixo de 50%. Quanto mais perto da partida, mais o modelo sabe e mais confiável fica o alerta.
+        Só cerca de 8% dos voos atrasam mais de 30 min, então o alerta dispara quando a chance fica bem acima do
+        normal, mesmo abaixo de 50%. Quanto mais perto da partida, mais o modelo sabe e mais confiável fica o alerta.
       </p>
 
       <div className="mt-5 grid gap-4 md:grid-cols-2">
@@ -84,15 +97,15 @@ export default function DetalheVoo({ voo, indice, data }: { voo: Voo; indice: In
           <p className="mt-1 text-lg">
             <span className="font-semibold" style={{ color: COR[voo.f] }}>
               {STATUS[voo.f]}
-            </span>{" "}
-            ({FAIXAS[voo.f]}): {descreverAtraso(voo.a)}.
+            </span>
+            : {descreverAtraso(voo.a)}.
           </p>
           <p className="mt-1 text-sm text-tinta-2">
             {voo.f1 === voo.f
-              ? "O alerta de 1 h antes acertou a faixa."
-              : voo.f1 > voo.f
-                ? "O alerta de 1 h antes foi mais pessimista do que o real."
-                : "O alerta de 1 h antes foi mais otimista do que o real."}
+              ? "A previsão de 1 h antes acertou."
+              : voo.f1
+                ? "Alarme falso: a previsão de 1 h antes avisou, mas o voo saiu dentro de 30 min."
+                : "A previsão de 1 h antes não avisou deste atraso."}
           </p>
         </section>
       </div>

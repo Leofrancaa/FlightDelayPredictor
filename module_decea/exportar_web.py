@@ -433,7 +433,12 @@ def _gravar(resumo, demo):
         (SAIDA / "voos" / f"{dia}.json").write_text(
             json.dumps(lista, ensure_ascii=False, separators=(",", ":")), encoding="utf-8"
         )
-    indice = {"datas": sorted(set(dias)), "empresas": EMPRESAS, "aeroportos": AEROPORTOS}
+    indice = {
+        "datas": sorted(set(dias)),
+        "empresas": EMPRESAS,
+        "aeroportos": AEROPORTOS,
+        "limiares": {k: m["limiar"] for k, m in resumo["modelos"].items()},
+    }
     (SAIDA / "indice.json").write_text(json.dumps(indice, ensure_ascii=False), encoding="utf-8")
 
 

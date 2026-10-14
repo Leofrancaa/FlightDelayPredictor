@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import BarraProbabilidade from "./BarraProbabilidade";
 import DetalheVoo from "./DetalheVoo";
 import { ALERTA, COR } from "@/lib/faixas";
-import type { Indice, Voo } from "@/lib/types";
+import type { Horizonte, Indice, Resumo, Voo } from "@/lib/types";
 
 const PAGINA = 40;
 
@@ -27,8 +27,17 @@ export default function BuscaVoo() {
   const [destino, setDestino] = useState("");
   const [selecionado, setSelecionado] = useState<Voo | null>(null);
   const [mostrar, setMostrar] = useState(PAGINA);
+  const [limiares, setLimiares] = useState<Partial<Record<Horizonte, number>>>({});
 
   useEffect(() => {
+    // limiares do alerta de cada horizonte (vêm no indice; se não, do resumo do modelo)
+    fetch("/data/resumo.json")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((r: Resumo | null) => {
+        if (r?.modelos)
+          setLimiares(Object.fromEntries(Object.entries(r.modelos).map(([k, m]) => [k, m.limiar])) as Record<Horizonte, number>);
+      })
+      .catch(() => undefined);
     fetch("/data/indice.json")
       .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
       .then((i: Indice) => {
@@ -124,7 +133,7 @@ export default function BuscaVoo() {
         </label>
       </form>
 
-      {selecionado && <DetalheVoo voo={selecionado} indice={indice} data={data} />}
+      {selecionado && <DetalheVoo voo={selecionado} indice={indice} data={data} limiares={indice.limiares ?? limiares} />}
 
       <section className="overflow-hidden rounded-lg bg-painel text-painel-texto">
         <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-white/10 px-4 py-3 font-cond sm:px-5">
@@ -167,7 +176,7 @@ export default function BuscaVoo() {
                   <span className="truncate">{nomeAp(v.d)}</span>
                   <span className="col-span-3 flex items-center gap-2 text-[15px] sm:col-span-1">
                     <span className="w-24 shrink-0 sm:w-16">
-                      <BarraProbabilidade p={v.p1} compacta />
+                      <BarraProbabilidade p={v.p1} limiar={(indice.limiares ?? limiares).h1} compacta />
                     </span>
                     <span style={{ color: COR[v.f1] }}>{ALERTA[v.f1]}</span>
                   </span>
