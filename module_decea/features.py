@@ -19,10 +19,11 @@ from module_decea.vra import carregar_vra, voos_regulares_domesticos
 
 AEROPORTOS = ["SBGR", "SBSP", "SBKP", "SBCF", "SBBR", "SBGL", "SBRJ", "SBPA", "SBCT", "SBRF"]
 
-# Alvo: faixa de atraso da partida (minutos). Até 30 min = dentro da tolerância usada pela ANAC.
-# A faixa 15–30 min foi unida à primeira: era a mais ruidosa e quase impossível de separar.
-LIMITES = [-np.inf, 30, 60, np.inf]
-FAIXAS = ["até 30 min", "30–60 min", "> 60 min"]
+# Alvo: a partida atrasa mais de 30 min? (tolerância usada pela ANAC)
+# Histórico: começou com 4 faixas (até 15, 15–30, 30–60, > 60) e depois 3 (até 30, 30–60, > 60). Mesmo treinando
+# com 2011–2025, separar 30–60 de > 60 ficou com precisão e recall de 24–40%, então o alvo virou binário.
+LIMITES = [-np.inf, 30, np.inf]
+FAIXAS = ["até 30 min", "> 30 min"]
 HORIZONTES = {"vespera": None, "3h": 3, "1h": 1}
 
 
@@ -423,7 +424,7 @@ def _voo_chegada(v, m, h):
 # Montagem
 # --------------------------------------------------------------------------------------------------------------------
 def montar(horizonte="3h", voos=None, metar=None, chegadas=None):
-    """Devolve (X, y, info) só com voos realizados. y = faixa 0..2. info = datas e atraso para análise."""
+    """Devolve (X, y, info) só com voos realizados. y = 1 se atrasou > 30 min. info = datas e atraso para análise."""
     if horizonte not in HORIZONTES:
         raise ValueError(f"horizonte deve ser um de {list(HORIZONTES)}")
     h = HORIZONTES[horizonte]

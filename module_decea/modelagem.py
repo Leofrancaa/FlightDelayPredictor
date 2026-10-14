@@ -1,6 +1,4 @@
-"""Treino, validação temporal e avaliação do modelo de faixas de atraso."""
-
-from itertools import product
+"""Treino, validação temporal e avaliação do modelo de atraso (> 30 min)."""
 
 import numpy as np
 import pandas as pd
@@ -10,13 +8,14 @@ from sklearn.metrics import (
     confusion_matrix,
     fbeta_score,
     log_loss,
+    precision_recall_curve,
     precision_recall_fscore_support,
     roc_auc_score,
 )
 
 from module_decea.features import FAIXAS
 
-MESES_TREINO = range(1, 10)  # jan–set; out–dez fica reservado para o teste final
+LIMIARES = np.round(np.arange(0.05, 0.71, 0.01), 2)  # limiares testados na calibração do alerta
 
 
 def hgb(**params):
@@ -42,42 +41,44 @@ def busca_hiperparametros(X, y, meses, grade, validacoes=(7, 8, 9)):
     return pd.DataFrame(linhas).sort_values("log_loss").reset_index(drop=True)
 
 
-def decidir(proba, pesos):
-    """Faixa prevista = argmax(prob x peso). Peso > 1 numa faixa de atraso = aceitar mais alarmes falsos nela."""
-    return np.argmax(proba * np.asarray(pesos)[None, :], axis=1)
+def decidir(proba, limiar):
+    """Alerta de atraso (> 30 min) quando a probabilidade passa do limiar."""
+    return (proba[:, 1] >= limiar).astype(int)
 
 
-def ajustar_pesos(proba, y, beta=1, opcoes=(1, 1.25, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10)):
-    """Escolhe os pesos das faixas de atraso que maximizam o F-beta macro.
-
-    beta=1 equilibra precisão e recall (beta=2 daria ao recall o dobro do peso e geraria muitos alarmes falsos).
-    """
-    melhor = (-1, None)
-    for w in product(opcoes, repeat=len(FAIXAS) - 1):
-        pesos = (1, *w)
-        s = fbeta_score(y, decidir(proba, pesos), beta=beta, average="macro", zero_division=0)
-        if s > melhor[0]:
-            melhor = (s, pesos)
-    return melhor[1], melhor[0]
-
-
-def metricas(y, proba, pesos=None):
-    """Métricas de ranking (não dependem de limiar) + métricas da decisão final."""
+def ajustar_limiar(proba, y, grade=LIMIARES):
+    """Limiar que maximiza o F1 da classe "atraso > 30 min" (equilíbrio entre precisão e recall)."""
     y = np.asarray(y)
-    pred = decidir(proba, pesos if pesos is not None else np.ones(proba.shape[1]))
-    atraso30 = y >= 1
-    p30 = proba[:, 1:].sum(axis=1)
-    alerta = pred >= 1
+    melhor = max(grade, key=lambda t: fbeta_score(y, decidir(proba, t), beta=1, zero_division=0))
+    return round(float(melhor), 2), float(fbeta_score(y, decidir(proba, melhor), beta=1, zero_division=0))
+
+
+def metricas(y, proba, limiar=0.5):
+    """Métricas de ranking (não dependem de limiar) + métricas da decisão no limiar escolhido."""
+    y = np.asarray(y)
+    p = proba[:, 1]
+    alerta = p >= limiar
     return {
-        "log_loss": log_loss(y, proba, labels=range(len(FAIXAS))),
-        "ROC-AUC macro (faixas)": roc_auc_score(y, proba, multi_class="ovr", average="macro"),
-        "ROC-AUC atraso>30": roc_auc_score(atraso30, p30),
-        "PR-AUC atraso>30": average_precision_score(atraso30, p30),
-        "F1 macro": fbeta_score(y, pred, beta=1, average="macro", zero_division=0),
-        "recall atraso>30": alerta[atraso30].mean(),
-        "precisão atraso>30": atraso30[alerta].mean() if alerta.any() else np.nan,
-        "acerto da faixa": (pred == y).mean(),
+        "log_loss": log_loss(y, proba, labels=[0, 1]),
+        "ROC-AUC": roc_auc_score(y, p),
+        "PR-AUC": average_precision_score(y, p),
+        "prevalência": y.mean(),
+        "precisão": y[alerta].mean() if alerta.any() else np.nan,
+        "recall": alerta[y == 1].mean(),
+        "F1": fbeta_score(y, alerta.astype(int), beta=1, zero_division=0),
+        "% voos com alerta": alerta.mean(),
     }
+
+
+def pontos_operacao(y, proba, recalls=(0.2, 0.3, 0.4, 0.5, 0.6)):
+    """Para cada recall desejado: melhor precisão possível e o limiar que a dá. Ajuda a escolher o equilíbrio."""
+    prec, rec, lim = precision_recall_curve(np.asarray(y), proba[:, 1])
+    linhas = []
+    for r in recalls:
+        ok = np.flatnonzero(rec[:-1] >= r)
+        k = ok[np.argmax(prec[ok])]
+        linhas.append({"recall": r, "precisão": float(prec[k]), "limiar": float(lim[k])})
+    return linhas
 
 
 def tabela_por_faixa(y, pred):
