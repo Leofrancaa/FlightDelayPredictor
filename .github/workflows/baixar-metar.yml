@@ -1,0 +1,57 @@
+# Baixa o METAR histórico (Iowa Environmental Mesonet) dos 10 aeroportos e publica um zip por ano
+# na Release "dados-vra". Uso: aba Actions -> "Baixar METAR (IEM)" -> Run workflow.
+name: Baixar METAR (IEM)
+
+on:
+  workflow_dispatch:
+    inputs:
+      ano_inicio:
+        description: "Primeiro ano"
+        default: "2011"
+        required: true
+      ano_fim:
+        description: "Último ano"
+        default: "2024"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  baixar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar METAR ano a ano
+        run: |
+          python3 - <<'EOF'
+          import pathlib, time, urllib.request
+          AEROPORTOS = ["SBGR", "SBSP", "SBKP", "SBCF", "SBBR", "SBGL", "SBRJ", "SBPA", "SBCT", "SBRF"]
+          for ano in range(${{ inputs.ano_inicio }}, ${{ inputs.ano_fim }} + 1):
+              pasta = pathlib.Path(f"METAR_{ano}")
+              pasta.mkdir()
+              for icao in AEROPORTOS:
+                  url = ("https://mesonet.agron.iastate.edu/cgi-bin/request/asos.py"
+                         f"?station={icao}&data=metar&year1={ano}&month1=1&day1=1&year2={ano + 1}&month2=1&day2=1"
+                         "&tz=Etc/UTC&format=onlycomma&latlon=no&missing=M&trace=T&direct=no&report_type=3&report_type=4")
+                  for tentativa in range(5):
+                      try:
+                          dados = urllib.request.urlopen(url, timeout=300).read()
+                          (pasta / f"{icao}_{ano}.csv").write_bytes(dados)
+                          print(f"{ano} {icao}: {len(dados) / 1e6:.2f} MB, {dados.count(b'\n') - 1} boletins")
+                          break
+                      except Exception as e:
+                          print(f"{ano} {icao}: falhou ({e}), tentando de novo")
+                          time.sleep(20 * (tentativa + 1))
+                  else:
+                      raise SystemExit(f"não consegui baixar {icao} {ano}")
+                  time.sleep(2)  # o IEM pede uso moderado
+          EOF
+      - name: Compactar e publicar na Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view dados-vra --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 || \
+            gh release create dados-vra --repo "$GITHUB_REPOSITORY" --title "Dados VRA (ANAC)" --notes "Dados brutos."
+          for d in METAR_*; do zip -9 -r -q "$d.zip" "$d"; done
+          ls -lh METAR_*.zip
+          gh release upload dados-vra METAR_*.zip --clobber --repo "$GITHUB_REPOSITORY"
