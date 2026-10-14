@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { CLASSES, COR, NOME_H, ORDEM_H, inteiro, mesCurto, num, pct } from "@/lib/faixas";
-import type { Horizonte, Resumo, Taxa } from "@/lib/types";
+import type { Horizonte, Modelo, Resumo, Taxa } from "@/lib/types";
 
 const DIAS = ["seg", "ter", "qua", "qui", "sex", "sáb", "dom"];
 const MESES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
@@ -62,6 +62,20 @@ function BarrasTaxa({ dados, rotulo, media }: { dados: Taxa[]; rotulo: (c: strin
       ))}
     </ul>
   );
+}
+
+/** Precisão, recall e F1 de cada classe, a partir da matriz de confusão (% por linha) e da prevalência. */
+function porClasse(m: Modelo) {
+  const p = m.prevalência;
+  const [[tn, fp], [fn, tp]] = m.confusao.map((l, i) => l.map((v) => (v / 100) * (i ? p : 1 - p)));
+  return [
+    [tn, fn, fp],
+    [tp, fp, fn],
+  ].map(([acerto, falsoPos, falsoNeg]) => {
+    const precisao = acerto / (acerto + falsoPos);
+    const recall = acerto / (acerto + falsoNeg);
+    return { precisao, recall, f1: (2 * precisao * recall) / (precisao + recall) };
+  });
 }
 
 const eixo = { tick: { fill: "var(--tinta-2)", fontSize: 12 }, stroke: "var(--linha)" };
@@ -146,6 +160,52 @@ export default function PainelAnalista({ r }: { r: Resumo }) {
                   <td className="py-2 pr-3">{limiar != null ? pct(m.precisão) : "–"}</td>
                   <td className="py-2 pr-3">{limiar != null ? pct(m.recall) : "–"}</td>
                   <td className="py-2">{limiar != null ? num(m.F1) : "–"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Secao>
+
+      <Secao
+        titulo="Desempenho por classe (teste 2024–2025)"
+        nota={`Precisão, recall e F1 de cada classe no limiar do site. "Até 30 min" parece ótimo porque ${pct(1 - m1.prevalência, 0)} dos voos já saem no horário: dizer "sem atraso" para todos daria ${pct(1 - m1.prevalência, 0)} de precisão e 100% de recall nessa classe. A classe difícil é "> 30 min".`}
+      >
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[640px] text-left text-[15px]">
+            <thead className="text-sm text-tinta-2">
+              <tr>
+                <th rowSpan={2} className="border-b border-linha py-2 pr-3 align-bottom font-medium">
+                  Modelo
+                </th>
+                {CLASSES.map((c, i) => (
+                  <th key={c} colSpan={3} className="pt-2 pr-4 font-semibold text-tinta">
+                    <span className="mr-1.5 inline-block h-2.5 w-2.5 rounded-sm" style={{ background: COR[i] }} aria-hidden />
+                    {c}
+                  </th>
+                ))}
+              </tr>
+              <tr className="border-b border-linha">
+                {CLASSES.flatMap((c) =>
+                  ["Precisão", "Recall", "F1"].map((t) => (
+                    <th key={c + t} className="py-2 pr-2 font-medium">
+                      {t}
+                    </th>
+                  )),
+                )}
+              </tr>
+            </thead>
+            <tbody>
+              {ORDEM_H.map((k) => (
+                <tr key={k} className="border-b border-linha/60 last:border-0">
+                  <td className="py-2 pr-3 font-medium">{NOME_H[k]}</td>
+                  {porClasse(r.modelos[k]).map((c, i) => (
+                    <Fragment key={i}>
+                      <td className="py-2 pr-2">{pct(c.precisao)}</td>
+                      <td className="py-2 pr-2">{pct(c.recall)}</td>
+                      <td className="py-2 pr-4">{num(c.f1)}</td>
+                    </Fragment>
+                  ))}
                 </tr>
               ))}
             </tbody>
