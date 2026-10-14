@@ -215,7 +215,7 @@ def _grupo(col):
 
 
 def _r(x, n=4):
-    return None if x is None or (isinstance(x, float) and np.isnan(x)) else round(float(x), n)
+    return None if x is None or pd.isna(x) else round(float(x), n)
 
 
 def _taxa(df, chave):
@@ -388,7 +388,7 @@ def _gravar(resumo, demo):
     (SAIDA / "voos").mkdir(exist_ok=True)
     for f in (SAIDA / "voos").glob("*.json"):
         f.unlink()
-    texto = json.dumps(resumo, ensure_ascii=False)
+    texto = json.dumps(resumo, ensure_ascii=False, allow_nan=False)
     (SAIDA / "resumo.json").write_text(texto, encoding="utf-8")
     (REPORTS_DIR / "modelo_final").mkdir(parents=True, exist_ok=True)
     (REPORTS_DIR / "modelo_final" / "resumo.json").write_text(
@@ -431,7 +431,7 @@ def _gravar(resumo, demo):
             )
         lista.sort(key=lambda x: x["h"])
         (SAIDA / "voos" / f"{dia}.json").write_text(
-            json.dumps(lista, ensure_ascii=False, separators=(",", ":")), encoding="utf-8"
+            json.dumps(lista, ensure_ascii=False, separators=(",", ":"), allow_nan=False), encoding="utf-8"
         )
     indice = {
         "datas": sorted(set(dias)),
