@@ -1,18 +1,22 @@
-import type { Faixa } from "./types";
+import type { Horizonte } from "./types";
 
-export const FAIXAS = ["até 30 min", "30–60 min", "> 60 min"] as const;
+/** Alvo binário: a partida atrasou mais de 30 min (tolerância usada pela ANAC)? */
+export const CLASSES = ["até 30 min", "> 30 min"] as const;
 
 /** O que aconteceu de fato. */
-export const STATUS = ["No horário", "Atrasou", "Atraso grave"] as const;
+export const STATUS = ["No horário", "Atrasou mais de 30 min"] as const;
 
 /**
- * Previsão. O limiar foi calibrado para equilibrar precisão e recall (F1), então o alerta dispara quando o risco
- * fica bem acima do normal, mesmo abaixo de 50%: é um alerta de risco, não uma certeza.
+ * Previsão. O limiar foi calibrado em 2023 para equilibrar precisão e recall (F1). Como só ~8% dos voos atrasam
+ * mais de 30 min, o alerta dispara bem abaixo de 50%: é um alerta de risco, não uma certeza.
  */
-export const ALERTA = ["Sem alerta", "Alerta de atraso", "Alerta de atraso grave"] as const;
+export const ALERTA = ["Sem alerta", "Alerta de atraso"] as const;
 
-/** Cores das faixas (variáveis CSS definidas em globals.css). */
-export const COR = ["var(--f0)", "var(--f2)", "var(--f3)"] as const;
+/** Cores: no horário / atraso (variáveis CSS definidas em globals.css). */
+export const COR = ["var(--f0)", "var(--f3)"] as const;
+
+export const NOME_H: Record<Horizonte, string> = { vespera: "Véspera", h3: "3 h antes", h1: "1 h antes" };
+export const ORDEM_H: Horizonte[] = ["vespera", "h3", "h1"];
 
 export const pct = (x: number | null | undefined, casas = 1) =>
   x == null ? "–" : `${(x * 100).toLocaleString("pt-BR", { maximumFractionDigits: casas, minimumFractionDigits: casas })}%`;
@@ -30,7 +34,6 @@ export function descreverAtraso(min: number): string {
   return `saiu ${h} h${m ? ` ${m} min` : ""} atrasado`;
 }
 
-/** Probabilidade (%) de atrasar mais de 30 min. */
-export const risco30 = (p: number[]) => p[1] + p[2];
-
-export const isFaixa = (n: number): n is Faixa => n >= 0 && n <= 2;
+const MESES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
+/** "2024-07" -> "jul/24" */
+export const mesCurto = (am: string) => `${MESES[Number(am.slice(5, 7)) - 1]}/${am.slice(2, 4)}`;

@@ -14,7 +14,8 @@ Depois abra os notebooks em `notebooks/` e selecione o kernel `.venv`:
 1. `01_explorar_aisweb.ipynb`: mapa das rotas da API AISWEB.
 2. `02_insights_ml.ipynb`: exploração dos dados em busca de uma situação-problema de ML. Cruza a AISWEB com METAR histórico (IEM) e os voos da ANAC (VRA) de 2025. Na primeira execução baixa ~330 MB para `data/raw/` (pasta ignorada pelo git).
 
-3. `03_modelo_atraso.ipynb`: modelo que prevê a **faixa de atraso** da partida (até 30 min, 30–60, > 60) na véspera, 3 h e 1 h antes do voo. Inclui o atraso do voo que traz o avião (voo de chegada). Gradient boosting em árvores, validação temporal (treino jan–set, teste out–dez). Variáveis em `module_decea/features.py`, treino e métricas em `module_decea/modelagem.py`.
+3. `03_modelo_atraso.ipynb`: primeira versão do modelo (faixas de atraso, só 2025). Mantido como histórico.
+4. `04_modelo_final.ipynb`: modelo final, **binário**: a partida atrasa mais de 30 min? Previsto na véspera, 3 h e 1 h antes. Dados de 2011 a 2025 (sem os períodos anômalos), treino até 2022, validação 2023 (hiperparâmetros e limiar do alerta), teste 2024–2025. Lê `reports/modelo_final/resumo.json`, gerado por `uv run python -m module_decea.exportar_web` (ou pelo workflow *Treinar modelo final* no GitHub Actions). Variáveis em `module_decea/features.py`, métricas em `module_decea/modelagem.py`.
 
 As siglas e os termos técnicos dos notebooks (METAR, NOTAM, IMC, PR-AUC...) estão explicados em [`docs/glossario.md`](docs/glossario.md).
 

@@ -19,30 +19,46 @@ from module_decea.vra import carregar_vra, voos_regulares_domesticos
 
 AEROPORTOS = ["SBGR", "SBSP", "SBKP", "SBCF", "SBBR", "SBGL", "SBRJ", "SBPA", "SBCT", "SBRF"]
 
-# Alvo: faixa de atraso da partida (minutos). Até 30 min = dentro da tolerância usada pela ANAC.
-# A faixa 15–30 min foi unida à primeira: era a mais ruidosa e quase impossível de separar.
-LIMITES = [-np.inf, 30, 60, np.inf]
-FAIXAS = ["até 30 min", "30–60 min", "> 60 min"]
+# Alvo: a partida atrasa mais de 30 min? (tolerância usada pela ANAC)
+# Histórico: começou com 4 faixas (até 15, 15–30, 30–60, > 60) e depois 3 (até 30, 30–60, > 60). Mesmo treinando
+# com 2011–2025, separar 30–60 de > 60 ficou com precisão e recall de 24–40%, então o alvo virou binário.
+LIMITES = [-np.inf, 30, np.inf]
+FAIXAS = ["até 30 min", "> 30 min"]
 HORIZONTES = {"vespera": None, "3h": 3, "1h": 1}
 
-# Feriados nacionais de 2025 (inclui Carnaval, ponto facultativo com grande efeito na malha)
-FERIADOS = pd.to_datetime(
-    [
-        "2025-01-01",
-        "2025-03-03",
-        "2025-03-04",
-        "2025-04-18",
-        "2025-04-21",
-        "2025-05-01",
-        "2025-06-19",
-        "2025-09-07",
-        "2025-10-12",
-        "2025-11-02",
-        "2025-11-15",
-        "2025-11-20",
-        "2025-12-25",
-    ]
-)
+
+def _pascoa(ano):
+    """Domingo de Páscoa (algoritmo de Meeus/Jones/Butcher)."""
+    a, b, c = ano % 19, ano // 100, ano % 100
+    d, e = b // 4, b % 4
+    g = (8 * b + 13) // 25
+    h = (19 * a + b - d - g + 15) % 30
+    i, k = c // 4, c % 4
+    l_ = (32 + 2 * e + 2 * i - h - k) % 7
+    m = (a + 11 * h + 22 * l_) // 451
+    mes = (h + l_ - 7 * m + 114) // 31
+    dia = (h + l_ - 7 * m + 114) % 31 + 1
+    return pd.Timestamp(ano, mes, dia)
+
+
+def feriados(anos):
+    """Feriados nacionais (inclui Carnaval, ponto facultativo com grande efeito na malha)."""
+    datas = []
+    for ano in anos:
+        p = _pascoa(ano)
+        datas += [
+            pd.Timestamp(ano, m, d) for m, d in [(1, 1), (4, 21), (5, 1), (9, 7), (10, 12), (11, 2), (11, 15), (12, 25)]
+        ]
+        datas += [
+            p - pd.Timedelta(days=48),
+            p - pd.Timedelta(days=47),
+            p - pd.Timedelta(days=2),
+            p + pd.Timedelta(days=60),
+        ]
+        if ano >= 2024:  # Consciência Negra virou feriado nacional em 2024
+            datas.append(pd.Timestamp(ano, 11, 20))
+    return pd.DatetimeIndex(sorted(datas))
+
 
 CAT = ["empresa", "origem", "destino", "aeronave"]
 CLIMA_ATUAL = [
@@ -66,7 +82,9 @@ TENDENCIA = ["vis_m", "teto_ft", "vento_kt", "spread", "qnh"]
 # --------------------------------------------------------------------------------------------------------------------
 def carregar_metar_horario():
     """METAR de hora cheia dos 10 aeroportos, em grade horária completa (horas sem boletim ficam NaN)."""
-    m = pd.concat([carregar_iem(RAW_DATA_DIR / f"metar/{icao}.csv") for icao in AEROPORTOS], ignore_index=True)
+    # Um arquivo por aeroporto e ano (SBGR_2014.csv) ou o arquivo único antigo (SBGR.csv)
+    arquivos = [f for icao in AEROPORTOS for f in sorted((RAW_DATA_DIR / "metar").glob(f"{icao}*.csv"))]
+    m = pd.concat([carregar_iem(f) for f in arquivos], ignore_index=True)
     m = m[~m["speci"]].drop_duplicates(["icao", "hora_utc"])
     m["spread"] = m["temp_c"] - m["orvalho_c"]  # ar perto da saturação -> nevoeiro
     cols = [
@@ -92,15 +110,42 @@ def carregar_metar_horario():
     return m.set_index(["icao", "hora_utc"])[cols].reindex(grade).reset_index()
 
 
-def carregar_voos():
+def _so_rede(df):
+    """Filtro aplicado na leitura: voo regular doméstico tocando um dos 10 aeroportos."""
+    return (
+        (df["di"] == "0") & (df["tipo_linha"] == "N") & (df["origem"].isin(AEROPORTOS) | df["destino"].isin(AEROPORTOS))
+    )
+
+
+# Períodos com dados incompletos ou atípicos no VRA (ver notebook 03): ficam fora quando se carregam vários anos
+PERIODOS_ANOMALOS = [
+    ("2014-06-01", "2014-08-01"),  # junho e julho de 2014 vêm vazios da ANAC
+    ("2017-08-01", "2018-04-01"),  # cerca de metade dos voos (uma companhia ausente nos arquivos)
+    ("2020-01-01", "2022-01-01"),  # pandemia
+]
+
+
+def carregar_vra_rede(anos=(2025,), sem_anomalias=True):
+    """VRA já filtrado (regular, doméstico, tocando os 10 aeroportos). Base para carregar_voos e carregar_chegadas."""
+    v = voos_regulares_domesticos(carregar_vra(anos=anos, filtro=_so_rede))
+    v = v.drop(columns=["di", "tipo_linha", "situacao"])
+    if sem_anomalias:
+        for ini, fim in PERIODOS_ANOMALOS:
+            v = v[~v["partida_prev"].between(pd.Timestamp(ini), pd.Timestamp(fim), inclusive="left")]
+    for c in ["empresa", "aeronave", "origem", "destino"]:  # poucos valores distintos: categoria economiza memória
+        v[c] = v[c].astype("category")
+    return v.reset_index(drop=True)
+
+
+def carregar_voos(anos=(2025,), vra=None):
     """Voos regulares domésticos saindo dos 10 aeroportos (inclui cancelados, usados só para contar a demanda)."""
-    v = voos_regulares_domesticos(carregar_vra())
+    v = carregar_vra_rede(anos) if vra is None else vra
     v = v[v["origem"].isin(AEROPORTOS)].copy()
     v["partida_utc"] = v["partida_prev"] + pd.Timedelta(hours=3)
     v["hora_bin"] = v["partida_utc"].dt.floor("h")
     v["dia"] = v["partida_prev"].dt.normalize()  # dia local
-    v["voo_id"] = v["empresa"] + v["voo"].astype(str)
-    v["rota"] = v["origem"] + "-" + v["destino"]
+    v["voo_id"] = v["empresa"].astype(str) + v["voo"].astype(str)
+    v["rota"] = v["origem"].astype(str) + "-" + v["destino"].astype(str)
     # Partida real horas antes da prevista (22 voos) = data registrada errada no VRA -> fora
     v["realizado"] = ~v["cancelado"] & v["atraso_partida_min"].ge(-60)
     v["faixa"] = pd.cut(v["atraso_partida_min"], LIMITES, labels=False, right=True)
@@ -108,9 +153,9 @@ def carregar_voos():
     return v.reset_index(drop=True)
 
 
-def carregar_chegadas():
+def carregar_chegadas(anos=(2025,), vra=None):
     """Todos os voos regulares domésticos que chegam aos 10 aeroportos (vindos de qualquer origem)."""
-    t = voos_regulares_domesticos(carregar_vra())
+    t = carregar_vra_rede(anos) if vra is None else vra
     t = t[t["destino"].isin(AEROPORTOS) & t["chegada_prev"].notna()]
     cols = {
         "destino": "origem",
@@ -143,63 +188,72 @@ def _programacao(v):
     f["partidas_dia_origem"] = v.groupby(["origem", "dia"])["voo"].transform("size")
     f["partidas_dia_rede"] = v.groupby("dia")["voo"].transform("size")
     # Distância até o feriado mais próximo, em dias (negativo = depois do feriado), limitada a ±7
-    d = v["dia"].values[:, None] - FERIADOS.values[None, :]
-    dias = (d / np.timedelta64(1, "D")).astype(float)
-    mais_perto = dias[np.arange(len(v)), np.abs(dias).argmin(axis=1)]
-    f["dias_ate_feriado"] = np.clip(-mais_perto, -7, 7)
-    f["feriado"] = (mais_perto == 0).astype(int)
+    # calculado por dia distinto (poucos milhares) e depois mapeado para os voos
+    fer = feriados(range(v["dia"].dt.year.min() - 1, v["dia"].dt.year.max() + 2))
+    dias_unicos = pd.DatetimeIndex(v["dia"].unique())
+    d = (dias_unicos.values[:, None] - fer.values[None, :]) / np.timedelta64(1, "D")
+    mais_perto = pd.Series(d[np.arange(len(dias_unicos)), np.abs(d).argmin(axis=1)], index=dias_unicos)
+    mp = v["dia"].map(mais_perto).to_numpy()
+    f["dias_ate_feriado"] = np.clip(-mp, -7, 7)
+    f["feriado"] = (mp == 0).astype(int)
     return f
 
 
 def _historico_mensal(v, chave, nome, suav=20):
     """Taxa de atraso > 30 min da chave (voo, rota...) usando só os meses ANTERIORES ao do voo (sem olhar o futuro).
 
-    Suavizada em direção à média global dos meses anteriores para chaves com poucos voos.
+    Acumula todos os meses anteriores (de todos os anos carregados). Suavizada em direção à média global dos
+    meses anteriores para chaves com poucos voos.
     """
-    r = v[v["realizado"]].assign(mes=lambda d: d["partida_prev"].dt.month, atr=lambda d: d["atr30"])
-    meses = range(1, 13)
+    ym = v["partida_prev"].dt.year * 12 + v["partida_prev"].dt.month - 1
+    r = v[v["realizado"]].assign(ym=ym[v["realizado"]], atr=lambda d: d["atr30"])
+    meses = range(int(ym.min()), int(ym.max()) + 1)
     # matriz chave x mês, acumulada e deslocada 1 mês -> só meses anteriores
-    k = r.pivot_table(index=chave, columns="mes", values="atr", aggfunc="sum", fill_value=0)
-    n = r.pivot_table(index=chave, columns="mes", values="atr", aggfunc="count", fill_value=0)
+    k = r.pivot_table(index=chave, columns="ym", values="atr", aggfunc="sum", fill_value=0)
+    n = r.pivot_table(index=chave, columns="ym", values="atr", aggfunc="count", fill_value=0)
     k = k.reindex(columns=meses, fill_value=0).cumsum(axis=1).shift(1, axis=1, fill_value=0)
     n = n.reindex(columns=meses, fill_value=0).cumsum(axis=1).shift(1, axis=1, fill_value=0)
-    glob = r.groupby("mes")["atr"].agg(["sum", "count"]).reindex(meses, fill_value=0).cumsum().shift(1)
-    prior = (glob["sum"] / glob["count"]).rename("prior")
+    glob = r.groupby("ym")["atr"].agg(["sum", "count"]).reindex(meses, fill_value=0).cumsum().shift(1)
+    prior = (glob["sum"] / glob["count"].replace(0, np.nan)).rename("prior")
     t = (
         pd.DataFrame({"k": k.stack(), "n": n.stack()})
-        .rename_axis([chave, "mes"])
+        .rename_axis([chave, "ym"])
         .reset_index()
-        .merge(prior, left_on="mes", right_index=True, how="left")
+        .merge(prior, left_on="ym", right_index=True, how="left")
     )
     t[f"hist_{nome}_taxa30"] = (t["k"] + suav * t["prior"]) / (t["n"] + suav)
     t[f"hist_{nome}_n"] = t["n"]
-    t.loc[t["prior"].isna(), [f"hist_{nome}_taxa30"]] = np.nan  # janeiro: ainda não há histórico
-    chaves = v[[chave]].assign(mes=v["partida_prev"].dt.month)
+    t.loc[t["prior"].isna(), [f"hist_{nome}_taxa30"]] = np.nan  # 1º mês: ainda não há histórico
+    chaves = v[[chave]].assign(ym=ym)
     return (
-        chaves.merge(t[[chave, "mes", f"hist_{nome}_taxa30", f"hist_{nome}_n"]], on=[chave, "mes"], how="left")
-        .drop(columns=[chave, "mes"])
+        chaves.merge(t[[chave, "ym", f"hist_{nome}_taxa30", f"hist_{nome}_n"]], on=[chave, "ym"], how="left")
+        .drop(columns=[chave, "ym"])
         .set_index(v.index)
     )
 
 
 def _voo_ultimos_7_dias(v):
-    """Desempenho do mesmo voo (empresa + número) nos 7 dias anteriores."""
+    """Desempenho do mesmo voo (empresa + número) nos 7 dias anteriores (janela d-7 .. d-1)."""
     # atraso limitado a [-60, 600] min: o VRA tem registros com data errada (ex.: -2889 min)
     r = v[v["realizado"]].assign(atr=lambda d: d["atr30"], atraso=lambda d: d["atraso_partida_min"].clip(-60, 600))
-    d = r.groupby(["voo_id", "dia"]).agg(k=("atr", "sum"), n=("atr", "size"), atraso=("atraso", "mean"))
-    dias = pd.date_range(v["dia"].min(), v["dia"].max(), freq="D")
-    d = d.reindex(pd.MultiIndex.from_product([d.index.levels[0], dias], names=["voo_id", "dia"]))
-    d["atraso_soma"] = d["atraso"] * d["n"]
-    g = d[["k", "n", "atraso_soma"]].fillna(0).groupby(level=0)
-    rol = g.rolling(7, min_periods=1).sum().droplevel(0)
-    rol = rol.groupby(level=0).shift(1)  # janela d-7 .. d-1
+    d = r.groupby(["voo_id", "dia"]).agg(k=("atr", "sum"), n=("atr", "size"), atraso_soma=("atraso", "sum"))
+    d = d.reset_index().sort_values(["voo_id", "dia"])
+    # d está ordenado por voo e dia, e o groupby (sort=True) devolve as linhas nessa mesma ordem
+    rol = d.groupby("voo_id", sort=True).rolling("7D", on="dia", closed="left")[["k", "n", "atraso_soma"]].sum()
+    d[["k7", "n7", "s7"]] = rol[["k", "n", "atraso_soma"]].to_numpy()
+    n7 = d["n7"].replace(0, np.nan)
     out = pd.DataFrame(
-        {"voo7d_taxa30": rol["k"] / rol["n"], "voo7d_atraso_medio": rol["atraso_soma"] / rol["n"], "voo7d_n": rol["n"]}
+        {
+            "voo_id": d["voo_id"],
+            "dia": d["dia"],
+            "voo7d_taxa30": d["k7"] / n7,
+            "voo7d_atraso_medio": d["s7"] / n7,
+            "voo7d_n": d["n7"].fillna(0),
+        }
     )
-    out = out.replace([np.inf, -np.inf], np.nan)
     return (
         v[["voo_id", "dia"]]
-        .merge(out.reset_index(), on=["voo_id", "dia"], how="left")
+        .merge(out, on=["voo_id", "dia"], how="left")
         .drop(columns=["voo_id", "dia"])
         .set_index(v.index)
     )
@@ -321,8 +375,12 @@ def _cia_recente(v, h):
 def _casar_chegada(v, chegadas):
     """Voo de chegada provável: o último da mesma companhia e mesmo modelo de avião chegando na origem
     pelo menos 25 min antes da partida (giro mínimo), em até 4 h. Sem a matrícula, é uma aproximação."""
-    esq = v[["empresa", "aeronave", "origem", "partida_prev"]].assign(
-        idx=np.arange(len(v)), chave_t=v["partida_prev"] - pd.Timedelta(minutes=25)
+    chaves = ["empresa", "aeronave", "origem"]
+    chegadas = chegadas.astype({c: str for c in chaves})
+    esq = (
+        v[["empresa", "aeronave", "origem", "partida_prev"]]
+        .astype({c: str for c in chaves})
+        .assign(idx=np.arange(len(v)), chave_t=v["partida_prev"] - pd.Timedelta(minutes=25))
     )
     m = pd.merge_asof(
         esq.sort_values("chave_t"),
@@ -366,7 +424,7 @@ def _voo_chegada(v, m, h):
 # Montagem
 # --------------------------------------------------------------------------------------------------------------------
 def montar(horizonte="3h", voos=None, metar=None, chegadas=None):
-    """Devolve (X, y, info) só com voos realizados. y = faixa 0..2. info = datas e atraso para análise."""
+    """Devolve (X, y, info) só com voos realizados. y = 1 se atrasou > 30 min. info = datas e atraso para análise."""
     if horizonte not in HORIZONTES:
         raise ValueError(f"horizonte deve ser um de {list(HORIZONTES)}")
     h = HORIZONTES[horizonte]
@@ -386,7 +444,10 @@ def montar(horizonte="3h", voos=None, metar=None, chegadas=None):
     ]
     if h is not None:
         partes += [_clima_no_instante(v, metar, h), _propagacao(v, h), _cia_recente(v, h), _voo_chegada(v, m, h)]
+    # float32 em cada bloco antes de juntar: metade da memória (com vários anos faz diferença)
+    partes = [p.astype({c: "float32" for c in p.select_dtypes("number").columns}) for p in partes]
     X = pd.concat(partes, axis=1)
+    del partes
 
     ok = v["realizado"].values
     info = v.loc[ok, ["partida_prev", "dia", "empresa", "voo", "origem", "destino", "atraso_partida_min"]]
