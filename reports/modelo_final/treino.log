@@ -1,0 +1,38 @@
+[  120s] dados 2011–2025: 5,656,294 voos
+[  150s] 1 h antes: 66 variáveis | treino 3,524,330 | val 480,293 | teste 973,986
+[  273s]   {'learning_rate': 0.05, 'max_iter': 150, 'max_leaf_nodes': 31, 'min_samples_leaf': 100, 'l2_regularization': 1.0} -> log loss 2023 = 0.2392
+[  367s]   {'learning_rate': 0.05, 'max_iter': 150, 'max_leaf_nodes': 15, 'min_samples_leaf': 1000, 'l2_regularization': 5.0, 'max_features': 0.5} -> log loss 2023 = 0.2413
+[  619s]   {'learning_rate': 0.05, 'max_iter': 400, 'max_leaf_nodes': 31, 'min_samples_leaf': 100, 'l2_regularization': 1.0} -> log loss 2023 = 0.2371
+[  834s]   {'learning_rate': 0.05, 'max_iter': 400, 'max_leaf_nodes': 15, 'min_samples_leaf': 1000, 'l2_regularization': 5.0, 'max_features': 0.5} -> log loss 2023 = 0.2387
+[ 1145s] 1 h antes: limiar 0.2 | {'nome': '1 h antes', 'limiar': 0.2, 'log_loss': 0.2271, 'ROC-AUC': 0.7857, 'PR-AUC': 0.3651, 'prevalência': 0.0798, 'precisão': 0.3837, 'recall': 0.3916, 'F1': 0.3876, '% voos com alerta': 0.0815, 'pontos_operacao': [{'recall': 0.2, 'precisão': 0.6082, 'limiar': 0.4225}, {'recall': 0.3, 'precisão': 0.4789, 'limiar': 0.286}, {'recall': 0.4, 'precisão': 0.3751, 'limiar': 0.1932}, {'recall': 0.5, 'precisão': 0.2922, 'limiar': 0.1316}, {'recall': 0.6, 'precisão': 0.2288, 'limiar': 0.0914}], 'confusao': [[94.54, 5.46], [60.84, 39.16]]}
+[ 1145s]   janela {'janela': 'desde 2011', 'voos_treino': 4004623, 'pr_auc': 0.3651, 'log_loss': 0.2271}
+[ 1298s]   janela {'janela': 'desde 2016', 'voos_treino': 2065100, 'pr_auc': 0.3693, 'log_loss': 0.2265}
+[ 1343s]   janela {'janela': 'só 2023', 'voos_treino': 480293, 'pr_auc': 0.3643, 'log_loss': 0.2278}
+[ 1399s] 3 h antes: 66 variáveis | treino 3,524,330 | val 480,293 | teste 973,986
+[ 1945s] 3 h antes: limiar 0.14 | {'nome': '3 h antes', 'limiar': 0.14, 'log_loss': 0.2476, 'ROC-AUC': 0.7324, 'PR-AUC': 0.2545, 'prevalência': 0.0798, 'precisão': 0.2495, 'recall': 0.366, 'F1': 0.2967, '% voos com alerta': 0.1171, 'pontos_operacao': [{'recall': 0.2, 'precisão': 0.3711, 'limiar': 0.2404}, {'recall': 0.3, 'precisão': 0.2899, 'limiar': 0.1709}, {'recall': 0.4, 'precisão': 0.2335, 'limiar': 0.1277}, {'recall': 0.5, 'precisão': 0.1959, 'limiar': 0.0999}, {'recall': 0.6, 'precisão': 0.1651, 'limiar': 0.0792}], 'confusao': [[90.45, 9.55], [63.4, 36.6]]}
+[ 1965s] Véspera: 31 variáveis | treino 3,524,330 | val 480,293 | teste 973,986
+[ 2237s] Véspera: limiar 0.12 | {'nome': 'Véspera', 'limiar': 0.12, 'log_loss': 0.2582, 'ROC-AUC': 0.6963, 'PR-AUC': 0.191, 'prevalência': 0.0798, 'precisão': 0.1923, 'recall': 0.365, 'F1': 0.2519, '% voos com alerta': 0.1515, 'pontos_operacao': [{'recall': 0.2, 'precisão': 0.2589, 'limiar': 0.1809}, {'recall': 0.3, 'precisão': 0.2138, 'limiar': 0.1385}, {'recall': 0.4, 'precisão': 0.182, 'limiar': 0.1115}, {'recall': 0.5, 'precisão': 0.158, 'limiar': 0.0919}, {'recall': 0.6, 'precisão': 0.1399, 'limiar': 0.077}], 'confusao': [[86.7, 13.3], [63.5, 36.5]]}
+[ 2259s] pronto: /home/runner/work/FlightDelayPredictor/FlightDelayPredictor/web/public/data
+	Command being timed: "uv run python -m module_decea.exportar_web --desde 2011"
+	User time (seconds): 4167.33
+	System time (seconds): 29.93
+	Percent of CPU this job got: 185%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 37:42.56
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 9467500
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 23
+	Minor (reclaiming a frame) page faults: 3403129
+	Voluntary context switches: 12511
+	Involuntary context switches: 19788
+	Swaps: 0
+	File system inputs: 7048
+	File system outputs: 123720
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 0
