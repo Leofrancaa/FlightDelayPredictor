@@ -1,6 +1,14 @@
+import dynamic from "next/dynamic";
 import BarraProbabilidade from "./BarraProbabilidade";
+import { COORDENADAS } from "@/lib/coordenadas";
 import { ALERTA, COR, STATUS, descreverAtraso, pct } from "@/lib/faixas";
 import type { Horizonte, Indice, Voo } from "@/lib/types";
+
+// three.js só carrega no navegador e só quando um voo é aberto.
+const GloboVoo = dynamic(() => import("./GloboVoo"), {
+  ssr: false,
+  loading: () => <div className="h-[22rem] rounded-lg bg-painel sm:h-[30rem]" aria-hidden />,
+});
 
 function Previsao({ titulo, p, alerta, limiar }: { titulo: string; p: number; alerta: 0 | 1; limiar?: number }) {
   return (
@@ -64,6 +72,19 @@ export default function DetalheVoo({
           </span>
         </h2>
       </header>
+
+      {COORDENADAS[voo.o] && COORDENADAS[voo.d] && (
+        <div className="mb-5">
+          <GloboVoo
+            origem={COORDENADAS[voo.o]}
+            destino={COORDENADAS[voo.d]}
+            siglaOrigem={voo.o}
+            siglaDestino={voo.d}
+            horario={voo.h}
+            atraso={voo.a}
+          />
+        </div>
+      )}
 
       <div className="grid gap-4 md:grid-cols-3">
         <Previsao titulo="Na véspera" p={voo.pv} alerta={voo.fv} limiar={limiares?.vespera} />
