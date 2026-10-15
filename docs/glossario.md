@@ -313,7 +313,20 @@ Termos que só aparecem no TAF:
 | **Propagação de atraso** | Um atraso empurra os voos seguintes do mesmo avião e da mesma tripulação. Por isso a taxa de atraso cresce ao longo do dia. |
 | **Disrupção** | Período em que a operação normal se rompe, com muitos atrasos e cancelamentos ao mesmo tempo (ex.: 10/12/2025). |
 | **Programação** | Grupo de variáveis da seção 8.1 do notebook 02 conhecidas antes do voo: empresa, rota, horário, avião, assentos, número de partidas na hora. |
-| **Fuso horário do VRA** | O arquivo não diz, mas os horários estão em horário de Brasília (UTC−3), enquanto o METAR está em UTC. Por isso `juntar_clima` soma 3 h (`deslocamento_h=3`) antes de cruzar as duas bases. |
+| **Fuso horário do VRA** | O arquivo não diz, mas os horários estão no horário oficial de Brasília, que até fev/2019 tinha horário de verão (UTC−2 de outubro/novembro a fevereiro). O METAR está em UTC. Prova: no início do horário de verão, os voos de Recife, Salvador, Fortaleza, Belém e Manaus (sem horário de verão) não mudam de horário no VRA, e só os internacionais de GRU (que seguem o UTC) andam 1 h. Por isso o projeto converte com o fuso `America/Sao_Paulo` (`para_utc` em `features.py`), que soma 2 h no verão até 2019 e 3 h no resto. Somar 3 h fixas desalinharia o clima em 1 h justo na época de trovoadas. |
+
+### 8.1 Problemas nos dados da ANAC
+
+Medidos nos voos regulares domésticos que saem dos 10 aeroportos (planilha `reports/qualidade_dados.xlsx`).
+
+| Problema | O que acontece | Tratamento |
+|---|---|---|
+| **Jun e jul de 2014 vazios** | Os arquivos da ANAC só têm o cabeçalho (desde 2022, sem como recuperar). | Fora (`PERIODOS_ANOMALOS`). |
+| **Partida real em branco (out/2015 a mar/2018)** | 45% a 61% dos voos realizados sem partida real; por companhia, TAM ~80%, Avianca ~78%, Gol ~69%, Azul ~17%. A coluna de situação da partida também vem vazia. Os vazios não são aleatórios: entre os voos com horário a taxa de atraso > 30 min fica em 10–21% (alta demais) e, contando os vazios como "no horário", em 3–10% (baixa demais). Além disso a Gol quase some de ago/2017 a jan/2018. | O período inteiro fica fora. Antes só ago/2017 a mar/2018 era excluído. |
+| **Cancelamentos 2011 a mar/2018** | 4% a 19% dos voos programados, contra 1% a 3% depois. Parece mudança de critério da ANAC (não confirmado). | Cancelados não entram no alvo, mas mexem nas variáveis de demanda programada e de voo de chegada cancelado. O treino compara "todos os meses válidos desde 2011" com "só desde abr/2018". |
+| **Horário de verão (até fev/2019)** | Ver "Fuso horário do VRA". | Conversão com `America/Sao_Paulo`. |
+| **Pandemia (2020–2021)** | Malha e atrasos atípicos. | Fora. |
+| **Voo de chegada sem partida real** | Antes da correção, um voo de chegada cancelado ou sem registro era tratado como "ainda no solo", com atraso falso crescendo com o tempo. | Agora vira desconhecido; só conta como "preso no solo" o voo que decolou depois do instante de referência. |
 
 ## 9. Machine learning e mineração de dados
 

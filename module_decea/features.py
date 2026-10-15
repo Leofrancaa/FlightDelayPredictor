@@ -7,7 +7,8 @@ Horizontes (o modelo só pode usar o que já se sabe no instante de referência)
                instante, tendência do clima nas 3 h anteriores, atraso recente na origem, no destino, na rede e
                da própria companhia, e o atraso já conhecido do voo que deve trazer o avião (voo de chegada).
 
-Os horários do VRA estão em Brasília (UTC-3); o METAR está em UTC.
+Os horários do VRA estão no horário oficial de Brasília, que até fev/2019 tinha horário de verão (UTC-2); o METAR
+está em UTC. A conversão usa o fuso America/Sao_Paulo, que conhece esse histórico (ver para_utc).
 """
 
 import numpy as np
@@ -117,12 +118,32 @@ def _so_rede(df):
     )
 
 
-# Períodos com dados incompletos ou atípicos no VRA (ver notebook 03): ficam fora quando se carregam vários anos
+# Períodos com dados incompletos ou atípicos no VRA (ver docs/glossario.md): ficam fora quando se carregam vários anos
 PERIODOS_ANOMALOS = [
     ("2014-06-01", "2014-08-01"),  # junho e julho de 2014 vêm vazios da ANAC
-    ("2017-08-01", "2018-04-01"),  # cerca de metade dos voos (uma companhia ausente nos arquivos)
+    # 45–61% dos voos realizados sem partida real (TAM, Avianca e Gol; a Gol ainda some de ago/2017 a jan/2018).
+    # Os vazios não são aleatórios: entre os conhecidos o atraso fica alto demais e, contando os vazios como
+    # "no horário", baixo demais. Não há como recuperar: o período inteiro fica fora.
+    ("2015-10-01", "2018-04-01"),
     ("2020-01-01", "2022-01-01"),  # pandemia
 ]
+
+FUSO = "America/Sao_Paulo"  # horário oficial de Brasília, com o horário de verão até fev/2019
+
+
+def para_utc(t):
+    """Horário de Brasília (VRA, sem fuso) -> UTC sem fuso. Na hora repetida do fim do horário de verão assume o
+    horário padrão; na hora que não existe (início) empurra para a frente."""
+    return (
+        t.dt.tz_localize(FUSO, ambiguous=np.zeros(len(t), dtype=bool), nonexistent="shift_forward")
+        .dt.tz_convert("UTC")
+        .dt.tz_localize(None)
+    )
+
+
+def para_local(t):
+    """UTC sem fuso -> horário de Brasília sem fuso."""
+    return t.dt.tz_localize("UTC").dt.tz_convert(FUSO).dt.tz_localize(None)
 
 
 def carregar_vra_rede(anos=(2025,), sem_anomalias=True):
@@ -141,7 +162,7 @@ def carregar_voos(anos=(2025,), vra=None):
     """Voos regulares domésticos saindo dos 10 aeroportos (inclui cancelados, usados só para contar a demanda)."""
     v = carregar_vra_rede(anos) if vra is None else vra
     v = v[v["origem"].isin(AEROPORTOS)].copy()
-    v["partida_utc"] = v["partida_prev"] + pd.Timedelta(hours=3)
+    v["partida_utc"] = para_utc(v["partida_prev"])
     v["hora_bin"] = v["partida_utc"].dt.floor("h")
     v["dia"] = v["partida_prev"].dt.normalize()  # dia local
     v["voo_id"] = v["empresa"].astype(str) + v["voo"].astype(str)
@@ -266,7 +287,7 @@ def _dia_anterior(v, metar):
     org["dia"] += pd.Timedelta(days=1)
     rede = r.groupby("dia")["atr"].mean().rename("ontem_taxa30_rede").reset_index()
     rede["dia"] += pd.Timedelta(days=1)
-    m = metar.assign(dia=(metar["hora_utc"] - pd.Timedelta(hours=3)).dt.normalize() + pd.Timedelta(days=1))
+    m = metar.assign(dia=para_local(metar["hora_utc"]).dt.normalize() + pd.Timedelta(days=1))
     clima = (
         m.groupby(["icao", "dia"])
         .agg(
@@ -349,7 +370,7 @@ def _propagacao(v, h):
 
     # Acumulado do dia (local) na origem até a última hora observável
     loc = por_ap.reset_index()
-    loc["dia"] = (loc["hora_bin"] - pd.Timedelta(hours=3)).dt.normalize()
+    loc["dia"] = para_local(loc["hora_bin"]).dt.normalize()
     loc[["k_dia", "n_dia"]] = loc.groupby(["ap", "dia"])[["k", "n"]].cumsum()
     loc = loc.set_index(["ap", "hora_bin"])
     j = loc.reindex(pd.MultiIndex.from_arrays([v["origem"], ultima]))
@@ -405,8 +426,9 @@ def _voo_chegada(v, m, h):
     ref = (v["partida_prev"] - pd.Timedelta(hours=h)).values
     pp, pr = m["in_partida_prev"].values, m["in_partida_real"].values
     partiu = ~pd.isna(pr) & (pr <= ref)
-    # Ainda não decolou mas já passou 30 min do horário: atraso é pelo menos (ref - previsto)
-    preso = ~partiu & ~pd.isna(pp) & (pp + np.timedelta64(30, "m") <= ref)
+    # Ainda não decolou mas já passou 30 min do horário: atraso é pelo menos (ref - previsto). Só vale para voos
+    # que decolaram depois de ref: cancelado ou sem partida real registrada não é "preso no solo", é desconhecido.
+    preso = ~pd.isna(pr) & (pr > ref) & ~pd.isna(pp) & (pp + np.timedelta64(30, "m") <= ref)
     atraso = np.where(partiu, (pr - pp) / np.timedelta64(1, "m"), np.nan)
     atraso = np.where(preso, (ref - pp) / np.timedelta64(1, "m"), atraso)
     cancelado_ja_sabido = m["in_cancelado"].fillna(False).values.astype(bool) & ~pd.isna(pp) & (pp <= ref)
