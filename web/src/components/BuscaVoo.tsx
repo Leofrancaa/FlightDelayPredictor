@@ -100,6 +100,7 @@ export default function BuscaVoo() {
   const [busca, setBusca] = useState("");
   const [aeroporto, setAeroporto] = useState("SBGR");
   const [periodo, setPeriodo] = useState("");
+  const [soRisco, setSoRisco] = useState(false);
   const [selecionado, setSelecionado] = useState<Voo | null>(null);
   const [mostrar, setMostrar] = useState(PAGINA);
   const [limiares, setLimiares] = useState<Partial<Record<Horizonte, number>>>({});
@@ -138,11 +139,11 @@ export default function BuscaVoo() {
     return m;
   }, [indice]);
 
-  useEffect(() => setMostrar(PAGINA), [data, busca, aeroporto, periodo]);
+  useEffect(() => setMostrar(PAGINA), [data, busca, aeroporto, periodo, soRisco]);
   const fechar = useCallback(() => setSelecionado(null), []);
 
   const buscando = busca.trim() !== "";
-  const filtrados = useMemo(() => {
+  const naVista = useMemo(() => {
     if (!voos) return [];
     const { iata, numero } = lerBusca(busca);
     const empresa = iata ? iataParaIcao[iata] : null;
@@ -154,6 +155,8 @@ export default function BuscaVoo() {
       return (!aeroporto || v.o === aeroporto) && hora >= p.de && hora < p.ate;
     });
   }, [voos, busca, buscando, aeroporto, periodo, iataParaIcao]);
+  const comRisco = useMemo(() => naVista.filter((v) => v.f1), [naVista]);
+  const filtrados = soRisco && !buscando ? comRisco : naVista;
 
   if (erro) return <p className="mt-6 rounded-md border border-[var(--f3)] bg-cartao p-4">{erro}</p>;
   if (!indice) return <p className="mt-6 text-tinta-2">Carregando…</p>;
@@ -165,7 +168,7 @@ export default function BuscaVoo() {
   const iataDe = (v: Voo) => indice.empresas[v.e]?.[1] ?? v.e;
   const d = data ? new Date(`${data}T12:00:00`) : null;
   const dataLonga = d ? `${DIAS[d.getDay()]} ${data.slice(8)} ${MESES[d.getMonth()]} ${data.slice(0, 4)}` : "";
-  const chaveAnim = `${data}|${aeroporto}|${periodo}|${buscando ? busca : ""}`;
+  const chaveAnim = `${data}|${aeroporto}|${periodo}|${soRisco}|${buscando ? busca : ""}`;
   const i = data ? indice.datas.indexOf(data) : -1;
 
   return (
@@ -252,7 +255,19 @@ export default function BuscaVoo() {
                 {p.id && <span className="ml-1 text-white/40">{String(p.de).padStart(2, "0")}–{String(p.ate).padStart(2, "0")}h</span>}
               </button>
             ))}
-            <span className="ml-auto shrink-0 self-center pl-3 text-[15px] text-white/50">
+            <button
+              type="button"
+              aria-pressed={soRisco}
+              onClick={() => setSoRisco((x) => !x)}
+              className={`ml-auto flex shrink-0 items-center gap-2 rounded border px-3 py-1 text-[15px] ${
+                soRisco ? "border-[#e55a4c] bg-[#e55a4c]/20 text-white" : "border-white/15 text-white/70 hover:text-white"
+              }`}
+            >
+              <span className={`inline-block h-2.5 w-2.5 rounded-full bg-[#e55a4c] ${soRisco ? "piscar" : ""}`} aria-hidden />
+              Só risco de atraso
+              <span className="rounded bg-black/30 px-1.5 text-white/80">{voos ? comRisco.length : "–"}</span>
+            </button>
+            <span className="shrink-0 self-center pl-3 text-[15px] text-white/50">
               {voos ? `${filtrados.length.toLocaleString("pt-BR")} ${filtrados.length === 1 ? "voo" : "voos"}` : "carregando…"}
             </span>
           </div>
@@ -268,7 +283,9 @@ export default function BuscaVoo() {
 
         {voos && filtrados.length === 0 && (
           <p className="px-5 py-8 text-white/70">
-            {buscando ? "Nenhum voo com esse número nesse dia. Tente só o número, sem a companhia." : "Nenhuma partida nesse período."}
+            {buscando ? "Nenhum voo com esse número nesse dia. Tente só o número, sem a companhia." : soRisco
+                ? "Nenhum voo com risco de atraso nesse período. Bom sinal!"
+                : "Nenhuma partida nesse período."}
           </p>
         )}
 
