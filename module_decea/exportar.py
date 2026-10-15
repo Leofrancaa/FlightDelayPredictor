@@ -16,6 +16,7 @@ import pandas as pd
 
 from module_decea.config import PROCESSED_DATA_DIR, RAW_DATA_DIR
 from module_decea.dataset import baixar_metar_iem, baixar_vra
+from module_decea.features import para_utc
 from module_decea.metar import carregar_iem
 from module_decea.vra import carregar_vra, voos_regulares_domesticos
 
@@ -77,7 +78,7 @@ def montar_base(ano=2025):
     v["dia_semana"] = v["partida_prev"].dt.dayofweek
     v["hora"] = v["partida_prev"].dt.hour
     # VRA está em horário de Brasília (ver notebook 02, seção 6) -> +3 h para casar com o METAR em UTC
-    v["hora_utc"] = (v["partida_prev"] + pd.Timedelta(hours=3)).dt.floor("h")
+    v["hora_utc"] = para_utc(v["partida_prev"]).dt.floor("h")
 
     w = metar[["icao", "hora_utc"] + COLS_CLIMA]
     for lado, chave in [("o", "origem"), ("d", "destino")]:

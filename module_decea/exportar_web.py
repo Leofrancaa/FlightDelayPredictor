@@ -316,9 +316,11 @@ def main():
             prior = np.tile([1 - y[tr].mean(), y[tr].mean()], (len(y_te), 1))
             resumo["chute"] = {m: _r(v) for m, v in M.metricas(y_te, prior, 0.5).items()}
             # Quanto histórico de treino vale a pena (mesmos hiperparâmetros, mesmo teste)
-            janelas = [(f"desde {a.desde}", tr), ("desde 2016", tr & (ano >= 2016)), ("só 2023", val)]
+            # "desde abr/2018": só a fase com o critério atual de cancelamento da ANAC (2–3% contra 5–19% antes)
+            recente = (info["partida_prev"] >= "2018-04-01").to_numpy()
+            janelas = [(f"desde {a.desde} (meses válidos)", tr), ("desde abr/2018", tr & recente), ("só 2023", val)]
             for nome_j, m_j in janelas:
-                if nome_j == "desde 2016" and a.desde >= 2016:
+                if nome_j == "desde abr/2018" and a.desde >= 2018:
                     continue
                 p_j = p_te if m_j is tr else M.hgb(**params).fit(X[m_j], y[m_j]).predict_proba(X[te])
                 resumo["janelas"].append(
