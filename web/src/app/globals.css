@@ -80,3 +80,42 @@ body {
     transition: none !important;
   }
 }
+
+/* Painel de partidas: plaquinhas que "viram" como num painel de palhetas (split-flap) */
+.flap {
+  display: inline-block;
+  min-width: 0.72em;
+  margin-right: 1px;
+  padding: 0 0.08em;
+  border-radius: 2px;
+  background: linear-gradient(#1d2a38 50%, #17222e 50%);
+  box-shadow: inset 0 -1px 0 #0a1017;
+  text-align: center;
+  animation: virar 0.5s cubic-bezier(0.3, 0.7, 0.4, 1) both;
+  animation-delay: calc(var(--i, 0) * 28ms);
+  transform-origin: 50% 50%;
+}
+
+@keyframes virar {
+  0% {
+    transform: rotateX(90deg);
+    opacity: 0.2;
+  }
+  60% {
+    transform: rotateX(-12deg);
+    opacity: 1;
+  }
+  100% {
+    transform: rotateX(0);
+  }
+}
+
+@keyframes piscar {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.piscar {
+  animation: piscar 1.6s ease-in-out infinite;
+}
