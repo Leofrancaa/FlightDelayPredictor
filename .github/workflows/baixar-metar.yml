@@ -13,6 +13,18 @@ on:
         description: "Último ano"
         default: "2024"
         required: true
+      estacoes:
+        description: "Estações ICAO, separadas por vírgula"
+        default: "SBGR,SBSP,SBKP,SBCF,SBBR,SBGL,SBRJ,SBPA,SBCT,SBRF"
+        required: true
+      release:
+        description: "Release de destino"
+        default: "dados-vra"
+        required: true
+      prefixo:
+        description: "Prefixo dos zips (METAR para o Brasil, METAR_EUA para os EUA)"
+        default: "METAR"
+        required: true
 
 permissions:
   contents: write
@@ -25,9 +37,9 @@ jobs:
         run: |
           python3 - <<'EOF'
           import pathlib, time, urllib.request
-          AEROPORTOS = ["SBGR", "SBSP", "SBKP", "SBCF", "SBBR", "SBGL", "SBRJ", "SBPA", "SBCT", "SBRF"]
+          AEROPORTOS = [e.strip() for e in "${{ inputs.estacoes }}".split(",")]
           for ano in range(${{ inputs.ano_inicio }}, ${{ inputs.ano_fim }} + 1):
-              pasta = pathlib.Path(f"METAR_{ano}")
+              pasta = pathlib.Path(f"${{ inputs.prefixo }}_{ano}")
               pasta.mkdir()
               for icao in AEROPORTOS:
                   url = ("https://mesonet.agron.iastate.edu/cgi-bin/request/asos.py"
@@ -50,8 +62,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release view dados-vra --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 || \
-            gh release create dados-vra --repo "$GITHUB_REPOSITORY" --title "Dados VRA (ANAC)" --notes "Dados brutos."
-          for d in METAR_*; do zip -9 -r -q "$d.zip" "$d"; done
-          ls -lh METAR_*.zip
-          gh release upload dados-vra METAR_*.zip --clobber --repo "$GITHUB_REPOSITORY"
+          R="${{ inputs.release }}"; P="${{ inputs.prefixo }}"
+          gh release view "$R" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 || \
+            gh release create "$R" --repo "$GITHUB_REPOSITORY" --title "$R" --notes "Dados brutos."
+          for d in ${P}_[0-9]*; do zip -9 -r -q "$d.zip" "$d"; done
+          ls -lh ${P}_*.zip
+          gh release upload "$R" ${P}_*.zip --clobber --repo "$GITHUB_REPOSITORY"
