@@ -1,0 +1,75 @@
+# Baixa o On-Time Performance da BTS (EUA) na nuvem do GitHub, guarda só as colunas e os voos do experimento
+# (voos que saem de ou chegam aos 10 maiores aeroportos dos EUA) e publica um parquet por ano na Release "dados-bts".
+# Uso: aba Actions -> "Baixar BTS (EUA)" -> Run workflow.
+name: Baixar BTS (EUA)
+
+on:
+  workflow_dispatch:
+    inputs:
+      anos:
+        description: "Anos, separados por vírgula"
+        default: "2022,2023,2024"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  preparar:
+    runs-on: ubuntu-latest
+    outputs:
+      anos: ${{ steps.anos.outputs.anos }}
+    steps:
+      - id: anos
+        run: python3 -c "import json; print('anos=' + json.dumps([a.strip() for a in '${{ inputs.anos }}'.split(',')]))" >> "$GITHUB_OUTPUT"
+      - name: Criar a Release dados-bts (se ainda não existir)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view dados-bts --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 || \
+          gh release create dados-bts --repo "$GITHUB_REPOSITORY" --title "Dados BTS (EUA)" \
+            --notes "On-Time Performance da BTS (transtats.bts.gov), filtrado: voos que tocam os 10 maiores aeroportos dos EUA, colunas do experimento. Um parquet por ano."
+
+  baixar:
+    needs: preparar
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        ano: ${{ fromJSON(needs.preparar.outputs.anos) }}
+    steps:
+      - name: Instalar pandas e pyarrow
+        run: pip install --quiet pandas pyarrow
+      - name: Baixar e filtrar ${{ matrix.ano }}
+        run: |
+          python3 - <<'EOF'
+          import io, subprocess, zipfile
+          import pandas as pd
+          ano = "${{ matrix.ano }}"
+          AEROPORTOS = ["ATL", "DFW", "DEN", "ORD", "LAX", "CLT", "LAS", "PHX", "MCO", "SEA"]
+          COLS = ["FlightDate", "Reporting_Airline", "Tail_Number", "Flight_Number_Reporting_Airline", "Origin", "Dest",
+                  "CRSDepTime", "DepDelay", "CRSArrTime", "ArrDelay", "Cancelled", "Diverted", "CRSElapsedTime",
+                  "Distance", "CarrierDelay", "WeatherDelay", "NASDelay", "SecurityDelay", "LateAircraftDelay"]
+          partes = []
+          for mes in range(1, 13):
+              url = f"https://transtats.bts.gov/PREZIP/On_Time_Reporting_Carrier_On_Time_Performance_1987_present_{ano}_{mes}.zip"
+              subprocess.run(["curl", "-sSfL", "--retry", "5", "--retry-delay", "20", "-A", "Mozilla/5.0", "-o", "m.zip", url], check=True)
+              z = zipfile.ZipFile("m.zip")
+              nome = [n for n in z.namelist() if n.lower().endswith(".csv")][0]
+              df = pd.read_csv(z.open(nome), usecols=COLS, dtype={"Tail_Number": str, "CRSDepTime": str, "CRSArrTime": str}, low_memory=False)
+              df = df[df["Origin"].isin(AEROPORTOS) | df["Dest"].isin(AEROPORTOS)]
+              partes.append(df)
+              print(f"{ano}-{mes:02d}: {len(df):,} voos", flush=True)
+          d = pd.concat(partes, ignore_index=True)
+          for c in ["Reporting_Airline", "Origin", "Dest"]:
+              d[c] = d[c].astype("category")
+          for c in ["DepDelay", "ArrDelay", "CRSElapsedTime", "Distance", "CarrierDelay", "WeatherDelay", "NASDelay", "SecurityDelay", "LateAircraftDelay", "Cancelled", "Diverted"]:
+              d[c] = d[c].astype("float32")
+          d.to_parquet(f"BTS_{ano}.parquet", index=False)
+          print(f"{ano}: {len(d):,} voos no total")
+          EOF
+      - name: Publicar na Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload dados-bts "BTS_${{ matrix.ano }}.parquet" --repo "$GITHUB_REPOSITORY" --clobber
