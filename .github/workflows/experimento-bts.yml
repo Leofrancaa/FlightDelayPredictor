@@ -1,0 +1,46 @@
+# Roda o experimento "quanto vale a matrícula do avião" com a BTS (EUA) na máquina do GitHub e publica o resumo
+# numa branch nova "dados/experimento-bts-<n>". Precisa da Release dados-bts (workflow "Baixar BTS (EUA)").
+name: Experimento BTS (EUA)
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Branch com o código"
+        default: "main"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  experimento:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+      - uses: astral-sh/setup-uv@v6
+      - name: Baixar dados da Release dados-bts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p data/raw/bts
+          gh release download dados-bts --repo "$GITHUB_REPOSITORY" -p 'BTS_*.parquet' -D data/raw/bts
+          ls -la data/raw/bts; free -g
+      - name: Instalar dependências
+        run: uv sync
+      - name: Rodar o experimento
+        run: /usr/bin/time -v uv run python -m module_decea.experimento_bts 2>&1 | tee experimento.log
+      - name: Publicar resultados numa branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+          destino="dados/experimento-bts-${{ github.run_number }}"
+          git checkout -b "$destino"
+          cp experimento.log reports/bts/experimento.log
+          git add reports/bts
+          git commit -m "dados: experimento BTS (run ${{ github.run_number }})"
+          git push origin "$destino"
+          echo "Resultados na branch $destino" >> "$GITHUB_STEP_SUMMARY"
