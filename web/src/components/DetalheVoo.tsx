@@ -1,7 +1,7 @@
 import dynamic from "next/dynamic";
 import BarraProbabilidade from "./BarraProbabilidade";
 import { COORDENADAS } from "@/lib/coordenadas";
-import { ALERTA, COR, STATUS, descreverAtraso, pct } from "@/lib/faixas";
+import { ALERTA, COR, descreverAtraso, pct, situacao } from "@/lib/faixas";
 import type { Horizonte, Indice, Voo } from "@/lib/types";
 
 // three.js só carrega no navegador e só quando um voo é aberto.
@@ -119,16 +119,18 @@ export default function DetalheVoo({
         <section className="rounded-md bg-pista p-4">
           <h3 className="font-semibold">O que aconteceu</h3>
           <p className="mt-1 text-lg">
-            <span className="font-semibold" style={{ color: COR[voo.f] }}>
-              {STATUS[voo.f]}
+            <span className="font-semibold" style={{ color: situacao(voo.a).cor }}>
+              {situacao(voo.a).texto}
             </span>
             : {descreverAtraso(voo.a)}.
           </p>
           <p className="mt-1 text-sm text-tinta-2">
             {voo.f1 === voo.f
-              ? "A previsão de 1 h antes acertou."
+              ? voo.f || voo.a <= 0
+                ? "A previsão de 1 h antes acertou."
+                : "A previsão de 1 h antes acertou: o alerta só cobre atrasos de mais de 30 min, e este ficou abaixo disso."
               : voo.f1
-                ? "Alarme falso: a previsão de 1 h antes avisou, mas o voo saiu dentro de 30 min."
+                ? "Alarme falso: a previsão de 1 h antes avisou, mas o atraso não passou de 30 min."
                 : "A previsão de 1 h antes não avisou deste atraso."}
           </p>
         </section>
