@@ -14,12 +14,17 @@ export default function Inicio() {
           O seu voo vai atrasar?
         </h1>
         <p className="mt-5 max-w-xl text-lg text-tinta-2">
-          Um modelo treinado com 15 anos de voos domésticos (2011–2025) nos 10 maiores aeroportos do país estima a chance
-          de cada partida atrasar mais de 30 minutos: na véspera, 3 horas e 1 hora antes do embarque.
+          Modelos que estimam a chance de cada partida atrasar mais de 30 minutos, na véspera, 3 horas e 1 hora antes do
+          embarque. No Brasil, 15 anos de voos domésticos (2011–2025) nos 10 maiores aeroportos. Nos EUA, os 10 maiores
+          aeroportos (2022–2024), com a matrícula de cada avião, que mostra o quanto essa informação faz falta nos dados da
+          ANAC.
         </p>
         <div className="mt-8 flex flex-wrap gap-3">
           <Link href="/passageiro" className="rounded-md bg-sinal px-5 py-3 font-semibold text-[#172230] hover:brightness-95">
-            Consultar um voo
+            Painel do Brasil
+          </Link>
+          <Link href="/eua/passageiro" className="rounded-md bg-painel px-5 py-3 font-semibold text-white hover:brightness-110">
+            Painel dos EUA
           </Link>
           <Link href="/analista" className="rounded-md border border-linha bg-cartao px-5 py-3 font-semibold hover:border-tinta-2">
             Ver a análise do modelo

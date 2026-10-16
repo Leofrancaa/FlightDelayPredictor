@@ -114,11 +114,12 @@ export default function GloboVoo({ origem, destino, siglaOrigem, siglaDestino, h
     let vivo = true;
     fetch("/data/globo.json")
       .then((r) => r.json())
-      .then(({ terra, brasil }: { terra: number[]; brasil: number[] }) => {
+      .then(({ terra, brasil, eua = [] }: { terra: number[]; brasil: number[]; eua?: number[] }) => {
         if (!vivo) return;
         for (const [lista, cor, tam] of [
           [terra, C.terra, 0.012],
           [brasil, C.brasil, 0.009],
+          [eua, C.brasil, 0.009],
         ] as const) {
           const pos = new Float32Array((lista.length / 2) * 3);
           for (let i = 0; i < lista.length; i += 2) {

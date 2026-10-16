@@ -102,17 +102,27 @@ export default function PainelAnalista({ r }: { r: Resumo }) {
     ...ORDEM_H.map((k) => ({ nome: NOME_H[k], m: r.modelos[k], limiar: r.modelos[k].limiar })),
   ];
   const cm = r.modelos[h].confusao;
+  const eua = r.pais === "eua";
 
   return (
     <div className="space-y-6">
       <header>
-        <h1 className="font-cond text-4xl font-semibold">Análise do modelo</h1>
+        <h1 className="font-cond text-4xl font-semibold">Análise do modelo{eua ? ": EUA" : ": Brasil"}</h1>
         <p className="mt-2 max-w-3xl text-tinta-2">
           Gradient boosting em árvores que estima a chance de uma partida atrasar mais de 30 min. Treino em{" "}
           {r.periodos.treino} ({inteiro(r.n.treino)} partidas), validação em {r.periodos.validacao} para escolher
-          hiperparâmetros e o limiar do alerta, e teste em {r.periodos.teste} ({inteiro(r.n.teste)} partidas, dois anos
-          inteiros que o modelo nunca viu). Períodos com dados incompletos ou atípicos ficam fora:{" "}
-          {r.periodos_anomalos.map(([a, b]) => `${a.slice(0, 7)} a ${b.slice(0, 7)}`).join(", ")} (fim exclusivo).
+          {eua ? "o limiar do alerta" : "hiperparâmetros e o limiar do alerta"}, e teste em {r.periodos.teste} (
+          {inteiro(r.n.teste)} partidas que o modelo nunca viu).
+          {eua
+            ? " Dados da BTS nos 10 maiores aeroportos dos EUA, com a matrícula de cada avião e METAR. Na véspera o modelo não usa nada que dependa da matrícula: a BTS registra o avião que de fato voou, e a troca de avião por causa de um atraso vazaria para o modelo."
+            : ""}
+          {r.periodos_anomalos.length > 0 && (
+            <>
+              {" "}
+              Períodos com dados incompletos ou atípicos ficam fora:{" "}
+              {r.periodos_anomalos.map(([a, b]) => `${a.slice(0, 7)} a ${b.slice(0, 7)}`).join(", ")} (fim exclusivo).
+            </>
+          )}
         </p>
       </header>
 
@@ -135,7 +145,7 @@ export default function PainelAnalista({ r }: { r: Resumo }) {
       </div>
 
       <Secao
-        titulo="Comparação dos horizontes (teste 2024–2025)"
+        titulo={`Comparação dos horizontes (teste ${r.periodos.teste})`}
         nota="Ranking (ROC-AUC, PR-AUC, log loss): quanto o modelo ordena bem o risco, sem depender de limiar. Decisão (precisão, recall, F1): no limiar escolhido em 2023 para equilibrar precisão e recall."
       >
         <div className="overflow-x-auto">
@@ -168,7 +178,7 @@ export default function PainelAnalista({ r }: { r: Resumo }) {
       </Secao>
 
       <Secao
-        titulo="Desempenho por classe (teste 2024–2025)"
+        titulo={`Desempenho por classe (teste ${r.periodos.teste})`}
         nota={`Precisão, recall e F1 de cada classe no limiar do site. "Até 30 min" parece ótimo porque ${pct(1 - m1.prevalência, 0)} dos voos já saem no horário: dizer "sem atraso" para todos daria ${pct(1 - m1.prevalência, 0)} de precisão e 100% de recall nessa classe. A classe difícil é "> 30 min".`}
       >
         <div className="overflow-x-auto">
@@ -212,6 +222,71 @@ export default function PainelAnalista({ r }: { r: Resumo }) {
           </table>
         </div>
       </Secao>
+
+      {r.matricula && r.causas && (
+        <div className="grid gap-6 lg:grid-cols-2">
+          <Secao
+            titulo="Quanto vale saber qual avião faz o voo"
+            nota="Mesmo modelo de 1 h, com o mesmo clima e o mesmo resto. Sem matrícula, o voo que traz o avião é adivinhado (o último da mesma companhia chegando na origem), como é preciso fazer com os dados da ANAC."
+          >
+            <table className="w-full text-left text-[15px]">
+              <thead className="text-sm text-tinta-2">
+                <tr className="border-b border-linha">
+                  {["Modelo", "PR-AUC", "Precisão", "Recall", "F1"].map((c) => (
+                    <th key={c} className="py-2 pr-3 font-medium">
+                      {c}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {[
+                  ["Sem matrícula (como no Brasil)", r.matricula.sem],
+                  ["Com matrícula", r.matricula.com],
+                ].map(([nome, m]) => {
+                  const x = m as typeof r.matricula.sem;
+                  return (
+                    <tr key={nome as string} className="border-b border-linha/60 last:border-0">
+                      <td className="py-2 pr-3 font-medium">{nome as string}</td>
+                      <td className="py-2 pr-3">{num(x["PR-AUC"])}</td>
+                      <td className="py-2 pr-3">{pct(x.precisão)}</td>
+                      <td className="py-2 pr-3">{pct(x.recall)}</td>
+                      <td className="py-2">{num(x.F1)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </Secao>
+          <Secao
+            titulo="Que atrasos o modelo pega"
+            nota="A BTS informa a causa de cada atraso depois do voo (por isso ela não entra no modelo). Recall do alerta de 1 h em cada causa, no teste."
+          >
+            <table className="w-full text-left text-[15px]">
+              <thead className="text-sm text-tinta-2">
+                <tr className="border-b border-linha">
+                  <th className="py-2 pr-3 font-medium">Causa</th>
+                  <th className="py-2 pr-3 font-medium">% dos atrasos</th>
+                  <th className="py-2 pr-3 font-medium">Sem matrícula</th>
+                  <th className="py-2 font-medium">Com matrícula</th>
+                </tr>
+              </thead>
+              <tbody>
+                {Object.entries(r.causas)
+                  .sort((a, b) => (b[1].parcela ?? 0) - (a[1].parcela ?? 0))
+                  .map(([c, info]) => (
+                    <tr key={c} className="border-b border-linha/60 last:border-0">
+                      <td className="py-2 pr-3">{info.descricao}</td>
+                      <td className="py-2 pr-3">{pct(info.parcela, 0)}</td>
+                      <td className="py-2 pr-3">{pct(r.matricula!.sem.recall_por_causa[c], 0)}</td>
+                      <td className="py-2 font-medium">{pct(r.matricula!.com.recall_por_causa[c], 0)}</td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+          </Secao>
+        </div>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Secao
@@ -284,7 +359,7 @@ export default function PainelAnalista({ r }: { r: Resumo }) {
       </div>
 
       <Secao
-        titulo="Sazonalidade: mês a mês em 2024–2025"
+        titulo={`Sazonalidade: mês a mês em ${r.periodos.teste}`}
         nota="PR-AUC de cada horizonte por mês. A linha tracejada é o chute (a proporção de atrasos naquele mês): o ganho do modelo é a distância até ela."
       >
         <div className="h-72 w-full">
@@ -324,7 +399,7 @@ export default function PainelAnalista({ r }: { r: Resumo }) {
       <div className="grid gap-6 lg:grid-cols-2">
         <Secao
           titulo="Quanto histórico usar"
-          nota="Mesmo modelo de 1 h e mesmo teste (2024–2025), mudando só os anos de treino."
+          nota={`Mesmo modelo de 1 h e mesmo teste (${r.periodos.teste}), mudando só os anos de treino.`}
         >
           <table className="w-full text-left text-[15px]">
             <thead className="text-sm text-tinta-2">
@@ -374,7 +449,7 @@ export default function PainelAnalista({ r }: { r: Resumo }) {
         </ul>
       </Secao>
 
-      <h2 className="pt-4 font-cond text-3xl font-semibold">Os dados de {r.desde} a 2025</h2>
+      <h2 className="pt-4 font-cond text-3xl font-semibold">Os dados de {r.desde} a {r.periodos.teste.slice(-4)}</h2>
       <p className="-mt-4 max-w-3xl text-tinta-2">
         Taxa de partidas com mais de 30 min de atraso. A linha vertical marca a média geral ({pct(media)}).
       </p>
