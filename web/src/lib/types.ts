@@ -7,6 +7,7 @@ export interface Indice {
   empresas: Record<string, [nome: string, iata: string]>;
   aeroportos: Record<string, string>;
   limiares?: Record<Horizonte, number>;
+  coordenadas?: Record<string, [lat: number, lon: number]>;
 }
 
 /** Um voo da demonstração (chaves curtas para o arquivo ficar leve). */
@@ -55,7 +56,10 @@ export interface Metricas {
   "% voos com alerta": number;
 }
 
+export type RecallCausa = Record<string, number | null>;
+
 export interface Modelo extends Metricas {
+  recall_por_causa?: RecallCausa;
   nome: string;
   limiar: number;
   pontos_operacao: { recall: number; precisão: number; limiar: number }[];
@@ -73,6 +77,12 @@ export interface Mes {
 
 export interface Resumo {
   gerado_em: string;
+  pais?: "eua";
+  causas?: Record<string, { descricao: string; parcela: number | null }>;
+  matricula?: {
+    sem: Metricas & { limiar: number; recall_por_causa: RecallCausa };
+    com: Metricas & { limiar: number; recall_por_causa: RecallCausa };
+  };
   alvo: string;
   desde: number;
   periodos: { treino: string; validacao: string; teste: string };

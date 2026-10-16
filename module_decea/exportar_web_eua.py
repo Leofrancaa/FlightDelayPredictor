@@ -97,8 +97,15 @@ DESCRICOES = {
     "distancia": "Distância",
     "duracao_prev": "Duração prevista",
 }
-for c in CLIMA:
-    DESCRICOES[f"o_{c}"] = f"{c} na origem"
+NOME_CLIMA = {
+    "vis_m": "Visibilidade", "teto_ft": "Teto de nuvens", "vento_kt": "Vento", "rajada_kt": "Rajada", "imc": "IMC",
+    "abaixo_minimos": "Abaixo dos mínimos", "trovoada": "Trovoada", "nevoeiro": "Nevoeiro", "chuva": "Chuva",
+    "spread": "Temperatura − orvalho", "qnh": "Pressão",
+}
+for c, n in NOME_CLIMA.items():
+    DESCRICOES[f"o_{c}"] = f"{n} na origem"
+    DESCRICOES[f"d_{c}"] = f"{n} no destino"
+    DESCRICOES[f"o_{c}_var3h"] = f"{n} na origem: variação em 3 h"
 log = B.log
 
 

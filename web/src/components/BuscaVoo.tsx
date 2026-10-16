@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import DetalheVoo from "./DetalheVoo";
+import { PAISES, type Pais } from "@/lib/pais";
 import type { Horizonte, Indice, Resumo, Voo } from "@/lib/types";
 
 const PAGINA = 60;
@@ -92,46 +93,49 @@ function Modal({ aberto, onFechar, titulo, children }: { aberto: boolean; onFech
   );
 }
 
-export default function BuscaVoo() {
+export default function BuscaVoo({ pais = "br" }: { pais?: Pais }) {
+  const { base, aeroporto: aeroportoPadrao, exemplo } = PAISES[pais];
   const [indice, setIndice] = useState<Indice | null>(null);
   const [data, setData] = useState("");
   const [voos, setVoos] = useState<Voo[] | null>(null);
   const [erro, setErro] = useState("");
   const [busca, setBusca] = useState("");
-  const [aeroporto, setAeroporto] = useState("SBGR");
+  const [aeroporto, setAeroporto] = useState(aeroportoPadrao);
   const [periodo, setPeriodo] = useState("");
   const [soRisco, setSoRisco] = useState(false);
   const [selecionado, setSelecionado] = useState<Voo | null>(null);
   const [mostrar, setMostrar] = useState(PAGINA);
   const [limiares, setLimiares] = useState<Partial<Record<Horizonte, number>>>({});
+  const [prevalencia, setPrevalencia] = useState<number | undefined>();
 
   useEffect(() => {
     // limiares do alerta de cada horizonte (vêm no indice; se não, do resumo do modelo)
-    fetch("/data/resumo.json")
+    fetch(`${base}/resumo.json`)
       .then((r) => (r.ok ? r.json() : null))
       .then((r: Resumo | null) => {
+        if (r?.modelos?.h1) setPrevalencia(r.modelos.h1.prevalência);
         if (r?.modelos)
           setLimiares(Object.fromEntries(Object.entries(r.modelos).map(([k, m]) => [k, m.limiar])) as Record<Horizonte, number>);
       })
       .catch(() => undefined);
-    fetch("/data/indice.json")
+    fetch(`${base}/indice.json`)
       .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
       .then((i: Indice) => {
         setIndice(i);
         setData(i.datas[0]);
       })
       .catch(() => setErro("Não encontrei os dados do modelo. Rode module_decea.exportar_web e publique de novo."));
-  }, []);
+  }, [base]);
 
   useEffect(() => {
     if (!data) return;
     setVoos(null);
     setSelecionado(null);
-    fetch(`/data/voos/${data}.json`)
+    fetch(`${base}/voos/${data}.json`)
       .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
       .then((v: Voo[]) => setVoos([...v].sort((a, b) => a.h.localeCompare(b.h))))
       .catch(() => setErro(`Não há voos para ${data}.`));
-  }, [data]);
+  }, [data, base]);
 
   const iataParaIcao = useMemo(() => {
     const m: Record<string, string> = {};
@@ -232,7 +236,7 @@ export default function BuscaVoo() {
             </div>
             <input
               type="search"
-              placeholder="Buscar voo: G3 1402"
+              placeholder={`Buscar voo: ${exemplo}`}
               aria-label="Buscar pelo número do voo"
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
@@ -351,7 +355,7 @@ export default function BuscaVoo() {
       </p>
 
       <Modal aberto={!!selecionado} onFechar={fechar} titulo="Detalhe do voo">
-        {selecionado && <DetalheVoo voo={selecionado} indice={indice} data={data} limiares={lim} />}
+        {selecionado && <DetalheVoo voo={selecionado} indice={indice} data={data} limiares={lim} prevalencia={prevalencia} />}
       </Modal>
     </div>
   );

@@ -49,12 +49,15 @@ export default function DetalheVoo({
   indice,
   data,
   limiares,
+  prevalencia = 0.08,
 }: {
   voo: Voo;
   indice: Indice;
   data: string;
   limiares?: Partial<Record<Horizonte, number>>;
+  prevalencia?: number;
 }) {
+  const coord = { ...COORDENADAS, ...indice.coordenadas };
   const [nomeEmpresa, iata] = indice.empresas[voo.e] ?? [voo.e, voo.e];
   const sinais = motivos(voo);
   const dataBr = new Date(`${data}T12:00:00`).toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" });
@@ -73,11 +76,11 @@ export default function DetalheVoo({
         </h2>
       </header>
 
-      {COORDENADAS[voo.o] && COORDENADAS[voo.d] && (
+      {coord[voo.o] && coord[voo.d] && (
         <div className="mb-5">
           <GloboVoo
-            origem={COORDENADAS[voo.o]}
-            destino={COORDENADAS[voo.d]}
+            origem={coord[voo.o]}
+            destino={coord[voo.d]}
             siglaOrigem={voo.o}
             siglaDestino={voo.d}
             horario={voo.h}
@@ -93,7 +96,7 @@ export default function DetalheVoo({
       </div>
 
       <p className="mt-3 text-sm text-tinta-2">
-        Só cerca de 8% dos voos atrasam mais de 30 min, então o alerta dispara quando a chance fica bem acima do
+        Só cerca de {Math.round(prevalencia * 100)}% dos voos atrasam mais de 30 min, então o alerta dispara quando a chance fica bem acima do
         normal, mesmo abaixo de 50%. Quanto mais perto da partida, mais o modelo sabe e mais confiável fica o alerta.
       </p>
 
