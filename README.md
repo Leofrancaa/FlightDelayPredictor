@@ -17,6 +17,8 @@ Depois abra os notebooks em `notebooks/` e selecione o kernel `.venv`:
 3. `03_modelo_atraso.ipynb`: primeira versão do modelo (faixas de atraso, só 2025). Mantido como histórico.
 4. `04_modelo_final.ipynb`: modelo final, **binário**: a partida atrasa mais de 30 min? Previsto na véspera, 3 h e 1 h antes. Dados de 2011 a 2025 (sem os períodos anômalos), treino até 2022, validação 2023 (hiperparâmetros e limiar do alerta), teste 2024–2025. Lê `reports/modelo_final/resumo.json`, gerado por `uv run python -m module_decea.exportar_web` (ou pelo workflow *Treinar modelo final* no GitHub Actions). Variáveis em `module_decea/features.py`, métricas em `module_decea/modelagem.py`.
 
+5. **Experimento BTS (EUA)**: `module_decea/experimento_bts.py` testa quanto vale saber qual avião faz cada voo (matrícula, que o VRA não tem). Mesmo tipo de modelo nos 10 maiores aeroportos dos EUA, treino 2022, validação 2023, teste 2024. Resultado (1 h antes, atraso > 30 min): sem matrícula PR-AUC 0,41, precisão 37%, recall 48%; com matrícula PR-AUC 0,72, precisão 69%, recall 60%. Por causa do atraso (informada pela BTS depois do voo), o modelo com matrícula pega 84% dos atrasos por "avião chegou atrasado", mas só 34% dos atrasos da companhia (manutenção, tripulação, embarque). Resumo em `reports/bts/resumo.json`; dados via workflows *Baixar BTS (EUA)* e *Experimento BTS (EUA)*.
+
 As siglas e os termos técnicos dos notebooks (METAR, NOTAM, IMC, PR-AUC...) estão explicados em [`docs/glossario.md`](docs/glossario.md).
 
 Outros comandos: `make test`, `make lint`, `make format`, `make clean` (`make` sozinho lista todos).
