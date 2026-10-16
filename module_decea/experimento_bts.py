@@ -16,8 +16,8 @@ avião atrasado), que a BTS informa depois do voo e que, por isso, não entra co
 """
 
 import argparse
-import os
 import json
+import os
 from pathlib import Path
 import time
 
@@ -30,7 +30,7 @@ from module_decea import modelagem as M
 AEROPORTOS = ["ATL", "DFW", "DEN", "ORD", "LAX", "CLT", "LAS", "PHX", "MCO", "SEA"]
 PARAMS = {
     "learning_rate": 0.05,
-    "max_iter": int(os.environ.get("BTS_ITER", 400)),
+    "max_iter": int(os.environ.get("BTS_ITER", "400")),
     "max_leaf_nodes": 31,
     "min_samples_leaf": 100,
     "l2_regularization": 1.0,
@@ -78,7 +78,10 @@ def carregar(pasta, anos=(2022, 2023, 2024)):
     d["realizado"] = ~d["cancelado"] & d["DepDelay"].notna()
     d["atr30"] = d["realizado"] & (d["DepDelay"] > 30)
     d["tail"] = d["Tail_Number"].where(d["Tail_Number"].fillna("").str.len() >= 3)
-    d["voo_id"] = d["Reporting_Airline"].astype(str) + d["Flight_Number_Reporting_Airline"].astype(str)
+    num = d["Flight_Number_Reporting_Airline"].astype("Int64").astype(str)
+    d["voo_id"] = (d["Reporting_Airline"].astype(str) + num).astype("category")
+    d["tail"] = d["tail"].astype("category")
+    d = d.drop(columns=["Tail_Number", "FlightDate", "Cancelled"])  # strings pesadas que não são mais usadas
     return d.sort_values("dep_utc").reset_index(drop=True)
 
 
@@ -114,9 +117,13 @@ def historico(v):
     j = pd.DataFrame({"ch": chave, "ym": ym}).merge(g, on=["ch", "ym"], how="left")
     f["hist_rota_cia"] = (j["sum"] / j["size"]).to_numpy()
     dia = v["dep_local"].dt.normalize()
-    dd = r.assign(dia=dia[r.index]).groupby(["voo_id", "dia"])["atr30"].agg(["sum", "size"]).reset_index()
+    dd = (
+        r.assign(dia=dia[r.index]).groupby(["voo_id", "dia"], observed=True)["atr30"].agg(["sum", "size"]).reset_index()
+    )
     dd = dd.sort_values(["voo_id", "dia"])
-    rol = dd.groupby("voo_id").rolling("7D", on="dia", closed="left")[["sum", "size"]].sum().reset_index()
+    rol = (
+        dd.groupby("voo_id", observed=True).rolling("7D", on="dia", closed="left")[["sum", "size"]].sum().reset_index()
+    )
     dd[["s7", "n7"]] = rol[["sum", "size"]].to_numpy()
     j = pd.DataFrame({"voo_id": v["voo_id"], "dia": dia}).merge(
         dd[["voo_id", "dia", "s7", "n7"]], on=["voo_id", "dia"], how="left"
@@ -125,12 +132,12 @@ def historico(v):
     return f
 
 
-def recente(v, todos):
+def recente(v, todos, h=H):
     """Atraso recente (mesma regra do Brasil: só horas até ref - 2 h, janela de 3 h) na origem, na companhia na
     origem e na companhia na rede."""
     f = pd.DataFrame(index=v.index)
     r = todos[todos["realizado"]].assign(hb=lambda x: x["dep_utc"].dt.floor("h"))
-    ultima = (v["dep_utc"] - pd.Timedelta(hours=H)).dt.floor("h") - pd.Timedelta(hours=2)
+    ultima = (v["dep_utc"] - pd.Timedelta(hours=h)).dt.floor("h") - pd.Timedelta(hours=2)
     for nome, chave in [
         ("origem", ["Origin"]),
         ("cia_origem", ["Origin", "Reporting_Airline"]),
@@ -146,9 +153,9 @@ def recente(v, todos):
     return f
 
 
-def _chegada(v, m, prefixo="chegada"):
+def _chegada(v, m, prefixo="chegada", h=H):
     """O que se sabe do voo de chegada `m` (alinhado a `v`) 1 h antes da partida."""
-    ref = (v["dep_utc"] - pd.Timedelta(hours=H)).to_numpy()
+    ref = (v["dep_utc"] - pd.Timedelta(hours=h)).to_numpy()
     pp, pr, ap, ar = (m[c].to_numpy() for c in ["dep_utc", "dep_real", "arr_prev", "arr_real"])
     tem = ~pd.isna(pp)
     partiu = ~pd.isna(pr) & (pr <= ref)
@@ -176,7 +183,7 @@ def _chegada(v, m, prefixo="chegada"):
 COLS_M = ["dep_utc", "dep_real", "arr_prev", "arr_real", "DepDelay", "ArrDelay", "cancelado"]
 
 
-def chegada_sem_matricula(v, todos):
+def chegada_sem_matricula(v, todos, h=H):
     """Como no Brasil: último voo da mesma companhia chegando na origem >= 25 min antes, em até 4 h."""
     cheg = todos[["Reporting_Airline", "Dest", *COLS_M]].rename(columns={"Dest": "Origin", "dep_utc": "dep_utc_m"})
     cheg = cheg.astype({"Reporting_Airline": str, "Origin": str}).sort_values("arr_prev")
@@ -196,32 +203,36 @@ def chegada_sem_matricula(v, todos):
     )
     m = m.sort_values("idx").reset_index(drop=True).rename(columns={"dep_utc_m": "dep_utc"})
     m.index = v.index
-    return _chegada(v, m)
+    return _chegada(v, m, h=h)
 
 
 def _anterior_do_aviao(todos, n=1):
     """Para cada voo (índice de `todos`), o n-ésimo voo anterior do mesmo avião."""
     t = todos[todos["tail"].notna()].sort_values(["tail", "dep_utc"])
-    ant = t.groupby("tail")[COLS_M + ["Dest"]].shift(n)
+    ant = t.groupby("tail", observed=True)[COLS_M + ["Dest"]].shift(n)
     ant.index = t.index
     return ant
 
 
-def chegada_com_matricula(v, todos, extras=False):
+def chegada_com_matricula(v, todos, extras=False, h=H):
     ant = _anterior_do_aviao(todos).reindex(v.index)
     valido = (ant["Dest"].astype(str) == v["Origin"].astype(str)) & (
         v["dep_utc"] - ant["arr_prev"] <= pd.Timedelta(hours=12)
     )
     m = ant.where(valido)
-    f = _chegada(v, m)
+    # Sem tempo de solo, folga e "achou": a BTS grava o avião que de fato voou, e quando a companhia troca o avião
+    # por causa de um atraso o tempo de solo do avião novo denuncia a troca (vazamento). O atraso conhecido do voo
+    # anterior do avião fica: 1 h antes da partida o avião designado já é conhecido.
+    f = _chegada(v, m, h=h).drop(columns=["chegada_giro_min", "chegada_folga", "chegada_achou"])
+    f.attrs["achou"] = float(valido.mean())
     if extras:
-        ref = (v["dep_utc"] - pd.Timedelta(hours=H)).to_numpy()
+        ref = (v["dep_utc"] - pd.Timedelta(hours=h)).to_numpy()
         ant2 = _anterior_do_aviao(todos, 2).reindex(v.index).where(valido)
         pr2 = ant2["dep_real"].to_numpy()
         f["aviao_atraso_2_voos_antes"] = np.where(~pd.isna(pr2) & (pr2 <= ref), ant2["DepDelay"].to_numpy(), np.nan)
         t = todos[todos["tail"].notna()].sort_values(["tail", "dep_utc"])
         dia = t["dep_utc"].dt.floor("D")
-        legs = t.groupby(["tail", dia]).cumcount()
+        legs = t.groupby(["tail", dia], observed=True).cumcount()
         f["aviao_voos_antes_no_dia"] = legs.reindex(v.index).astype("float32")
     return f
 
@@ -303,13 +314,14 @@ def main():
     }
     for nome, f in variantes.items():
         cheg = f()
-        log(f"{nome}: voo de chegada encontrado em {cheg['chegada_achou'].mean():.1%}")
+        achou = cheg.attrs.get("achou", cheg["chegada_achou"].mean() if "chegada_achou" in cheg else np.nan)
+        log(f"{nome}: voo de chegada encontrado em {achou:.1%}")
         X = pd.concat([base, cheg], axis=1)
         for c in X.columns:
             if X[c].dtype.kind in "fi":
                 X[c] = X[c].astype("float32")
         resumo["modelos"][nome] = {
-            "achou_chegada": float(cheg["chegada_achou"].mean()),
+            "achou_chegada": float(achou),
             **avaliar(nome, X, y, ano, causa_dom, causa_ok),
         }
 

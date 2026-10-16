@@ -9,6 +9,9 @@ RE_VIS = re.compile(r"\s(\d{4})(?:\s|$)")
 RE_NUVEM = re.compile(r"\b(FEW|SCT|BKN|OVC|VV)(\d{3}|///)")
 RE_TEMP = re.compile(r"\s(M?\d{2})/(M?\d{2})\s")
 RE_QNH = re.compile(r"\bQ(\d{4})\b")
+# EUA: visibilidade em milhas terrestres ("10SM", "1/2SM", "1 1/2SM", "M1/4SM") e altímetro em polegadas ("A3021")
+RE_VIS_SM = re.compile(r"\s(?:(\d+)\s)?M?(?:(\d+)/(\d+)|(\d+))SM\b")
+RE_ALTIMETRO = re.compile(r"\bA(\d{4})\b")
 
 
 def _temp(t):
@@ -25,6 +28,9 @@ def decodificar(metar):
         d["rajada_kt"] = int(m[3]) if m[3] else np.nan
     if "CAVOK" in corpo:
         d["vis_m"], d["teto_ft"] = 9999, 99999
+    elif m := RE_VIS_SM.search(corpo):
+        milhas = (int(m[1]) if m[1] else 0) + (int(m[2]) / int(m[3]) if m[2] else int(m[4]))
+        d["vis_m"] = min(round(milhas * 1609.34), 9999)  # mesma escala do Brasil: 9999 = 10 km ou mais
     elif m := RE_VIS.search(corpo):
         d["vis_m"] = int(m[1])
     # Teto = camada BKN/OVC/VV mais baixa (em pés). Sem camada assim, céu "ilimitado".
@@ -35,6 +41,8 @@ def decodificar(metar):
         d["temp_c"], d["orvalho_c"] = _temp(m[1]), _temp(m[2])
     if m := RE_QNH.search(corpo):
         d["qnh"] = int(m[1])
+    elif m := RE_ALTIMETRO.search(corpo):
+        d["qnh"] = round(int(m[1]) / 100 * 33.8639)  # inHg -> hPa
     for fen, padrao in {"trovoada": r"\b[+-]?(?:VC)?TS", "chuva": r"\b[+-]?(?:SH|TS)?RA\b|\b[+-]?(?:SH|TS)RA",
                         "nevoeiro": r"\b(?:MI|BC|PR)?FG\b", "nevoa": r"\bBR\b", "cb": r"\d{3}CB\b"}.items():
         d[fen] = bool(re.search(padrao, corpo))
