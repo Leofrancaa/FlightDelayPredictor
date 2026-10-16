@@ -88,6 +88,7 @@ export default function GloboVoo({ origem, destino, siglaOrigem, siglaDestino, h
   const espera = Math.max(atraso, 0);
   const atrasou = espera > 0;
   const atrasoForte = atraso > 30;
+  const corAviao = atrasoForte ? "#e55a4c" : atraso > 0 ? "#e2b232" : "#ffffff";
 
   useEffect(() => {
     const el = caixa.current;
@@ -175,7 +176,7 @@ export default function GloboVoo({ origem, destino, siglaOrigem, siglaDestino, h
     cena.add(anel);
     descartar.push(geoPonto, matPonto, geoAnel, matAnel);
 
-    const real = aviao(atrasoForte ? C.atraso : C.real);
+    const real = aviao(new THREE.Color(corAviao).getHex());
     const fantasma = aviao(C.fantasma, 0.45);
     real.scale.setScalar(escala);
     fantasma.scale.setScalar(escala);
@@ -302,7 +303,7 @@ export default function GloboVoo({ origem, destino, siglaOrigem, siglaDestino, h
       renderer.dispose();
       renderer.domElement.remove();
     };
-  }, [origem, destino, horario, espera, atrasou, atrasoForte, rodada]);
+  }, [origem, destino, horario, espera, atrasou, corAviao, rodada]);
 
   return (
     <div className="overflow-hidden rounded-lg bg-painel text-painel-texto">
@@ -335,7 +336,7 @@ export default function GloboVoo({ origem, destino, siglaOrigem, siglaDestino, h
       </div>
       <ul className="flex flex-wrap gap-4 px-4 pb-3 text-xs text-white/70">
         <li className="flex items-center gap-1.5">
-          <span className="inline-block h-2 w-2 rounded-full" style={{ background: atrasoForte ? "#e55a4c" : "#fff" }} />
+          <span className="inline-block h-2 w-2 rounded-full" style={{ background: corAviao }} />
           Avião real
         </li>
         {atrasou && (

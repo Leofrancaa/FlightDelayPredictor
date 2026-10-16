@@ -12,7 +12,14 @@ export const STATUS = ["No horário", "Atrasou mais de 30 min"] as const;
  */
 export const ALERTA = ["Sem alerta", "Alerta de atraso"] as const;
 
-/** Cores: no horário / atraso (variáveis CSS definidas em globals.css). */
+/** O que aconteceu de fato. Atraso de até 30 min não é "no horário": é atraso, só não passa do critério da ANAC. */
+export function situacao(atrasoMin: number): { texto: string; cor: string; painel: string } {
+  if (atrasoMin <= 0) return { texto: "No horário", cor: "var(--f0)", painel: "#3fb394" };
+  if (atrasoMin <= 30) return { texto: "Atrasou até 30 min", cor: "var(--f1)", painel: "#e2b232" };
+  return { texto: "Atrasou mais de 30 min", cor: "var(--f3)", painel: "#e55a4c" };
+}
+
+/** Cores: até 30 min / mais de 30 min (variáveis CSS definidas em globals.css). */
 export const COR = ["var(--f0)", "var(--f3)"] as const;
 
 export const NOME_H: Record<Horizonte, string> = { vespera: "Véspera", h3: "3 h antes", h1: "1 h antes" };

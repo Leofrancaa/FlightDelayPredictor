@@ -179,7 +179,7 @@ export default function PainelAnalista({ r }: { r: Resumo }) {
 
       <Secao
         titulo={`Desempenho por classe (teste ${r.periodos.teste})`}
-        nota={`Precisão, recall e F1 de cada classe no limiar do site. "Até 30 min" parece ótimo porque ${pct(1 - m1.prevalência, 0)} dos voos já saem no horário: dizer "sem atraso" para todos daria ${pct(1 - m1.prevalência, 0)} de precisão e 100% de recall nessa classe. A classe difícil é "> 30 min".`}
+        nota={`Precisão, recall e F1 de cada classe no limiar do site. "Até 30 min" parece ótimo porque ${pct(1 - m1.prevalência, 0)} dos voos saem com no máximo 30 min de atraso: dizer "até 30 min" para todos daria ${pct(1 - m1.prevalência, 0)} de precisão e 100% de recall nessa classe. A classe difícil é "> 30 min".`}
       >
         <div className="overflow-x-auto">
           <table className="w-full min-w-[640px] text-left text-[15px]">

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import DetalheVoo from "./DetalheVoo";
+import { situacao } from "@/lib/faixas";
 import { PAISES, type Pais } from "@/lib/pais";
 import type { Horizonte, Indice, Resumo, Voo } from "@/lib/types";
 
@@ -295,7 +296,7 @@ export default function BuscaVoo({ pais = "br" }: { pais?: Pais }) {
 
         <ul key={chaveAnim} className="font-cond">
           {filtrados.slice(0, mostrar).map((v, idx) => {
-            const atraso = v.a > 30;
+            const sit = situacao(v.a);
             const inicio = Math.min(idx, 18) * 2;
             return (
               <li key={`${v.e}${v.n}${v.h}${v.o}`} className={idx % 2 ? "bg-white/[0.025]" : ""}>
@@ -320,17 +321,17 @@ export default function BuscaVoo({ pais = "br" }: { pais?: Pais }) {
                       style={{ background: v.f1 ? VERMELHO : VERDE }}
                       aria-hidden
                     />
-                    <span style={{ color: v.f1 ? VERMELHO : VERDE }}>{v.f1 ? "Risco de atraso" : "No horário"}</span>
+                    <span style={{ color: v.f1 ? VERMELHO : VERDE }}>{v.f1 ? "Risco de atraso" : "Sem alerta"}</span>
                     <span className="text-white/45">{v.p1}%</span>
                     <span className="ml-auto text-white/60 md:hidden">
-                      Partiu {somarMin(v.h, v.a)}
-                      {atraso && <span style={{ color: VERMELHO }}> +{v.a}′</span>}
+                      Partiu <span style={{ color: sit.painel }}>{somarMin(v.h, v.a)}</span>
+                      {v.a > 0 && <span style={{ color: sit.painel }}> +{v.a}′</span>}
                     </span>
                   </span>
                   <span className="hidden text-base uppercase tracking-wide md:block">
                     <span className="text-white/60">Partiu </span>
-                    <span style={{ color: atraso ? VERMELHO : "#fff" }}>{somarMin(v.h, v.a)}</span>
-                    {v.a > 5 && <span style={{ color: atraso ? VERMELHO : "rgba(255,255,255,.5)" }}> +{v.a}′</span>}
+                    <span style={{ color: v.a > 0 ? sit.painel : "#fff" }}>{somarMin(v.h, v.a)}</span>
+                    {v.a > 0 && <span style={{ color: sit.painel }}> +{v.a}′</span>}
                   </span>
                 </button>
               </li>
@@ -350,7 +351,8 @@ export default function BuscaVoo({ pais = "br" }: { pais?: Pais }) {
 
       <p className="mt-3 text-sm text-tinta-2">
         <strong className="text-tinta">Previsão</strong>: o alerta do modelo 1 h antes da partida, com a chance de atrasar
-        mais de 30 min. <strong className="text-tinta">Situação</strong>: o que aconteceu de fato. Clique num voo para ver os
+        mais de 30 min. <strong className="text-tinta">Situação</strong>: o que aconteceu de fato (em amarelo, atraso de até 30 min; em
+        vermelho, mais de 30 min). Clique num voo para ver os
         detalhes e a animação do trajeto.
       </p>
 
