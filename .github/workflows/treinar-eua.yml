@@ -1,0 +1,51 @@
+# Treina o modelo dos EUA (BTS + METAR + matrícula) na máquina do GitHub, roda de novo o experimento BTS e publica
+# os dados do site (web/public/data/eua) e os relatórios numa branch nova "dados/eua-<n>".
+name: Treinar modelo EUA
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Branch com o código"
+        default: "main"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  treinar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+      - uses: astral-sh/setup-uv@v6
+      - name: Baixar dados da Release dados-bts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p data/raw/bts data/raw/metar_eua tmp_metar
+          gh release download dados-bts --repo "$GITHUB_REPOSITORY" -p 'BTS_*.parquet' -D data/raw/bts
+          gh release download dados-bts --repo "$GITHUB_REPOSITORY" -p 'METAR_EUA_*.zip' -D tmp_metar
+          for z in tmp_metar/*.zip; do unzip -q -o -j "$z" '*.csv' -d data/raw/metar_eua; done
+          ls data/raw/bts data/raw/metar_eua | wc -l; free -g
+      - name: Instalar dependências
+        run: uv sync
+      - name: Treinar e exportar o site
+        run: /usr/bin/time -v uv run python -m module_decea.exportar_web_eua 2>&1 | tee treino_eua.log
+      - name: Experimento BTS (sem / com matrícula), sem as variáveis que vazam
+        run: uv run python -m module_decea.experimento_bts 2>&1 | tee experimento.log
+      - name: Publicar resultados numa branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+          destino="dados/eua-${{ github.run_number }}"
+          git checkout -b "$destino"
+          cp treino_eua.log reports/eua/treino.log
+          cp experimento.log reports/bts/experimento.log
+          git add web/public/data/eua reports/eua reports/bts
+          git commit -m "dados: modelo EUA treinado (run ${{ github.run_number }})"
+          git push origin "$destino"
+          echo "Resultados na branch $destino" >> "$GITHUB_STEP_SUMMARY"
