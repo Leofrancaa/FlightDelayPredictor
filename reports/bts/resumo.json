@@ -1,0 +1,247 @@
+{
+  "aeroportos": [
+    "ATL",
+    "DFW",
+    "DEN",
+    "ORD",
+    "LAX",
+    "CLT",
+    "LAS",
+    "PHX",
+    "MCO",
+    "SEA"
+  ],
+  "periodos": {
+    "treino": "2022",
+    "validacao": "2023",
+    "teste": "2024"
+  },
+  "n": {
+    "treino": 4351408,
+    "teste": 2333227
+  },
+  "prevalencia_teste": 0.14530476460284406,
+  "matricula_preenchida": 1.0,
+  "modelos": {
+    "A_sem_matricula": {
+      "achou_chegada": 0.9453962445259094,
+      "limiar": 0.21,
+      "log_loss": 0.353989367700853,
+      "ROC-AUC": 0.7549996696543435,
+      "PR-AUC": 0.41365495883084236,
+      "prevalência": 0.14530476460284406,
+      "precisão": 0.3700334764819261,
+      "recall": 0.4841621218243867,
+      "F1": 0.41947346363004456,
+      "% voos com alerta": 0.19012080693391598,
+      "pontos_operacao": [
+        {
+          "recall": 0.2,
+          "precisão": 0.5992046659597031,
+          "limiar": 0.4333193193473267
+        },
+        {
+          "recall": 0.3,
+          "precisão": 0.5018403757721683,
+          "limiar": 0.3328727227614413
+        },
+        {
+          "recall": 0.4,
+          "precisão": 0.42321219592116965,
+          "limiar": 0.2586207247906305
+        },
+        {
+          "recall": 0.5,
+          "precisão": 0.3611662689619908,
+          "limiar": 0.20206426380162407
+        },
+        {
+          "recall": 0.6,
+          "precisão": 0.31006005548273025,
+          "limiar": 0.157368818144841
+        }
+      ],
+      "recall_por_causa": {
+        "CarrierDelay": {
+          "descricao": "companhia (manutenção, tripulação, embarque...)",
+          "atrasos": 120519,
+          "recall": 0.3641251586886715
+        },
+        "WeatherDelay": {
+          "descricao": "clima extremo",
+          "atrasos": 15129,
+          "recall": 0.5302399365457069
+        },
+        "NASDelay": {
+          "descricao": "controle de tráfego / aeroporto",
+          "atrasos": 25546,
+          "recall": 0.4639082439520864
+        },
+        "SecurityDelay": {
+          "descricao": "segurança",
+          "atrasos": 850,
+          "recall": 0.4023529411764706
+        },
+        "LateAircraftDelay": {
+          "descricao": "avião chegou atrasado",
+          "atrasos": 167764,
+          "recall": 0.5769771822321833
+        },
+        "sem_causa": {
+          "descricao": "sem causa informada",
+          "atrasos": 9221,
+          "recall": 0.35245634963669886
+        }
+      }
+    },
+    "B_com_matricula": {
+      "achou_chegada": 0.9156124591827393,
+      "limiar": 0.3,
+      "log_loss": 0.24921516310982877,
+      "ROC-AUC": 0.8738989434037981,
+      "PR-AUC": 0.7166629139201816,
+      "prevalência": 0.14530476460284406,
+      "precisão": 0.6855477223427332,
+      "recall": 0.5965979311504326,
+      "F1": 0.6379873483800659,
+      "% voos com alerta": 0.12645147686015978,
+      "pontos_operacao": [
+        {
+          "recall": 0.2,
+          "precisão": 0.9962609970674486,
+          "limiar": 0.9814214210136223
+        },
+        {
+          "recall": 0.3,
+          "precisão": 0.9828294247808989,
+          "limiar": 0.9130191724267277
+        },
+        {
+          "recall": 0.4,
+          "precisão": 0.935081501503158,
+          "limiar": 0.717420238174259
+        },
+        {
+          "recall": 0.5,
+          "precisão": 0.8253894058244107,
+          "limiar": 0.4692822872688739
+        },
+        {
+          "recall": 0.6,
+          "precisão": 0.6802322081848035,
+          "limiar": 0.29492218374048573
+        }
+      ],
+      "recall_por_causa": {
+        "CarrierDelay": {
+          "descricao": "companhia (manutenção, tripulação, embarque...)",
+          "atrasos": 120519,
+          "recall": 0.3444602095935081
+        },
+        "WeatherDelay": {
+          "descricao": "clima extremo",
+          "atrasos": 15129,
+          "recall": 0.4477493555423359
+        },
+        "NASDelay": {
+          "descricao": "controle de tráfego / aeroporto",
+          "atrasos": 25546,
+          "recall": 0.36232678305801297
+        },
+        "SecurityDelay": {
+          "descricao": "segurança",
+          "atrasos": 850,
+          "recall": 0.3341176470588235
+        },
+        "LateAircraftDelay": {
+          "descricao": "avião chegou atrasado",
+          "atrasos": 167764,
+          "recall": 0.8374144631744593
+        },
+        "sem_causa": {
+          "descricao": "sem causa informada",
+          "atrasos": 9221,
+          "recall": 0.4281531287279037
+        }
+      }
+    },
+    "B+_matricula_e_cadeia": {
+      "achou_chegada": 0.9156124591827393,
+      "limiar": 0.31,
+      "log_loss": 0.24848662892882828,
+      "ROC-AUC": 0.8743780388601229,
+      "PR-AUC": 0.7183033178292765,
+      "prevalência": 0.14530476460284406,
+      "precisão": 0.6972514315460697,
+      "recall": 0.5926130213049621,
+      "F1": 0.6406879056856176,
+      "% voos com alerta": 0.12349848514525162,
+      "pontos_operacao": [
+        {
+          "recall": 0.2,
+          "precisão": 0.9966656384494484,
+          "limiar": 0.9820055264956317
+        },
+        {
+          "recall": 0.3,
+          "precisão": 0.9837221448467967,
+          "limiar": 0.9156053082708241
+        },
+        {
+          "recall": 0.4,
+          "precisão": 0.9362241199577497,
+          "limiar": 0.7177223368241583
+        },
+        {
+          "recall": 0.5,
+          "precisão": 0.8284704709401208,
+          "limiar": 0.47334310972193433
+        },
+        {
+          "recall": 0.6,
+          "precisão": 0.6857518499165641,
+          "limiar": 0.2988100948430239
+        }
+      ],
+      "recall_por_causa": {
+        "CarrierDelay": {
+          "descricao": "companhia (manutenção, tripulação, embarque...)",
+          "atrasos": 120519,
+          "recall": 0.3384445606087007
+        },
+        "WeatherDelay": {
+          "descricao": "clima extremo",
+          "atrasos": 15129,
+          "recall": 0.4396853724634807
+        },
+        "NASDelay": {
+          "descricao": "controle de tráfego / aeroporto",
+          "atrasos": 25546,
+          "recall": 0.3539888827996555
+        },
+        "SecurityDelay": {
+          "descricao": "segurança",
+          "atrasos": 850,
+          "recall": 0.3129411764705882
+        },
+        "LateAircraftDelay": {
+          "descricao": "avião chegou atrasado",
+          "atrasos": 167764,
+          "recall": 0.8363355666293126
+        },
+        "sem_causa": {
+          "descricao": "sem causa informada",
+          "atrasos": 9221,
+          "recall": 0.4181759028304956
+        }
+      }
+    }
+  },
+  "causas_teste": {
+    "CarrierDelay": 0.36542169989812257,
+    "WeatherDelay": 0.045872143792752146,
+    "NASDelay": 0.07745718721195362,
+    "SecurityDelay": 0.0025772570707805753,
+    "LateAircraftDelay": 0.5086717120263912
+  }
+}

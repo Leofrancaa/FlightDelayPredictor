@@ -1,0 +1,55 @@
+[    33s] BTS: 12,172,655 voos tocando os 10 aeroportos
+[    62s] partidas realizadas: 6,684,635 | atraso > 30: 14.147% | por ano {2022: 2120897, 2023: 2230511, 2024: 2333227}
+[    72s] A_sem_matricula: voo de chegada encontrado em 94.5%
+[   194s] A_sem_matricula: limiar 0.21
+[   380s] A_sem_matricula: PR-AUC 0.4137 | precisão 0.370 | recall 0.484 | F1 0.419
+[   393s] B_com_matricula: voo de chegada encontrado em 91.6%
+[   513s] B_com_matricula: limiar 0.3
+[   697s] B_com_matricula: PR-AUC 0.7167 | precisão 0.686 | recall 0.597 | F1 0.638
+[   736s] B+_matricula_e_cadeia: voo de chegada encontrado em 91.6%
+[   859s] B+_matricula_e_cadeia: limiar 0.31
+[  1053s] B+_matricula_e_cadeia: PR-AUC 0.7183 | precisão 0.697 | recall 0.593 | F1 0.641
+[  1053s] resumo em reports/bts/resumo.json
+{
+  "A_sem_matricula": {
+    "PR-AUC": 0.41365495883084236,
+    "precis\u00e3o": 0.3700334764819261,
+    "recall": 0.4841621218243867,
+    "F1": 0.41947346363004456
+  },
+  "B_com_matricula": {
+    "PR-AUC": 0.7166629139201816,
+    "precis\u00e3o": 0.6855477223427332,
+    "recall": 0.5965979311504326,
+    "F1": 0.6379873483800659
+  },
+  "B+_matricula_e_cadeia": {
+    "PR-AUC": 0.7183033178292765,
+    "precis\u00e3o": 0.6972514315460697,
+    "recall": 0.5926130213049621,
+    "F1": 0.6406879056856176
+  }
+}
+	Command being timed: "uv run python -m module_decea.experimento_bts"
+	User time (seconds): 1859.70
+	System time (seconds): 20.82
+	Percent of CPU this job got: 177%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 17:37.26
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 13010880
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 52
+	Minor (reclaiming a frame) page faults: 6009470
+	Voluntary context switches: 2975
+	Involuntary context switches: 10427
+	Swaps: 0
+	File system inputs: 9352
+	File system outputs: 65760
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 0
