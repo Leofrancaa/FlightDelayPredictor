@@ -1,0 +1,1116 @@
+{
+  "gerado_em": "2026-10-16T16:46:01+00:00",
+  "pais": "eua",
+  "alvo": "partida com atraso > 30 min",
+  "desde": 2022,
+  "periodos": {
+    "treino": "2022",
+    "validacao": "2023",
+    "teste": "2024"
+  },
+  "periodos_anomalos": [],
+  "horizontes": {
+    "h1": "1 h antes",
+    "h3": "3 h antes",
+    "vespera": "Véspera"
+  },
+  "hiperparametros": {
+    "learning_rate": 0.05,
+    "max_iter": 400,
+    "max_leaf_nodes": 31,
+    "min_samples_leaf": 100,
+    "l2_regularization": 1.0
+  },
+  "busca": [],
+  "n": {
+    "treino": 2120897,
+    "validacao": 2230511,
+    "teste": 2333227
+  },
+  "modelos": {
+    "h1": {
+      "nome": "1 h antes",
+      "limiar": 0.28,
+      "log_loss": 0.2809,
+      "ROC-AUC": 0.8542,
+      "PR-AUC": 0.6378,
+      "prevalência": 0.1453,
+      "precisão": 0.582,
+      "recall": 0.572,
+      "F1": 0.577,
+      "% voos com alerta": 0.1428,
+      "pontos_operacao": [
+        {
+          "recall": 0.2,
+          "precisão": 0.9369,
+          "limiar": 0.8318
+        },
+        {
+          "recall": 0.3,
+          "precisão": 0.8651,
+          "limiar": 0.6687
+        },
+        {
+          "recall": 0.4,
+          "precisão": 0.7647,
+          "limiar": 0.4875
+        },
+        {
+          "recall": 0.5,
+          "precisão": 0.6573,
+          "limiar": 0.3564
+        },
+        {
+          "recall": 0.6,
+          "precisão": 0.5535,
+          "limiar": 0.2535
+        }
+      ],
+      "confusao": [
+        [
+          93.02,
+          6.98
+        ],
+        [
+          42.8,
+          57.2
+        ]
+      ],
+      "recall_por_causa": {
+        "CarrierDelay": 0.3198,
+        "WeatherDelay": 0.5213,
+        "NASDelay": 0.4001,
+        "SecurityDelay": 0.3024,
+        "LateAircraftDelay": 0.7933
+      }
+    },
+    "h3": {
+      "nome": "3 h antes",
+      "limiar": 0.25,
+      "log_loss": 0.3248,
+      "ROC-AUC": 0.8031,
+      "PR-AUC": 0.51,
+      "prevalência": 0.1453,
+      "precisão": 0.4815,
+      "recall": 0.4989,
+      "F1": 0.49,
+      "% voos com alerta": 0.1506,
+      "pontos_operacao": [
+        {
+          "recall": 0.2,
+          "precisão": 0.7573,
+          "limiar": 0.5752
+        },
+        {
+          "recall": 0.3,
+          "precisão": 0.6599,
+          "limiar": 0.4452
+        },
+        {
+          "recall": 0.4,
+          "precisão": 0.5664,
+          "limiar": 0.3367
+        },
+        {
+          "recall": 0.5,
+          "precisão": 0.4806,
+          "limiar": 0.2491
+        },
+        {
+          "recall": 0.6,
+          "precisão": 0.4019,
+          "limiar": 0.1818
+        }
+      ],
+      "confusao": [
+        [
+          90.86,
+          9.14
+        ],
+        [
+          50.11,
+          49.89
+        ]
+      ],
+      "recall_por_causa": {
+        "CarrierDelay": 0.3152,
+        "WeatherDelay": 0.4594,
+        "NASDelay": 0.3694,
+        "SecurityDelay": 0.3329,
+        "LateAircraftDelay": 0.6631
+      }
+    },
+    "vespera": {
+      "nome": "Véspera",
+      "limiar": 0.18,
+      "log_loss": 0.3802,
+      "ROC-AUC": 0.706,
+      "PR-AUC": 0.2941,
+      "prevalência": 0.1453,
+      "precisão": 0.2798,
+      "recall": 0.4999,
+      "F1": 0.3588,
+      "% voos com alerta": 0.2596,
+      "pontos_operacao": [
+        {
+          "recall": 0.2,
+          "precisão": 0.3876,
+          "limiar": 0.3166
+        },
+        {
+          "recall": 0.3,
+          "precisão": 0.3455,
+          "limiar": 0.2604
+        },
+        {
+          "recall": 0.4,
+          "precisão": 0.31,
+          "limiar": 0.2161
+        },
+        {
+          "recall": 0.5,
+          "precisão": 0.2797,
+          "limiar": 0.18
+        },
+        {
+          "recall": 0.6,
+          "precisão": 0.2529,
+          "limiar": 0.1495
+        }
+      ],
+      "confusao": [
+        [
+          78.12,
+          21.88
+        ],
+        [
+          50.01,
+          49.99
+        ]
+      ],
+      "recall_por_causa": {
+        "CarrierDelay": 0.4143,
+        "WeatherDelay": 0.4555,
+        "NASDelay": 0.5358,
+        "SecurityDelay": 0.4741,
+        "LateAircraftDelay": 0.5647
+      }
+    }
+  },
+  "mensal": {
+    "h1": [
+      {
+        "mes": "2024-01",
+        "voos": 175359,
+        "prevalencia": 0.1614,
+        "pr_auc": 0.6535,
+        "precisao": 0.5787,
+        "recall": 0.5994
+      },
+      {
+        "mes": "2024-02",
+        "voos": 171700,
+        "prevalencia": 0.0982,
+        "pr_auc": 0.539,
+        "precisao": 0.5697,
+        "recall": 0.4433
+      },
+      {
+        "mes": "2024-03",
+        "voos": 194544,
+        "prevalencia": 0.1457,
+        "pr_auc": 0.6253,
+        "precisao": 0.5652,
+        "recall": 0.5611
+      },
+      {
+        "mes": "2024-04",
+        "voos": 193497,
+        "prevalencia": 0.1311,
+        "pr_auc": 0.5971,
+        "precisao": 0.5572,
+        "recall": 0.5312
+      },
+      {
+        "mes": "2024-05",
+        "voos": 201956,
+        "prevalencia": 0.1983,
+        "pr_auc": 0.7035,
+        "precisao": 0.6011,
+        "recall": 0.6501
+      },
+      {
+        "mes": "2024-06",
+        "voos": 201603,
+        "prevalencia": 0.1837,
+        "pr_auc": 0.6659,
+        "precisao": 0.5696,
+        "recall": 0.6283
+      },
+      {
+        "mes": "2024-07",
+        "voos": 204380,
+        "prevalencia": 0.23,
+        "pr_auc": 0.7348,
+        "precisao": 0.612,
+        "recall": 0.7013
+      },
+      {
+        "mes": "2024-08",
+        "voos": 203573,
+        "prevalencia": 0.1683,
+        "pr_auc": 0.6549,
+        "precisao": 0.5801,
+        "recall": 0.5984
+      },
+      {
+        "mes": "2024-09",
+        "voos": 195379,
+        "prevalencia": 0.1039,
+        "pr_auc": 0.5519,
+        "precisao": 0.5541,
+        "recall": 0.4678
+      },
+      {
+        "mes": "2024-10",
+        "voos": 204800,
+        "prevalencia": 0.0856,
+        "pr_auc": 0.4994,
+        "precisao": 0.5819,
+        "recall": 0.3833
+      },
+      {
+        "mes": "2024-11",
+        "voos": 190745,
+        "prevalencia": 0.0933,
+        "pr_auc": 0.5205,
+        "precisao": 0.5755,
+        "recall": 0.4242
+      },
+      {
+        "mes": "2024-12",
+        "voos": 195691,
+        "prevalencia": 0.1338,
+        "pr_auc": 0.6045,
+        "precisao": 0.5839,
+        "recall": 0.5188
+      }
+    ],
+    "h3": [
+      {
+        "mes": "2024-01",
+        "voos": 175359,
+        "prevalencia": 0.1614,
+        "pr_auc": 0.5245,
+        "precisao": 0.4828,
+        "recall": 0.5241
+      },
+      {
+        "mes": "2024-02",
+        "voos": 171700,
+        "prevalencia": 0.0982,
+        "pr_auc": 0.4006,
+        "precisao": 0.4551,
+        "recall": 0.3608
+      },
+      {
+        "mes": "2024-03",
+        "voos": 194544,
+        "prevalencia": 0.1457,
+        "pr_auc": 0.5012,
+        "precisao": 0.4609,
+        "recall": 0.4999
+      },
+      {
+        "mes": "2024-04",
+        "voos": 193497,
+        "prevalencia": 0.1311,
+        "pr_auc": 0.4645,
+        "precisao": 0.4443,
+        "recall": 0.4615
+      },
+      {
+        "mes": "2024-05",
+        "voos": 201956,
+        "prevalencia": 0.1983,
+        "pr_auc": 0.5847,
+        "precisao": 0.5117,
+        "recall": 0.58
+      },
+      {
+        "mes": "2024-06",
+        "voos": 201603,
+        "prevalencia": 0.1837,
+        "pr_auc": 0.5412,
+        "precisao": 0.4704,
+        "recall": 0.5786
+      },
+      {
+        "mes": "2024-07",
+        "voos": 204380,
+        "prevalencia": 0.23,
+        "pr_auc": 0.6296,
+        "precisao": 0.5267,
+        "recall": 0.6492
+      },
+      {
+        "mes": "2024-08",
+        "voos": 203573,
+        "prevalencia": 0.1683,
+        "pr_auc": 0.525,
+        "precisao": 0.4784,
+        "recall": 0.5291
+      },
+      {
+        "mes": "2024-09",
+        "voos": 195379,
+        "prevalencia": 0.1039,
+        "pr_auc": 0.3969,
+        "precisao": 0.4377,
+        "recall": 0.3635
+      },
+      {
+        "mes": "2024-10",
+        "voos": 204800,
+        "prevalencia": 0.0856,
+        "pr_auc": 0.3382,
+        "precisao": 0.4455,
+        "recall": 0.267
+      },
+      {
+        "mes": "2024-11",
+        "voos": 190745,
+        "prevalencia": 0.0933,
+        "pr_auc": 0.3758,
+        "precisao": 0.4553,
+        "recall": 0.3217
+      },
+      {
+        "mes": "2024-12",
+        "voos": 195691,
+        "prevalencia": 0.1338,
+        "pr_auc": 0.4685,
+        "precisao": 0.4812,
+        "recall": 0.4304
+      }
+    ],
+    "vespera": [
+      {
+        "mes": "2024-01",
+        "voos": 175359,
+        "prevalencia": 0.1614,
+        "pr_auc": 0.2681,
+        "precisao": 0.2639,
+        "recall": 0.4884
+      },
+      {
+        "mes": "2024-02",
+        "voos": 171700,
+        "prevalencia": 0.0982,
+        "pr_auc": 0.1838,
+        "precisao": 0.2081,
+        "recall": 0.2517
+      },
+      {
+        "mes": "2024-03",
+        "voos": 194544,
+        "prevalencia": 0.1457,
+        "pr_auc": 0.2944,
+        "precisao": 0.274,
+        "recall": 0.5301
+      },
+      {
+        "mes": "2024-04",
+        "voos": 193497,
+        "prevalencia": 0.1311,
+        "pr_auc": 0.2348,
+        "precisao": 0.2369,
+        "recall": 0.4469
+      },
+      {
+        "mes": "2024-05",
+        "voos": 201956,
+        "prevalencia": 0.1983,
+        "pr_auc": 0.3381,
+        "precisao": 0.3165,
+        "recall": 0.5913
+      },
+      {
+        "mes": "2024-06",
+        "voos": 201603,
+        "prevalencia": 0.1837,
+        "pr_auc": 0.3326,
+        "precisao": 0.2925,
+        "recall": 0.6403
+      },
+      {
+        "mes": "2024-07",
+        "voos": 204380,
+        "prevalencia": 0.23,
+        "pr_auc": 0.4231,
+        "precisao": 0.3485,
+        "recall": 0.7524
+      },
+      {
+        "mes": "2024-08",
+        "voos": 203573,
+        "prevalencia": 0.1683,
+        "pr_auc": 0.3335,
+        "precisao": 0.2969,
+        "recall": 0.6102
+      },
+      {
+        "mes": "2024-09",
+        "voos": 195379,
+        "prevalencia": 0.1039,
+        "pr_auc": 0.1732,
+        "precisao": 0.1995,
+        "recall": 0.2372
+      },
+      {
+        "mes": "2024-10",
+        "voos": 204800,
+        "prevalencia": 0.0856,
+        "pr_auc": 0.149,
+        "precisao": 0.1886,
+        "recall": 0.1631
+      },
+      {
+        "mes": "2024-11",
+        "voos": 190745,
+        "prevalencia": 0.0933,
+        "pr_auc": 0.1642,
+        "precisao": 0.2038,
+        "recall": 0.1904
+      },
+      {
+        "mes": "2024-12",
+        "voos": 195691,
+        "prevalencia": 0.1338,
+        "pr_auc": 0.2142,
+        "precisao": 0.2215,
+        "recall": 0.3946
+      }
+    ]
+  },
+  "janelas": [
+    {
+      "janela": "2022–2023",
+      "voos_treino": 4351408,
+      "pr_auc": 0.6378,
+      "log_loss": 0.2809
+    },
+    {
+      "janela": "só 2023",
+      "voos_treino": 2230511,
+      "pr_auc": 0.6359,
+      "log_loss": 0.2816
+    }
+  ],
+  "causas": {
+    "CarrierDelay": {
+      "descricao": "companhia (manutenção, tripulação, embarque...)",
+      "parcela": 0.3654
+    },
+    "WeatherDelay": {
+      "descricao": "clima extremo",
+      "parcela": 0.0459
+    },
+    "NASDelay": {
+      "descricao": "controle de tráfego / aeroporto",
+      "parcela": 0.0775
+    },
+    "SecurityDelay": {
+      "descricao": "segurança",
+      "parcela": 0.0026
+    },
+    "LateAircraftDelay": {
+      "descricao": "avião chegou atrasado",
+      "parcela": 0.5087
+    }
+  },
+  "chute": {
+    "log_loss": 0.4146,
+    "ROC-AUC": 0.5,
+    "PR-AUC": 0.1453,
+    "prevalência": 0.1453,
+    "precisão": null,
+    "recall": 0.0,
+    "F1": 0.0,
+    "% voos com alerta": 0.0
+  },
+  "matricula": {
+    "sem": {
+      "limiar": 0.21,
+      "log_loss": 0.3513,
+      "ROC-AUC": 0.7596,
+      "PR-AUC": 0.4234,
+      "prevalência": 0.1453,
+      "precisão": 0.3791,
+      "recall": 0.4848,
+      "F1": 0.4255,
+      "% voos com alerta": 0.1858,
+      "recall_por_causa": {
+        "CarrierDelay": 0.3577,
+        "WeatherDelay": 0.5825,
+        "NASDelay": 0.4754,
+        "SecurityDelay": 0.3835,
+        "LateAircraftDelay": 0.5768
+      }
+    },
+    "com": {
+      "limiar": 0.28,
+      "PR-AUC": 0.6378,
+      "ROC-AUC": 0.8542,
+      "log_loss": 0.2809,
+      "precisão": 0.582,
+      "recall": 0.572,
+      "F1": 0.577,
+      "recall_por_causa": {
+        "CarrierDelay": 0.3198,
+        "WeatherDelay": 0.5213,
+        "NASDelay": 0.4001,
+        "SecurityDelay": 0.3024,
+        "LateAircraftDelay": 0.7933
+      }
+    }
+  },
+  "importancia": [
+    {
+      "variavel": "chegada_atraso_chegada",
+      "descricao": "Atraso de chegada do avião",
+      "grupo": "propagação",
+      "valor": 0.10332
+    },
+    {
+      "variavel": "chegada_atraso_conhecido",
+      "descricao": "Atraso do voo anterior do avião",
+      "grupo": "propagação",
+      "valor": 0.08483
+    },
+    {
+      "variavel": "aviao_atraso_2_voos_antes",
+      "descricao": "Atraso do avião 2 voos antes",
+      "grupo": "propagação",
+      "valor": 0.03496
+    },
+    {
+      "variavel": "empresa",
+      "descricao": "Companhia",
+      "grupo": "programação",
+      "valor": 0.00795
+    },
+    {
+      "variavel": "recente_cia_rede",
+      "descricao": "Atraso recente da cia na rede",
+      "grupo": "propagação",
+      "valor": 0.00665
+    },
+    {
+      "variavel": "destino",
+      "descricao": "Aeroporto de destino",
+      "grupo": "programação",
+      "valor": 0.00407
+    },
+    {
+      "variavel": "aviao_voos_antes_no_dia",
+      "descricao": "Voos que o avião já fez no dia",
+      "grupo": "propagação",
+      "valor": 0.0033
+    },
+    {
+      "variavel": "recente_cia_origem",
+      "descricao": "Atraso recente da cia na origem",
+      "grupo": "propagação",
+      "valor": 0.00294
+    },
+    {
+      "variavel": "hora",
+      "descricao": "Hora da partida",
+      "grupo": "programação",
+      "valor": 0.00288
+    },
+    {
+      "variavel": "chegada_ainda_nao_partiu",
+      "descricao": "Avião ainda não saiu da origem anterior",
+      "grupo": "propagação",
+      "valor": 0.00283
+    },
+    {
+      "variavel": "recente_origem",
+      "descricao": "Atraso recente na origem",
+      "grupo": "propagação",
+      "valor": 0.00221
+    },
+    {
+      "variavel": "partidas_hora_cia",
+      "descricao": "Partidas da cia na hora",
+      "grupo": "programação",
+      "valor": 0.00141
+    },
+    {
+      "variavel": "voo_7dias",
+      "descricao": "Atraso do voo (7 dias)",
+      "grupo": "histórico",
+      "valor": 0.00138
+    },
+    {
+      "variavel": "o_trovoada",
+      "descricao": "Trovoada na origem",
+      "grupo": "clima",
+      "valor": 0.0013
+    },
+    {
+      "variavel": "origem",
+      "descricao": "Aeroporto de origem",
+      "grupo": "programação",
+      "valor": 0.00123
+    },
+    {
+      "variavel": "hist_rota_cia",
+      "descricao": "Histórico da rota e companhia",
+      "grupo": "histórico",
+      "valor": 0.0008
+    },
+    {
+      "variavel": "mes",
+      "descricao": "Mês",
+      "grupo": "programação",
+      "valor": 0.00063
+    },
+    {
+      "variavel": "o_teto_ft",
+      "descricao": "Teto de nuvens na origem",
+      "grupo": "clima",
+      "valor": 0.00061
+    },
+    {
+      "variavel": "chegada_cancelada",
+      "descricao": "Voo anterior do avião cancelado",
+      "grupo": "propagação",
+      "valor": 0.0005
+    },
+    {
+      "variavel": "o_qnh",
+      "descricao": "Pressão na origem",
+      "grupo": "clima",
+      "valor": 0.00037
+    }
+  ],
+  "eda": {
+    "por_hora": [
+      {
+        "chave": "0",
+        "taxa30": 0.1587,
+        "voos": 23985
+      },
+      {
+        "chave": "1",
+        "taxa30": 0.1438,
+        "voos": 3963
+      },
+      {
+        "chave": "2",
+        "taxa30": 0.1429,
+        "voos": 14
+      },
+      {
+        "chave": "3",
+        "taxa30": 0.0,
+        "voos": 1
+      },
+      {
+        "chave": "4",
+        "taxa30": 0.5,
+        "voos": 2
+      },
+      {
+        "chave": "5",
+        "taxa30": 0.046,
+        "voos": 109929
+      },
+      {
+        "chave": "6",
+        "taxa30": 0.0505,
+        "voos": 251835
+      },
+      {
+        "chave": "7",
+        "taxa30": 0.0655,
+        "voos": 390671
+      },
+      {
+        "chave": "8",
+        "taxa30": 0.0772,
+        "voos": 488790
+      },
+      {
+        "chave": "9",
+        "taxa30": 0.0891,
+        "voos": 471088
+      },
+      {
+        "chave": "10",
+        "taxa30": 0.1053,
+        "voos": 437378
+      },
+      {
+        "chave": "11",
+        "taxa30": 0.1162,
+        "voos": 437588
+      },
+      {
+        "chave": "12",
+        "taxa30": 0.1256,
+        "voos": 346015
+      },
+      {
+        "chave": "13",
+        "taxa30": 0.135,
+        "voos": 414116
+      },
+      {
+        "chave": "14",
+        "taxa30": 0.1543,
+        "voos": 358613
+      },
+      {
+        "chave": "15",
+        "taxa30": 0.1659,
+        "voos": 372473
+      },
+      {
+        "chave": "16",
+        "taxa30": 0.1796,
+        "voos": 373517
+      },
+      {
+        "chave": "17",
+        "taxa30": 0.1889,
+        "voos": 383902
+      },
+      {
+        "chave": "18",
+        "taxa30": 0.2031,
+        "voos": 389789
+      },
+      {
+        "chave": "19",
+        "taxa30": 0.2062,
+        "voos": 403100
+      },
+      {
+        "chave": "20",
+        "taxa30": 0.2109,
+        "voos": 377375
+      },
+      {
+        "chave": "21",
+        "taxa30": 0.1949,
+        "voos": 283194
+      },
+      {
+        "chave": "22",
+        "taxa30": 0.194,
+        "voos": 263614
+      },
+      {
+        "chave": "23",
+        "taxa30": 0.1647,
+        "voos": 103683
+      }
+    ],
+    "por_aeroporto": [
+      {
+        "chave": "ATL",
+        "taxa30": 0.1204,
+        "voos": 985139
+      },
+      {
+        "chave": "CLT",
+        "taxa30": 0.1516,
+        "voos": 594649
+      },
+      {
+        "chave": "DEN",
+        "taxa30": 0.1591,
+        "voos": 854575
+      },
+      {
+        "chave": "DFW",
+        "taxa30": 0.1647,
+        "voos": 857369
+      },
+      {
+        "chave": "LAS",
+        "taxa30": 0.1561,
+        "voos": 547922
+      },
+      {
+        "chave": "LAX",
+        "taxa30": 0.1136,
+        "voos": 573572
+      },
+      {
+        "chave": "MCO",
+        "taxa30": 0.1805,
+        "voos": 460464
+      },
+      {
+        "chave": "ORD",
+        "taxa30": 0.1381,
+        "voos": 785386
+      },
+      {
+        "chave": "PHX",
+        "taxa30": 0.1256,
+        "voos": 530288
+      },
+      {
+        "chave": "SEA",
+        "taxa30": 0.1029,
+        "voos": 495271
+      }
+    ],
+    "por_empresa": [
+      {
+        "chave": "Alaska",
+        "taxa30": 0.1095,
+        "voos": 312546
+      },
+      {
+        "chave": "Allegiant",
+        "taxa30": 0.1414,
+        "voos": 30746
+      },
+      {
+        "chave": "American",
+        "taxa30": 0.1702,
+        "voos": 1355338
+      },
+      {
+        "chave": "Delta",
+        "taxa30": 0.1082,
+        "voos": 1102944
+      },
+      {
+        "chave": "Endeavor (Delta Connection)",
+        "taxa30": 0.0848,
+        "voos": 83815
+      },
+      {
+        "chave": "Envoy (American Eagle)",
+        "taxa30": 0.0972,
+        "voos": 301316
+      },
+      {
+        "chave": "Frontier",
+        "taxa30": 0.208,
+        "voos": 253796
+      },
+      {
+        "chave": "Hawaiian",
+        "taxa30": 0.0963,
+        "voos": 14219
+      },
+      {
+        "chave": "Horizon (Alaska)",
+        "taxa30": 0.0892,
+        "voos": 30633
+      },
+      {
+        "chave": "JetBlue",
+        "taxa30": 0.2254,
+        "voos": 117787
+      },
+      {
+        "chave": "PSA (American Eagle)",
+        "taxa30": 0.1139,
+        "voos": 179471
+      },
+      {
+        "chave": "Republic",
+        "taxa30": 0.084,
+        "voos": 65154
+      },
+      {
+        "chave": "SkyWest",
+        "taxa30": 0.1115,
+        "voos": 677713
+      },
+      {
+        "chave": "Southwest",
+        "taxa30": 0.1646,
+        "voos": 1060395
+      },
+      {
+        "chave": "Spirit",
+        "taxa30": 0.1813,
+        "voos": 292663
+      },
+      {
+        "chave": "United",
+        "taxa30": 0.1327,
+        "voos": 774763
+      },
+      {
+        "chave": "YV",
+        "taxa30": 0.1708,
+        "voos": 31336
+      }
+    ],
+    "por_mes": [
+      {
+        "chave": "1",
+        "taxa30": 0.1422,
+        "voos": 512623
+      },
+      {
+        "chave": "2",
+        "taxa30": 0.1135,
+        "voos": 484877
+      },
+      {
+        "chave": "3",
+        "taxa30": 0.1441,
+        "voos": 558328
+      },
+      {
+        "chave": "4",
+        "taxa30": 0.1406,
+        "voos": 546849
+      },
+      {
+        "chave": "5",
+        "taxa30": 0.1549,
+        "voos": 572631
+      },
+      {
+        "chave": "6",
+        "taxa30": 0.1847,
+        "voos": 569566
+      },
+      {
+        "chave": "7",
+        "taxa30": 0.2082,
+        "voos": 588209
+      },
+      {
+        "chave": "8",
+        "taxa30": 0.1637,
+        "voos": 588092
+      },
+      {
+        "chave": "9",
+        "taxa30": 0.1107,
+        "voos": 564182
+      },
+      {
+        "chave": "10",
+        "taxa30": 0.0945,
+        "voos": 588790
+      },
+      {
+        "chave": "11",
+        "taxa30": 0.0961,
+        "voos": 553279
+      },
+      {
+        "chave": "12",
+        "taxa30": 0.1374,
+        "voos": 557209
+      }
+    ],
+    "por_dia_semana": [
+      {
+        "chave": "0",
+        "taxa30": 0.1408,
+        "voos": 994195
+      },
+      {
+        "chave": "1",
+        "taxa30": 0.1198,
+        "voos": 926103
+      },
+      {
+        "chave": "2",
+        "taxa30": 0.1248,
+        "voos": 929577
+      },
+      {
+        "chave": "3",
+        "taxa30": 0.1453,
+        "voos": 978691
+      },
+      {
+        "chave": "4",
+        "taxa30": 0.1589,
+        "voos": 990288
+      },
+      {
+        "chave": "5",
+        "taxa30": 0.1429,
+        "voos": 885030
+      },
+      {
+        "chave": "6",
+        "taxa30": 0.1557,
+        "voos": 980751
+      }
+    ],
+    "por_ano": [
+      {
+        "chave": "2022",
+        "taxa30": 0.1387,
+        "voos": 2120897
+      },
+      {
+        "chave": "2023",
+        "taxa30": 0.1401,
+        "voos": 2230511
+      },
+      {
+        "chave": "2024",
+        "taxa30": 0.1453,
+        "voos": 2333227
+      }
+    ],
+    "clima": [
+      {
+        "chave": "Todas as partidas",
+        "taxa30": 0.1415,
+        "voos": 6684635
+      },
+      {
+        "chave": "IMC na origem",
+        "taxa30": 0.1568,
+        "voos": 550326
+      },
+      {
+        "chave": "Chuva na origem",
+        "taxa30": 0.2322,
+        "voos": 279867
+      },
+      {
+        "chave": "Rajada ≥ 25 kt",
+        "taxa30": 0.2108,
+        "voos": 276067
+      },
+      {
+        "chave": "Trovoada na origem",
+        "taxa30": 0.5478,
+        "voos": 55441
+      },
+      {
+        "chave": "Abaixo dos mínimos",
+        "taxa30": 0.1725,
+        "voos": 31627
+      },
+      {
+        "chave": "Voo anterior do avião saiu > 30 min atrasado",
+        "taxa30": 0.4785,
+        "voos": 725733
+      }
+    ]
+  }
+}

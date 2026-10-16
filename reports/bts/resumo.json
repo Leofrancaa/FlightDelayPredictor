@@ -95,144 +95,144 @@
       }
     },
     "B_com_matricula": {
-      "achou_chegada": 0.9156124591827393,
-      "limiar": 0.3,
-      "log_loss": 0.24921516310982877,
-      "ROC-AUC": 0.8738989434037981,
-      "PR-AUC": 0.7166629139201816,
+      "achou_chegada": 0.9156124455561149,
+      "limiar": 0.28,
+      "log_loss": 0.2868505853144169,
+      "ROC-AUC": 0.8490150497148137,
+      "PR-AUC": 0.6206802044254867,
       "prevalência": 0.14530476460284406,
-      "precisão": 0.6855477223427332,
-      "recall": 0.5965979311504326,
-      "F1": 0.6379873483800659,
-      "% voos com alerta": 0.12645147686015978,
+      "precisão": 0.5641491407070147,
+      "recall": 0.5642939099605049,
+      "F1": 0.564221516047453,
+      "% voos com alerta": 0.14534205201637046,
       "pontos_operacao": [
         {
           "recall": 0.2,
-          "precisão": 0.9962609970674486,
-          "limiar": 0.9814214210136223
+          "precisão": 0.9225714285714286,
+          "limiar": 0.805029569135288
         },
         {
           "recall": 0.3,
-          "precisão": 0.9828294247808989,
-          "limiar": 0.9130191724267277
+          "precisão": 0.8306097949383835,
+          "limiar": 0.6093276635596692
         },
         {
           "recall": 0.4,
-          "precisão": 0.935081501503158,
-          "limiar": 0.717420238174259
+          "precisão": 0.7254786576721644,
+          "limiar": 0.4544029259624168
         },
         {
           "recall": 0.5,
-          "precisão": 0.8253894058244107,
-          "limiar": 0.4692822872688739
+          "precisão": 0.6262931161883368,
+          "limiar": 0.3424678051904313
         },
         {
           "recall": 0.6,
-          "precisão": 0.6802322081848035,
-          "limiar": 0.29492218374048573
+          "precisão": 0.5299165338084967,
+          "limiar": 0.24820573715659403
         }
       ],
       "recall_por_causa": {
         "CarrierDelay": {
           "descricao": "companhia (manutenção, tripulação, embarque...)",
           "atrasos": 120519,
-          "recall": 0.3444602095935081
+          "recall": 0.3204888855699101
         },
         "WeatherDelay": {
           "descricao": "clima extremo",
           "atrasos": 15129,
-          "recall": 0.4477493555423359
+          "recall": 0.47670037675986515
         },
         "NASDelay": {
           "descricao": "controle de tráfego / aeroporto",
           "atrasos": 25546,
-          "recall": 0.36232678305801297
+          "recall": 0.3919596022860722
         },
         "SecurityDelay": {
           "descricao": "segurança",
           "atrasos": 850,
-          "recall": 0.3341176470588235
+          "recall": 0.31411764705882356
         },
         "LateAircraftDelay": {
           "descricao": "avião chegou atrasado",
           "atrasos": 167764,
-          "recall": 0.8374144631744593
+          "recall": 0.7817529386519158
         },
         "sem_causa": {
           "descricao": "sem causa informada",
           "atrasos": 9221,
-          "recall": 0.4281531287279037
+          "recall": 0.4386725951632144
         }
       }
     },
     "B+_matricula_e_cadeia": {
-      "achou_chegada": 0.9156124591827393,
-      "limiar": 0.31,
-      "log_loss": 0.24848662892882828,
-      "ROC-AUC": 0.8743780388601229,
-      "PR-AUC": 0.7183033178292765,
+      "achou_chegada": 0.9156124455561149,
+      "limiar": 0.28,
+      "log_loss": 0.28243284876253133,
+      "ROC-AUC": 0.852119293075687,
+      "PR-AUC": 0.6340834837147782,
       "prevalência": 0.14530476460284406,
-      "precisão": 0.6972514315460697,
-      "recall": 0.5926130213049621,
-      "F1": 0.6406879056856176,
-      "% voos com alerta": 0.12349848514525162,
+      "precisão": 0.5770547639321421,
+      "recall": 0.5716915072161969,
+      "F1": 0.5743606156107434,
+      "% voos com alerta": 0.14395427448765166,
       "pontos_operacao": [
         {
           "recall": 0.2,
-          "precisão": 0.9966656384494484,
-          "limiar": 0.9820055264956317
+          "precisão": 0.9362125144971558,
+          "limiar": 0.8322724120645979
         },
         {
           "recall": 0.3,
-          "precisão": 0.9837221448467967,
-          "limiar": 0.9156053082708241
+          "precisão": 0.8615110960528545,
+          "limiar": 0.6554154473375111
         },
         {
           "recall": 0.4,
-          "precisão": 0.9362241199577497,
-          "limiar": 0.7177223368241583
+          "precisão": 0.7566325021899113,
+          "limiar": 0.48034634229066936
         },
         {
           "recall": 0.5,
-          "precisão": 0.8284704709401208,
-          "limiar": 0.47334310972193433
+          "precisão": 0.6509167706633388,
+          "limiar": 0.3554714624665374
         },
         {
           "recall": 0.6,
-          "precisão": 0.6857518499165641,
-          "limiar": 0.2988100948430239
+          "precisão": 0.5471049573973664,
+          "limiar": 0.2527003269920339
         }
       ],
       "recall_por_causa": {
         "CarrierDelay": {
           "descricao": "companhia (manutenção, tripulação, embarque...)",
           "atrasos": 120519,
-          "recall": 0.3384445606087007
+          "recall": 0.32343447921074686
         },
         "WeatherDelay": {
           "descricao": "clima extremo",
           "atrasos": 15129,
-          "recall": 0.4396853724634807
+          "recall": 0.48007138607971445
         },
         "NASDelay": {
           "descricao": "controle de tráfego / aeroporto",
           "atrasos": 25546,
-          "recall": 0.3539888827996555
+          "recall": 0.3900806388475691
         },
         "SecurityDelay": {
           "descricao": "segurança",
           "atrasos": 850,
-          "recall": 0.3129411764705882
+          "recall": 0.3070588235294118
         },
         "LateAircraftDelay": {
           "descricao": "avião chegou atrasado",
           "atrasos": 167764,
-          "recall": 0.8363355666293126
+          "recall": 0.7945864428602084
         },
         "sem_causa": {
           "descricao": "sem causa informada",
           "atrasos": 9221,
-          "recall": 0.4181759028304956
+          "recall": 0.43899793948595595
         }
       }
     }
