@@ -29,6 +29,9 @@ export default function Inicio() {
           <Link href="/analista" className="rounded-md border border-linha bg-cartao px-5 py-3 font-semibold hover:border-tinta-2">
             Ver a análise do modelo
           </Link>
+          <Link href="/comparacao" className="rounded-md border border-linha bg-cartao px-5 py-3 font-semibold hover:border-tinta-2">
+            Brasil × EUA
+          </Link>
         </div>
       </section>
 

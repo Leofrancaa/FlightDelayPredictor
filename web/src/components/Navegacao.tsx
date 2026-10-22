@@ -7,13 +7,17 @@ import { PAISES, type Pais } from "@/lib/pais";
 const LINKS = [
   { href: "/passageiro", rotulo: "Meu voo" },
   { href: "/analista", rotulo: "Análise do modelo" },
+  { href: "/comparacao", rotulo: "Brasil × EUA", global: true },
 ];
 
 export default function Navegacao() {
   const rota = usePathname();
   const pais: Pais = rota.startsWith("/eua") ? "eua" : "br";
   const pagina = rota.replace(/^\/eua/, "") || "/";
-  const destino = (p: Pais) => `${PAISES[p].prefixo}${pagina === "/" ? "/passageiro" : pagina}`;
+  // Páginas globais (a comparação) não existem por país: o seletor leva ao painel do país escolhido.
+  const global = LINKS.some((l) => l.global && pagina.startsWith(l.href));
+  const destino = (p: Pais) => `${PAISES[p].prefixo}${pagina === "/" || global ? "/passageiro" : pagina}`;
+  const marcado = (p: Pais) => pais === p && pagina !== "/" && !global;
   return (
     <header className="mb-8 bg-painel text-painel-texto">
       <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6">
@@ -27,8 +31,8 @@ export default function Navegacao() {
               <Link
                 key={p}
                 href={destino(p)}
-                aria-current={pais === p && pagina !== "/" ? "true" : undefined}
-                className={`rounded px-2.5 py-1 ${pais === p && pagina !== "/" ? "bg-white/15 font-semibold text-white" : "text-white/60 hover:text-white"}`}
+                aria-current={marcado(p) ? "true" : undefined}
+                className={`rounded px-2.5 py-1 ${marcado(p) ? "bg-white/15 font-semibold text-white" : "text-white/60 hover:text-white"}`}
               >
                 {PAISES[p].nome}
               </Link>
@@ -36,7 +40,7 @@ export default function Navegacao() {
           </div>
           <nav className="flex gap-1 text-[15px]">
             {LINKS.map((l) => {
-              const href = `${PAISES[pais].prefixo}${l.href}`;
+              const href = l.global ? l.href : `${PAISES[pais].prefixo}${l.href}`;
               const ativo = pagina.startsWith(l.href);
               return (
                 <Link
