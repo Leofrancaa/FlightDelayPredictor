@@ -2,8 +2,8 @@
 
 Next.js 15 (App Router) + TypeScript + Tailwind 4. Duas áreas:
 
-- **Meu voo** (`/passageiro`): o passageiro escolhe o aeroporto e o dia e busca pelo número do voo. Vê o alerta de atraso previsto na véspera, 3 h e 1 h antes, a chance de atrasar mais de 30 min (com o limiar do alerta), o que pesou na previsão e o que aconteceu de fato.
-- **Análise do modelo** (`/analista`): comparação dos horizontes com o chute, pontos de operação (precisão × recall), matriz de confusão, recall por causa do atraso, quanto vale a matrícula do avião, importância das variáveis e a análise descritiva.
+- **Meu voo** (`/passageiro`): o passageiro escolhe o aeroporto e o dia e busca pelo número do voo. Vê o alerta previsto na véspera, 3 h e 1 h antes (sem alerta / atraso provável / atraso de mais de 30 min provável), as duas chances (atrasar 15 min ou mais e, se atrasar, passar de 30 min, com o limiar de cada alerta), o que pesou na previsão e o que aconteceu de fato.
+- **Análise do modelo** (`/analista`): as duas perguntas comparadas com o chute em cada horizonte, pontos de operação (precisão × recall), matriz de confusão, recall por causa do atraso, quanto vale a matrícula do avião, importância das variáveis e a análise descritiva.
 
 ## Como funciona
 

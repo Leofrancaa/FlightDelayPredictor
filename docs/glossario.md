@@ -90,7 +90,9 @@ Fenômenos que `module_decea/metar.py` reconhece: `TS` trovoada (inclui `VCTS`, 
 |---|---|
 | **On-Time Performance** | Base mensal da BTS, um voo por linha. O workflow *Baixar BTS (EUA)* guarda só os voos que tocam os 10 aeroportos e as colunas usadas. |
 | **Matrícula (`Tail_Number`)** | Registro do avião. Permite achar o voo anterior do mesmo avião (de onde vem o atraso propagado). |
-| **Atraso > 30 min** | Alvo do modelo: a partida saiu mais de 30 min depois do previsto. |
+| **Atraso (≥ 15 min)** | Critério de pontualidade do DOT: a partida saiu 15 min ou mais depois do previsto. É a pergunta 1 do modelo ("vai atrasar?"). |
+| **Atraso > 30 min** | Pergunta 2 do modelo, só entre os voos que atrasam: "se atrasar, passa de 30 min?". |
+| **3 classes** | Alvo do modelo: < 15 min, 15–30 min, > 30 min. As duas perguntas saem das probabilidades dessas classes (ver [`MODELO.md`](MODELO.md)). |
 | **Causas do atraso** | Minutos atribuídos depois do voo: `CarrierDelay` (companhia), `WeatherDelay` (clima extremo), `NASDelay` (controle de tráfego/aeroporto), `SecurityDelay` (segurança), `LateAircraftDelay` (avião chegou atrasado). Só servem para medir o recall por causa no teste, nunca como variável. |
 | **Propagação de atraso** | Um atraso empurra os voos seguintes do mesmo avião. Por isso a taxa de atraso cresce ao longo do dia. |
 | **Sem / com matrícula** | Duas versões do modelo de 1 h: sem matrícula, o voo que traz o avião é adivinhado (último da mesma companhia chegando na origem); com matrícula, é o voo anterior do mesmo avião. |
@@ -103,11 +105,11 @@ Fenômenos que `module_decea/metar.py` reconhece: `TS` trovoada (inclui `VCTS`, 
 
 | Termo | Significado |
 |---|---|
-| **Divisão temporal** | Treino 2022, validação 2023 (limiar do alerta), teste 2024. O modelo nunca vê o futuro. |
+| **Divisão temporal** | Treino 2022, validação 2023 (limiares dos alertas), teste 2024. O modelo nunca vê o futuro. |
 | **Vazamento de dados** | Informação que não estaria disponível na hora da previsão vaza para o treino e infla o resultado. |
 | **Horizonte** | Antecedência da previsão: véspera, 3 h e 1 h antes da partida. |
 | **Baseline / chute** | Referência simples que o modelo precisa superar: dar a todo voo a proporção de atrasos do treino. |
-| **Prevalência** | Proporção de positivos (~15% dos voos atrasam mais de 30 min). É a PR-AUC de um chute ao acaso. |
+| **Prevalência** | Proporção de positivos: ~23% dos voos atrasam 15 min ou mais; entre eles, ~64% passam de 30 min. É a PR-AUC de um chute ao acaso. |
 
 ### Métricas
 
@@ -115,7 +117,8 @@ Fenômenos que `module_decea/metar.py` reconhece: `TS` trovoada (inclui `VCTS`, 
 |---|---|
 | **Precisão** | Dos voos com alerta, quantos atrasaram de fato. |
 | **Recall** | Dos voos que atrasaram, quantos receberam alerta. |
-| **F1** | Média harmônica de precisão e recall. O limiar do alerta é o que maximiza o F1 na validação. |
+| **F1** | Média harmônica de precisão e recall. O limiar de "vai atrasar?" é o que maximiza o F1 na validação. |
+| **Acurácia balanceada** | Média do recall de "sim" e de "não". Usada no limiar de "passa de 30 min?", em que "sim" é a maioria (64%) e o F1 levaria a dizer "sim" para todos. |
 | **ROC-AUC** | Chance de um voo atrasado receber nota maior que um pontual. 0,5 = chute. Não depende de limiar. |
 | **PR-AUC** | Área sob a curva precisão × recall (`average_precision_score`). Mais informativa que a ROC-AUC em classe rara. |
 | **Log loss** | Penaliza probabilidades confiantes e erradas. Usada para comparar modelos sem escolher limiar. |

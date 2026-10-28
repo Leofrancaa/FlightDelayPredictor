@@ -1,6 +1,6 @@
 # Previsão de atraso de voos (EUA)
 
-Modelo que estima a chance de uma partida atrasar mais de 30 min, previsto na véspera, 3 h e 1 h antes, nos 10 maiores aeroportos dos EUA. Dados: BTS On-Time Performance 2022–2024 (com a matrícula de cada avião e a causa de cada atraso) e METAR histórico do Iowa Environmental Mesonet (IEM).
+Modelo que responde, para cada partida, duas perguntas: **o voo vai atrasar (15 min ou mais)?** e, **se atrasar, passa de 30 min?** Previstas na véspera, 3 h e 1 h antes, nos 10 maiores aeroportos dos EUA. Dados: BTS On-Time Performance 2022–2024 (com a matrícula de cada avião e a causa de cada atraso) e METAR histórico do Iowa Environmental Mesonet (IEM).
 
 ## Setup
 
@@ -19,11 +19,11 @@ Para rodar local, baixe para `data/raw/bts/` e descompacte os CSVs do METAR em `
 
 ## Modelo
 
-`module_decea/exportar_web_eua.py` treina o modelo e exporta os dados do site para `web/public/data/` (`make treinar`, ou o workflow *Treinar modelo EUA*). Treino 2022, validação 2023 (limiar do alerta), teste 2024.
+`module_decea/exportar_web_eua.py` treina o modelo e exporta os dados do site para `web/public/data/` (`make treinar`, ou o workflow *Treinar modelo EUA*). Um classificador de 3 classes (< 15, 15–30, > 30 min) por horizonte; treino 2022, validação 2023 (limiares dos alertas), teste 2024.
 
-No teste, 1 h antes, atraso > 30 min: sem matrícula PR-AUC 0,42 (precisão 38%, recall 48%); com matrícula PR-AUC 0,64 (precisão 58%, recall 57%). O modelo com matrícula pega 79% dos atrasos por "avião chegou atrasado", mas só 32% dos atrasos da companhia (manutenção, tripulação, embarque), que somam 37% dos atrasos. Tempo de solo e folga calculados pela matrícula ficam de fora: a BTS grava o avião que de fato voou, e a troca de avião por causa de atraso vazava para o modelo.
+No teste, 1 h antes: **vai atrasar?** PR-AUC 0,70 (chute 0,23), precisão 62%, recall 63%; **se atrasar, passa de 30 min?** PR-AUC 0,84 (chute 0,64, porque 64% dos atrasos já passam de 30 min). Sem a matrícula do avião, a PR-AUC da primeira pergunta cai para 0,51. O alerta de 1 h pega 89% dos atrasos por "avião chegou atrasado", mas só 42% dos atrasos da companhia (manutenção, tripulação, embarque), que somam 39% dos atrasos. Tempo de solo e folga calculados pela matrícula ficam de fora: a BTS grava o avião que de fato voou, e a troca de avião por causa de atraso vazava para o modelo.
 
-`module_decea/experimento_bts.py` compara as versões sem/com matrícula (`make experimento`, resultado em `reports/bts/resumo.json`).
+`module_decea/experimento_bts.py` é um experimento à parte, só com "> 30 min?", que compara as versões sem/com matrícula (`make experimento`, resultado em `reports/bts/resumo.json`).
 
 Como o modelo funciona (classificação, gradient boosting, validação temporal, métricas): [`docs/MODELO.md`](docs/MODELO.md).
 
@@ -40,7 +40,7 @@ Outros comandos: `make test`, `make lint`, `make format`, `make clean` (`make` s
 ├── module_decea       <- código Python do projeto
 │   ├── config.py           <- caminhos do projeto
 │   ├── metar.py            <- decodificação de METAR
-│   ├── modelagem.py        <- treino, limiar do alerta e métricas
+│   ├── modelagem.py        <- treino, limiares dos alertas e métricas
 │   ├── experimento_bts.py  <- leitura da BTS, variáveis e experimento sem/com matrícula
 │   └── exportar_web_eua.py <- modelo final e JSON do site
 ├── reports            <- bts/ e eua/: métricas e logs do treino
