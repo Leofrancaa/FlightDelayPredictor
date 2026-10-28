@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import DetalheVoo from "./DetalheVoo";
-import { situacao } from "@/lib/faixas";
+import { ALERTA_CURTO, COR_PAINEL, situacao } from "@/lib/faixas";
 import type { Horizonte, Indice, Resumo, Voo } from "@/lib/types";
 
 const PAGINA = 60;
@@ -19,8 +19,6 @@ const AEROPORTO_PADRAO = "ATL";
 const EXEMPLO = "DL 774";
 const DIAS = ["DOM", "SEG", "TER", "QUA", "QUI", "SEX", "SÁB"];
 const MESES = ["JAN", "FEV", "MAR", "ABR", "MAI", "JUN", "JUL", "AGO", "SET", "OUT", "NOV", "DEZ"];
-const VERDE = "#3fb394";
-const VERMELHO = "#e55a4c";
 
 /** "DL 774", "dl774", "774" -> { iata: "DL" | null, numero: "774" } */
 function lerBusca(texto: string): { iata: string | null; numero: string } {
@@ -107,6 +105,7 @@ export default function BuscaVoo() {
   const [selecionado, setSelecionado] = useState<Voo | null>(null);
   const [mostrar, setMostrar] = useState(PAGINA);
   const [limiares, setLimiares] = useState<Partial<Record<Horizonte, number>>>({});
+  const [limiares30, setLimiares30] = useState<Partial<Record<Horizonte, number>>>({});
   const [prevalencia, setPrevalencia] = useState<number | undefined>();
 
   useEffect(() => {
@@ -115,8 +114,10 @@ export default function BuscaVoo() {
       .then((r) => (r.ok ? r.json() : null))
       .then((r: Resumo | null) => {
         if (r?.modelos?.h1) setPrevalencia(r.modelos.h1.prevalência);
-        if (r?.modelos)
+        if (r?.modelos) {
           setLimiares(Object.fromEntries(Object.entries(r.modelos).map(([k, m]) => [k, m.limiar])) as Record<Horizonte, number>);
+          setLimiares30(Object.fromEntries(Object.entries(r.modelos).map(([k, m]) => [k, m.q30?.limiar])) as Record<Horizonte, number>);
+        }
       })
       .catch(() => undefined);
     fetch(`${base}/indice.json`)
@@ -160,13 +161,14 @@ export default function BuscaVoo() {
       return (!aeroporto || v.o === aeroporto) && hora >= p.de && hora < p.ate;
     });
   }, [voos, busca, buscando, aeroporto, periodo, iataParaIcao]);
-  const comRisco = useMemo(() => naVista.filter((v) => v.f1), [naVista]);
+  const comRisco = useMemo(() => naVista.filter((v) => v.f1 > 0), [naVista]);
   const filtrados = soRisco && !buscando ? comRisco : naVista;
 
   if (erro) return <p className="mt-6 rounded-md border border-[var(--f3)] bg-cartao p-4">{erro}</p>;
   if (!indice) return <p className="mt-6 text-tinta-2">Carregando…</p>;
 
   const lim = indice.limiares ?? limiares;
+  const lim30 = indice.limiares30 ?? limiares30;
   const origens = voos ? [...new Set(voos.map((v) => v.o))].sort() : [];
   const nomeAp = (c: string) => indice.aeroportos[c] ?? c;
   const iataDe = (v: Voo) => indice.empresas[v.e]?.[1] ?? v.e;
@@ -317,10 +319,10 @@ export default function BuscaVoo() {
                   <span className="col-span-3 flex items-center gap-2 text-[15px] uppercase tracking-wide md:col-span-1 md:text-base">
                     <span
                       className={`inline-block h-2.5 w-2.5 shrink-0 rounded-full ${v.f1 ? "piscar" : ""}`}
-                      style={{ background: v.f1 ? VERMELHO : VERDE }}
+                      style={{ background: COR_PAINEL[v.f1] }}
                       aria-hidden
                     />
-                    <span style={{ color: v.f1 ? VERMELHO : VERDE }}>{v.f1 ? "Risco de atraso" : "Sem alerta"}</span>
+                    <span style={{ color: COR_PAINEL[v.f1] }}>{ALERTA_CURTO[v.f1]}</span>
                     <span className="text-white/45">{v.p1}%</span>
                     <span className="ml-auto text-white/60 md:hidden">
                       Partiu <span style={{ color: sit.painel }}>{somarMin(v.h, v.a)}</span>
@@ -349,14 +351,13 @@ export default function BuscaVoo() {
       </section>
 
       <p className="mt-3 text-sm text-tinta-2">
-        <strong className="text-tinta">Previsão</strong>: o alerta do modelo 1 h antes da partida, com a chance de atrasar
-        mais de 30 min. <strong className="text-tinta">Situação</strong>: o que aconteceu de fato (em amarelo, atraso de até 30 min; em
-        vermelho, mais de 30 min). Clique num voo para ver os
-        detalhes e a animação do trajeto.
+        <strong className="text-tinta">Previsão</strong>: o alerta do modelo 1 h antes da partida, com a chance de atrasar 15 min ou
+        mais (em amarelo, risco de atraso; em vermelho, risco de passar de 30 min). <strong className="text-tinta">Situação</strong>: o
+        que aconteceu de fato, nas mesmas cores. Clique num voo para ver as duas chances, os detalhes e a animação do trajeto.
       </p>
 
       <Modal aberto={!!selecionado} onFechar={fechar} titulo="Detalhe do voo">
-        {selecionado && <DetalheVoo voo={selecionado} indice={indice} data={data} limiares={lim} prevalencia={prevalencia} />}
+        {selecionado && <DetalheVoo voo={selecionado} indice={indice} data={data} limiares={lim} limiares30={lim30} prevalencia={prevalencia} />}
       </Modal>
     </div>
   );
