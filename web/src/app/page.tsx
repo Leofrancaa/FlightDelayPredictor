@@ -2,8 +2,8 @@ import Link from "next/link";
 
 const EXEMPLO = [
   { h: "07:10", voo: "DL 774", destino: "Nova York", status: "Sem alerta", cor: "var(--f0)" },
-  { h: "17:45", voo: "AA 2321", destino: "Chicago", status: "Alerta de atraso", cor: "var(--f3)" },
-  { h: "19:20", voo: "WN 1870", destino: "Denver", status: "Sem alerta", cor: "var(--f0)" },
+  { h: "17:45", voo: "AA 2321", destino: "Chicago", status: "Risco > 30 min", cor: "var(--f3)" },
+  { h: "19:20", voo: "WN 1870", destino: "Denver", status: "Risco de atraso", cor: "var(--f1)" },
 ];
 
 export default function Inicio() {
@@ -14,8 +14,8 @@ export default function Inicio() {
           O seu voo vai atrasar?
         </h1>
         <p className="mt-5 max-w-xl text-lg text-tinta-2">
-          Modelos que estimam a chance de cada partida atrasar mais de 30 minutos, na véspera, 3 horas e 1 hora antes do
-          embarque. Voos dos 10 maiores aeroportos dos EUA (2022–2024), com a matrícula de cada avião para seguir o
+          Para cada partida, duas perguntas: o voo vai atrasar 15 minutos ou mais? E, se atrasar, vai passar de 30 minutos?
+          Previstas na véspera, 3 horas e 1 hora antes do embarque. Voos dos 10 maiores aeroportos dos EUA (2022–2024), com a matrícula de cada avião para seguir o
           atraso dele ao longo do dia.
         </p>
         <div className="mt-8 flex flex-wrap gap-3">

@@ -1,15 +1,15 @@
-[    24s] BTS: 12,172,655 voos tocando os 10 aeroportos
-[    47s] partidas realizadas: 6,684,635 | atraso > 30: 14.147% | por ano {2022: 2120897, 2023: 2230511, 2024: 2333227}
-[    55s] A_sem_matricula: voo de chegada encontrado em 94.5%
-[   138s] A_sem_matricula: limiar 0.21
-[   260s] A_sem_matricula: PR-AUC 0.4137 | precisão 0.370 | recall 0.484 | F1 0.419
-[   268s] B_com_matricula: voo de chegada encontrado em 91.6%
-[   344s] B_com_matricula: limiar 0.28
-[   454s] B_com_matricula: PR-AUC 0.6207 | precisão 0.564 | recall 0.564 | F1 0.564
-[   473s] B+_matricula_e_cadeia: voo de chegada encontrado em 91.6%
-[   554s] B+_matricula_e_cadeia: limiar 0.28
-[   671s] B+_matricula_e_cadeia: PR-AUC 0.6341 | precisão 0.577 | recall 0.572 | F1 0.574
-[   671s] resumo em reports/bts/resumo.json
+[    30s] BTS: 12,172,655 voos tocando os 10 aeroportos
+[    60s] partidas realizadas: 6,684,635 | atraso > 30: 14.147% | por ano {2022: 2120897, 2023: 2230511, 2024: 2333227}
+[    69s] A_sem_matricula: voo de chegada encontrado em 94.5%
+[   181s] A_sem_matricula: limiar 0.21
+[   355s] A_sem_matricula: PR-AUC 0.4137 | precisão 0.370 | recall 0.484 | F1 0.419
+[   367s] B_com_matricula: voo de chegada encontrado em 91.6%
+[   467s] B_com_matricula: limiar 0.28
+[   619s] B_com_matricula: PR-AUC 0.6207 | precisão 0.564 | recall 0.564 | F1 0.564
+[   653s] B+_matricula_e_cadeia: voo de chegada encontrado em 91.6%
+[   758s] B+_matricula_e_cadeia: limiar 0.28
+[   920s] B+_matricula_e_cadeia: PR-AUC 0.6341 | precisão 0.577 | recall 0.572 | F1 0.574
+[   920s] resumo em reports/bts/resumo.json
 {
   "A_sem_matricula": {
     "PR-AUC": 0.41365495883084236,

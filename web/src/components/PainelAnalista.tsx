@@ -2,8 +2,8 @@
 
 import { Fragment, useState } from "react";
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { CLASSES, COR, NOME_H, ORDEM_H, inteiro, mesCurto, num, pct } from "@/lib/faixas";
-import type { Horizonte, Modelo, Resumo, Taxa } from "@/lib/types";
+import { ALERTA, CLASSES, CLASSES3, COR, NOME_H, ORDEM_H, inteiro, mesCurto, num, pct } from "@/lib/faixas";
+import type { Horizonte, Modelo, PontoOperacao, Resumo, Taxa } from "@/lib/types";
 
 const DIAS = ["seg", "ter", "qua", "qui", "sex", "sáb", "dom"];
 const MESES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
@@ -43,9 +43,9 @@ function Seletor({ valor, onChange }: { valor: Horizonte; onChange: (h: Horizont
   );
 }
 
-/** Barras horizontais de taxa de atraso > 30 min, com a média geral marcada. */
+/** Barras horizontais: taxa de atraso >= 15 min, com a parte > 30 min em tom mais escuro e a média geral marcada. */
 function BarrasTaxa({ dados, rotulo, media }: { dados: Taxa[]; rotulo: (c: string) => string; media: number }) {
-  const max = Math.max(...dados.map((d) => d.taxa30 ?? 0), media) * 1.1;
+  const max = Math.max(...dados.map((d) => d.taxa15 ?? 0), media) * 1.1;
   return (
     <ul className="space-y-1.5">
       {dados.map((d) => (
@@ -53,14 +53,62 @@ function BarrasTaxa({ dados, rotulo, media }: { dados: Taxa[]; rotulo: (c: strin
           <span className="truncate text-tinta-2" title={rotulo(d.chave)}>
             {rotulo(d.chave)}
           </span>
-          <span className="relative h-4 rounded-sm bg-pista">
-            <span className="absolute inset-y-0 left-0 rounded-sm bg-[#2a78d6]" style={{ width: `${((d.taxa30 ?? 0) / max) * 100}%` }} />
+          <span
+            className="relative h-4 rounded-sm bg-pista"
+            title={`≥ 15 min: ${pct(d.taxa15)} · > 30 min: ${pct(d.taxa30)}`}
+          >
+            <span className="absolute inset-y-0 left-0 rounded-sm bg-[#8db7ea]" style={{ width: `${((d.taxa15 ?? 0) / max) * 100}%` }} />
+            <span className="absolute inset-y-0 left-0 rounded-sm bg-[#184f95]" style={{ width: `${((d.taxa30 ?? 0) / max) * 100}%` }} />
             <span className="absolute inset-y-[-3px] w-px bg-tinta" style={{ left: `${(media / max) * 100}%` }} aria-hidden />
           </span>
-          <span className="text-right font-medium">{pct(d.taxa30)}</span>
+          <span className="text-right font-medium">{pct(d.taxa15)}</span>
         </li>
       ))}
     </ul>
+  );
+}
+
+function LegendaTaxa() {
+  return (
+    <ul className="flex flex-wrap gap-4 text-sm text-tinta-2">
+      <li className="flex items-center gap-1.5">
+        <span className="inline-block h-2.5 w-2.5 rounded-sm bg-[#8db7ea]" aria-hidden />
+        atraso de 15 a 30 min
+      </li>
+      <li className="flex items-center gap-1.5">
+        <span className="inline-block h-2.5 w-2.5 rounded-sm bg-[#184f95]" aria-hidden />
+        mais de 30 min
+      </li>
+    </ul>
+  );
+}
+
+/** Melhor precisão possível para cada recall desejado. */
+function TabelaPontos({ pontos, alvo }: { pontos: PontoOperacao[]; alvo: string }) {
+  return (
+    <table className="mt-4 w-full text-left text-[15px]">
+      <thead className="text-sm text-tinta-2">
+        <tr className="border-b border-linha">
+          <th className="py-2 font-medium">Pegar (recall)</th>
+          <th className="py-2 font-medium">Precisão dos alertas</th>
+          <th className="py-2 text-right font-medium">Limiar</th>
+        </tr>
+      </thead>
+      <tbody>
+        {pontos.map((p) => (
+          <tr key={p.recall} className="border-b border-linha/60 last:border-0">
+            <td className="py-2">
+              {pct(p.recall, 0)} {alvo}
+            </td>
+            <td className="py-2">
+              <span className="mr-2 inline-block h-2.5 rounded-sm bg-[#2a78d6] align-middle" style={{ width: `${p.precisão * 100}px` }} />
+              {pct(p.precisão)}
+            </td>
+            <td className="py-2 text-right">{pct(p.limiar, 0)}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
   );
 }
 
@@ -83,11 +131,13 @@ const dica = { background: "var(--cartao)", border: "1px solid var(--linha)", co
 
 export default function PainelAnalista({ r }: { r: Resumo }) {
   const [h, setH] = useState<Horizonte>("h1");
+  const [pergunta, setPergunta] = useState<"atraso" | "mais30">("atraso");
   const m1 = r.modelos.h1;
-  const media = r.eda.clima[0]?.taxa30 ?? 0;
+  const q1 = m1.q30;
+  const media = r.eda.clima[0]?.taxa15 ?? 0;
   const maxImp = Math.max(...r.importancia.map((i) => i.valor));
-  const porAeroporto = [...r.eda.por_aeroporto].sort((a, b) => (b.taxa30 ?? 0) - (a.taxa30 ?? 0));
-  const porEmpresa = r.eda.por_empresa.filter((e) => e.voos > 20000).sort((a, b) => (b.taxa30 ?? 0) - (a.taxa30 ?? 0));
+  const porAeroporto = [...r.eda.por_aeroporto].sort((a, b) => (b.taxa15 ?? 0) - (a.taxa15 ?? 0));
+  const porEmpresa = r.eda.por_empresa.filter((e) => e.voos > 20000).sort((a, b) => (b.taxa15 ?? 0) - (a.taxa15 ?? 0));
   const mensal = r.mensal.h1.map((m, i) => ({
     mes: m.mes,
     prevalencia: m.prevalencia,
@@ -101,16 +151,22 @@ export default function PainelAnalista({ r }: { r: Resumo }) {
     { nome: "Chute (proporção do treino)", m: r.chute },
     ...ORDEM_H.map((k) => ({ nome: NOME_H[k], m: r.modelos[k], limiar: r.modelos[k].limiar })),
   ];
-  const cm = r.modelos[h].confusao;
+  const cm = r.modelos[h].confusao3;
+  const linhas30: { nome: string; m: Resumo["chute30"]; limiar?: number; ab?: number }[] = [
+    { nome: "Chute (proporção do treino)", m: r.chute30 },
+    ...ORDEM_H.map((k) => ({ nome: NOME_H[k], m: r.modelos[k].q30, limiar: r.modelos[k].q30.limiar, ab: r.modelos[k].q30.acuracia_balanceada })),
+  ];
 
   return (
     <div className="space-y-6">
       <header>
         <h1 className="font-cond text-4xl font-semibold">Análise do modelo</h1>
         <p className="mt-2 max-w-3xl text-tinta-2">
-          Gradient boosting em árvores que estima a chance de uma partida atrasar mais de 30 min. Treino em{" "}
-          {r.periodos.treino} ({inteiro(r.n.treino)} partidas), validação em {r.periodos.validacao} para escolher o limiar
-          do alerta, e teste em {r.periodos.teste} (
+          Gradient boosting em árvores com 3 classes de atraso de partida (menos de 15 min, 15 a 30 min, mais de 30 min). Dele
+          saem as duas perguntas do site: <strong className="text-tinta">o voo vai atrasar 15 min ou mais?</strong> e,{" "}
+          <strong className="text-tinta">se atrasar, passa de 30 min?</strong> Treino em{" "}
+          {r.periodos.treino} ({inteiro(r.n.treino)} partidas), validação em {r.periodos.validacao} para escolher os
+          limiares dos alertas, e teste em {r.periodos.teste} (
           {inteiro(r.n.teste)} partidas que o modelo nunca viu).
           {" "}
           Dados da BTS nos 10 maiores aeroportos dos EUA, com a matrícula de cada avião e METAR. Na véspera o modelo não
@@ -128,25 +184,30 @@ export default function PainelAnalista({ r }: { r: Resumo }) {
 
       <div className="grid gap-3 sm:grid-cols-3">
         <div className="rounded-lg bg-painel p-5 text-painel-texto">
-          <p className="text-sm text-white/60">PR-AUC, 1 h antes</p>
+          <p className="text-sm text-white/60">Vai atrasar? PR-AUC, 1 h antes</p>
           <p className="font-cond text-5xl font-semibold text-sinal">{num(m1["PR-AUC"], 2)}</p>
           <p className="text-sm text-white/70">contra {num(r.chute["PR-AUC"], 2)} de um chute</p>
         </div>
         <div className="rounded-lg border border-linha bg-cartao p-5">
-          <p className="text-sm text-tinta-2">Atrasos &gt; 30 min avisados</p>
+          <p className="text-sm text-tinta-2">Atrasos de 15 min ou mais avisados</p>
           <p className="font-cond text-5xl font-semibold">{pct(m1.recall, 0)}</p>
-          <p className="text-sm text-tinta-2">e {pct(m1.precisão, 0)} dos alertas se confirmam</p>
+          <p className="text-sm text-tinta-2">
+            e {pct(m1.precisão, 0)} dos alertas se confirmam ({pct(m1["% voos com alerta"], 0)} dos voos com alerta, para{" "}
+            {pct(m1.prevalência, 0)} que atrasam)
+          </p>
         </div>
         <div className="rounded-lg border border-linha bg-cartao p-5">
-          <p className="text-sm text-tinta-2">Voos com alerta</p>
-          <p className="font-cond text-5xl font-semibold">{pct(m1["% voos com alerta"], 0)}</p>
-          <p className="text-sm text-tinta-2">para {pct(m1.prevalência, 0)} que de fato atrasam</p>
+          <p className="text-sm text-tinta-2">Se atrasar, passa de 30 min? PR-AUC</p>
+          <p className="font-cond text-5xl font-semibold">{num(q1["PR-AUC"], 2)}</p>
+          <p className="text-sm text-tinta-2">
+            contra {num(r.chute30["PR-AUC"], 2)} de um chute: {pct(q1.prevalência, 0)} dos atrasos já passam de 30 min
+          </p>
         </div>
       </div>
 
       <Secao
-        titulo={`Comparação dos horizontes (teste ${r.periodos.teste})`}
-        nota="Ranking (ROC-AUC, PR-AUC, log loss): quanto o modelo ordena bem o risco, sem depender de limiar. Decisão (precisão, recall, F1): no limiar escolhido em 2023 para equilibrar precisão e recall."
+        titulo={`Vai atrasar 15 min ou mais? (teste ${r.periodos.teste})`}
+        nota="Chance de atrasar = P(15–30 min) + P(> 30 min). Ranking (ROC-AUC, PR-AUC, log loss): quanto o modelo ordena bem o risco, sem depender de limiar. Decisão (precisão, recall, F1): no limiar escolhido em 2023 pelo F1."
       >
         <div className="overflow-x-auto">
           <table className="w-full min-w-[700px] text-left text-[15px]">
@@ -178,8 +239,40 @@ export default function PainelAnalista({ r }: { r: Resumo }) {
       </Secao>
 
       <Secao
+        titulo={`Se atrasar, passa de 30 min? (teste ${r.periodos.teste})`}
+        nota={`Chance = P(> 30 min) ÷ P(atraso), avaliada só nos ${pct(r.prevalencias.atraso15, 0)} de voos que de fato atrasaram 15 min ou mais. Como ${pct(r.prevalencias.mais30_dado_atraso, 0)} deles passam de 30 min, o chute já acerta muito: o limiar é escolhido pela acurácia balanceada (média do recall de "sim" e de "não"), senão o modelo diria "sim" para quase todos.`}
+      >
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[700px] text-left text-[15px]">
+            <thead className="text-sm text-tinta-2">
+              <tr className="border-b border-linha">
+                {["Modelo", "ROC-AUC", "PR-AUC", "Limiar", "Precisão", "Recall", "Acurácia balanceada"].map((c) => (
+                  <th key={c} className="py-2 pr-3 font-medium">
+                    {c}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {linhas30.map(({ nome, m, limiar, ab }) => (
+                <tr key={nome} className="border-b border-linha/60 last:border-0">
+                  <td className="py-2 pr-3 font-medium">{nome}</td>
+                  <td className="py-2 pr-3">{num(m["ROC-AUC"])}</td>
+                  <td className="py-2 pr-3">{num(m["PR-AUC"])}</td>
+                  <td className="py-2 pr-3">{limiar != null ? pct(limiar, 0) : "–"}</td>
+                  <td className="py-2 pr-3">{limiar != null ? pct(m.precisão) : "–"}</td>
+                  <td className="py-2 pr-3">{limiar != null ? pct(m.recall) : "–"}</td>
+                  <td className="py-2">{ab != null ? pct(ab) : "50,0%"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Secao>
+
+      <Secao
         titulo={`Desempenho por classe (teste ${r.periodos.teste})`}
-        nota={`Precisão, recall e F1 de cada classe no limiar do site. "Até 30 min" parece ótimo porque ${pct(1 - m1.prevalência, 0)} dos voos saem com no máximo 30 min de atraso: dizer "até 30 min" para todos daria ${pct(1 - m1.prevalência, 0)} de precisão e 100% de recall nessa classe. A classe difícil é "> 30 min".`}
+        nota={`Pergunta "vai atrasar?": precisão, recall e F1 de cada resposta no limiar do site. "< 15 min" parece ótimo porque ${pct(1 - m1.prevalência, 0)} dos voos saem com menos de 15 min de atraso: dizer "< 15 min" para todos daria ${pct(1 - m1.prevalência, 0)} de precisão e 100% de recall nessa classe. A classe difícil é "≥ 15 min".`}
       >
         <div className="overflow-x-auto">
           <table className="w-full min-w-[640px] text-left text-[15px]">
@@ -227,12 +320,12 @@ export default function PainelAnalista({ r }: { r: Resumo }) {
         <div className="grid gap-6 lg:grid-cols-2">
           <Secao
             titulo="Quanto vale saber qual avião faz o voo"
-            nota="Mesmo modelo de 1 h, com o mesmo clima e o mesmo resto. Sem matrícula, o voo que traz o avião é adivinhado (o último da mesma companhia chegando na origem)."
+            nota="Mesmo modelo de 1 h, com o mesmo clima e o mesmo resto. Sem matrícula, o voo que traz o avião é adivinhado (o último da mesma companhia chegando na origem). Precisão, recall e F1 da pergunta “vai atrasar?”; a última coluna é a pergunta “passa de 30 min?”."
           >
             <table className="w-full text-left text-[15px]">
               <thead className="text-sm text-tinta-2">
                 <tr className="border-b border-linha">
-                  {["Modelo", "PR-AUC", "Precisão", "Recall", "F1"].map((c) => (
+                  {["Modelo", "PR-AUC atraso", "Precisão", "Recall", "F1", "PR-AUC > 30"].map((c) => (
                     <th key={c} className="py-2 pr-3 font-medium">
                       {c}
                     </th>
@@ -251,7 +344,8 @@ export default function PainelAnalista({ r }: { r: Resumo }) {
                       <td className="py-2 pr-3">{num(x["PR-AUC"])}</td>
                       <td className="py-2 pr-3">{pct(x.precisão)}</td>
                       <td className="py-2 pr-3">{pct(x.recall)}</td>
-                      <td className="py-2">{num(x.F1)}</td>
+                      <td className="py-2 pr-3">{num(x.F1)}</td>
+                      <td className="py-2">{num(x.q30?.["PR-AUC"])}</td>
                     </tr>
                   );
                 })}
@@ -260,7 +354,7 @@ export default function PainelAnalista({ r }: { r: Resumo }) {
           </Secao>
           <Secao
             titulo="Que atrasos o modelo pega"
-            nota="A BTS informa a causa de cada atraso depois do voo (por isso ela não entra no modelo). Recall do alerta de 1 h em cada causa, no teste."
+            nota="A BTS informa a causa de cada atraso depois do voo (por isso ela não entra no modelo). Recall do alerta de atraso (≥ 15 min) de 1 h em cada causa, no teste."
           >
             <table className="w-full text-left text-[15px]">
               <thead className="text-sm text-tinta-2">
@@ -291,43 +385,58 @@ export default function PainelAnalista({ r }: { r: Resumo }) {
       <div className="grid gap-6 lg:grid-cols-2">
         <Secao
           titulo="Escolhendo o equilíbrio"
-          nota="Melhor precisão possível para cada fração de atrasos que se quer pegar. Mais recall = mais alertas e mais alarmes falsos."
+          nota="Melhor precisão possível para cada fração de casos que se quer pegar. Mais recall = mais alertas e mais alarmes falsos."
         >
-          <Seletor valor={h} onChange={setH} />
-          <table className="mt-4 w-full text-left text-[15px]">
-            <thead className="text-sm text-tinta-2">
-              <tr className="border-b border-linha">
-                <th className="py-2 font-medium">Pegar (recall)</th>
-                <th className="py-2 font-medium">Precisão dos alertas</th>
-                <th className="py-2 text-right font-medium">Limiar</th>
-              </tr>
-            </thead>
-            <tbody>
-              {r.modelos[h].pontos_operacao.map((p) => (
-                <tr key={p.recall} className="border-b border-linha/60 last:border-0">
-                  <td className="py-2">{pct(p.recall, 0)} dos atrasos</td>
-                  <td className="py-2">
-                    <span className="mr-2 inline-block h-2.5 rounded-sm bg-[#2a78d6] align-middle" style={{ width: `${p.precisão * 100}px` }} />
-                    {pct(p.precisão)}
-                  </td>
-                  <td className="py-2 text-right">{pct(p.limiar, 0)}</td>
-                </tr>
+          <div className="flex flex-wrap gap-2">
+            <Seletor valor={h} onChange={setH} />
+            <div className="inline-flex rounded-md border border-linha p-0.5" role="group" aria-label="Pergunta">
+              {(
+                [
+                  ["atraso", "Vai atrasar?"],
+                  ["mais30", "Passa de 30 min?"],
+                ] as const
+              ).map(([id, nome]) => (
+                <button
+                  key={id}
+                  type="button"
+                  aria-pressed={pergunta === id}
+                  onClick={() => setPergunta(id)}
+                  className={`rounded px-3 py-1 text-sm ${pergunta === id ? "bg-painel text-painel-texto" : "text-tinta-2 hover:text-tinta"}`}
+                >
+                  {nome}
+                </button>
               ))}
-            </tbody>
-          </table>
-          <p className="mt-3 text-sm text-tinta-2">
-            O site usa o limiar de {pct(r.modelos[h].limiar, 0)} ({NOME_H[h].toLowerCase()}), escolhido em 2023 pelo F1.
-          </p>
+            </div>
+          </div>
+          {pergunta === "atraso" ? (
+            <>
+              <TabelaPontos pontos={r.modelos[h].pontos_operacao} alvo="dos atrasos" />
+              <p className="mt-3 text-sm text-tinta-2">
+                O site usa o limiar de {pct(r.modelos[h].limiar, 0)} ({NOME_H[h].toLowerCase()}), escolhido em 2023 pelo F1.
+              </p>
+            </>
+          ) : (
+            <>
+              <TabelaPontos pontos={r.modelos[h].q30.pontos_operacao} alvo="dos atrasos > 30 min" />
+              <p className="mt-3 text-sm text-tinta-2">
+                Entre os voos que atrasaram. O site usa o limiar de {pct(r.modelos[h].q30.limiar, 0)} ({NOME_H[h].toLowerCase()}),
+                escolhido em 2023 pela acurácia balanceada.
+              </p>
+            </>
+          )}
         </Secao>
 
-        <Secao titulo="Matriz de confusão" nota="Cada linha é o que aconteceu; as células mostram o que o modelo previu (% da linha).">
+        <Secao titulo="Matriz de confusão" nota="Juntando as duas perguntas. Cada linha é o que aconteceu; as células mostram o alerta do site (% da linha).">
           <Seletor valor={h} onChange={setH} />
           <table className="mt-4 w-full text-center text-sm">
             <thead>
               <tr className="text-tinta-2">
-                <th className="p-1 text-left font-medium">real / previsto</th>
-                <th className="p-1 font-medium">sem alerta</th>
-                <th className="p-1 font-medium">alerta</th>
+                <th className="p-1 text-left font-medium">real / alerta</th>
+                {ALERTA.map((a) => (
+                  <th key={a} className="p-1 font-medium">
+                    {a.toLowerCase()}
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody>
@@ -335,7 +444,7 @@ export default function PainelAnalista({ r }: { r: Resumo }) {
                 <tr key={i}>
                   <th className="p-1 text-left font-medium">
                     <span className="mr-1.5 inline-block h-2.5 w-2.5 rounded-sm" style={{ background: COR[i] }} aria-hidden />
-                    {CLASSES[i]}
+                    {CLASSES3[i]}
                   </th>
                   {linha.map((v, j) => (
                     <td
@@ -360,7 +469,7 @@ export default function PainelAnalista({ r }: { r: Resumo }) {
 
       <Secao
         titulo={`Sazonalidade: mês a mês em ${r.periodos.teste}`}
-        nota="PR-AUC de cada horizonte por mês. A linha tracejada é o chute (a proporção de atrasos naquele mês): o ganho do modelo é a distância até ela."
+        nota="Pergunta “vai atrasar?”: PR-AUC de cada horizonte por mês. A linha tracejada é o chute (a proporção de atrasos de 15 min ou mais naquele mês): o ganho do modelo é a distância até ela."
       >
         <div className="h-72 w-full">
           <ResponsiveContainer>
@@ -379,7 +488,7 @@ export default function PainelAnalista({ r }: { r: Resumo }) {
             </LineChart>
           </ResponsiveContainer>
         </div>
-        <h3 className="mt-6 font-semibold">Precisão e recall do alerta de 1 h, mês a mês</h3>
+        <h3 className="mt-6 font-semibold">Precisão e recall do alerta de atraso de 1 h, mês a mês</h3>
         <div className="mt-2 h-60 w-full">
           <ResponsiveContainer>
             <LineChart data={mensal} margin={{ top: 8, right: 16, bottom: 0, left: -12 }}>
@@ -423,7 +532,7 @@ export default function PainelAnalista({ r }: { r: Resumo }) {
           </table>
         </Secao>
 
-        <Secao titulo="Taxa de atraso por ano" nota="Partidas com mais de 30 min de atraso. Anos com períodos excluídos aparecem só com os meses válidos.">
+        <Secao titulo="Taxa de atraso por ano" nota="Partidas com 15 min ou mais de atraso; o tom escuro é a parte com mais de 30 min.">
           <BarrasTaxa dados={r.eda.por_ano} rotulo={(c) => c} media={media} />
         </Secao>
       </div>
@@ -451,8 +560,10 @@ export default function PainelAnalista({ r }: { r: Resumo }) {
 
       <h2 className="pt-4 font-cond text-3xl font-semibold">Os dados de {r.desde} a {r.periodos.teste.slice(-4)}</h2>
       <p className="-mt-4 max-w-3xl text-tinta-2">
-        Taxa de partidas com mais de 30 min de atraso. A linha vertical marca a média geral ({pct(media)}).
+        Taxa de partidas com 15 min ou mais de atraso; o tom escuro é a parte com mais de 30 min. A linha vertical marca a
+        média geral ({pct(media)}).
       </p>
+      <LegendaTaxa />
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Secao titulo="Condições 1 h antes da partida">

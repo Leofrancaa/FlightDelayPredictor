@@ -1,7 +1,7 @@
 import dynamic from "next/dynamic";
 import BarraProbabilidade from "./BarraProbabilidade";
 import { ALERTA, COR, descreverAtraso, pct, situacao } from "@/lib/faixas";
-import type { Horizonte, Indice, Voo } from "@/lib/types";
+import type { Horizonte, Indice, Nivel, Voo } from "@/lib/types";
 
 // three.js só carrega no navegador e só quando um voo é aberto.
 const GloboVoo = dynamic(() => import("./GloboVoo"), {
@@ -9,22 +9,54 @@ const GloboVoo = dynamic(() => import("./GloboVoo"), {
   loading: () => <div className="h-[32rem] rounded-lg bg-painel sm:h-[44rem]" aria-hidden />,
 });
 
-function Previsao({ titulo, p, alerta, limiar }: { titulo: string; p: number; alerta: 0 | 1; limiar?: number }) {
+function Previsao({
+  titulo,
+  p,
+  q,
+  alerta,
+  limiar,
+  limiar30,
+}: {
+  titulo: string;
+  p: number;
+  q: number;
+  alerta: Nivel;
+  limiar?: number;
+  limiar30?: number;
+}) {
   return (
     <div className="rounded-md border border-linha p-4">
       <h3 className="text-sm text-tinta-2">{titulo}</h3>
       <p className="mt-1 font-cond text-2xl font-semibold" style={{ color: COR[alerta] }}>
         {ALERTA[alerta]}
       </p>
-      <p className="mb-3 text-sm text-tinta-2">
-        Chance de atrasar mais de 30 min: <strong className="text-tinta">{p}%</strong>
+      <p className="mb-2 mt-2 text-sm text-tinta-2">
+        Vai atrasar 15 min ou mais? <strong className="text-tinta">{p}%</strong>
       </p>
-      <BarraProbabilidade p={p} limiar={limiar} />
-      {limiar != null && (
-        <p className="mt-1.5 text-xs text-tinta-2">O traço marca {Math.round(limiar * 100)}%, onde o alerta dispara.</p>
+      <BarraProbabilidade p={p} limiar={limiar} rotulo="Chance de atrasar 15 min ou mais" corAlerta="var(--f1)" />
+      <p className={`mb-2 mt-3 text-sm text-tinta-2 ${alerta ? "" : "opacity-60"}`}>
+        Se atrasar, passa de 30 min? <strong className="text-tinta">{q}%</strong>
+      </p>
+      <div className={alerta ? "" : "opacity-60"}>
+        <BarraProbabilidade p={q} limiar={limiar30} rotulo="Chance de passar de 30 min, se atrasar" />
+      </div>
+      {limiar != null && limiar30 != null && (
+        <p className="mt-1.5 text-xs text-tinta-2">
+          Os traços marcam onde cada alerta dispara ({Math.round(limiar * 100)}% e {Math.round(limiar30 * 100)}%).
+        </p>
       )}
     </div>
   );
+}
+
+/** Compara o alerta de 1 h antes (0/1/2) com o que aconteceu (0/1/2). */
+function veredito(alerta: Nivel, real: Nivel): string {
+  if (alerta === real) return "A previsão de 1 h antes acertou.";
+  if (alerta === 0) return "A previsão de 1 h antes não avisou deste atraso.";
+  if (real === 0) return "Alarme falso: a previsão de 1 h antes avisou, mas o voo saiu com menos de 15 min de atraso.";
+  return alerta === 1
+    ? "A previsão de 1 h antes acertou que ia atrasar, mas esperava um atraso de até 30 min."
+    : "A previsão de 1 h antes acertou que ia atrasar, mas esperava mais de 30 min.";
 }
 
 function motivos(v: Voo): string[] {
@@ -48,12 +80,14 @@ export default function DetalheVoo({
   indice,
   data,
   limiares,
-  prevalencia = 0.15,
+  limiares30,
+  prevalencia = 0.22,
 }: {
   voo: Voo;
   indice: Indice;
   data: string;
   limiares?: Partial<Record<Horizonte, number>>;
+  limiares30?: Partial<Record<Horizonte, number>>;
   prevalencia?: number;
 }) {
   const coord = indice.coordenadas ?? {};
@@ -89,14 +123,15 @@ export default function DetalheVoo({
       )}
 
       <div className="grid gap-4 md:grid-cols-3">
-        <Previsao titulo="Na véspera" p={voo.pv} alerta={voo.fv} limiar={limiares?.vespera} />
-        <Previsao titulo="3 h antes da partida" p={voo.p3} alerta={voo.f3} limiar={limiares?.h3} />
-        <Previsao titulo="1 h antes da partida" p={voo.p1} alerta={voo.f1} limiar={limiares?.h1} />
+        <Previsao titulo="Na véspera" p={voo.pv} q={voo.qv} alerta={voo.fv} limiar={limiares?.vespera} limiar30={limiares30?.vespera} />
+        <Previsao titulo="3 h antes da partida" p={voo.p3} q={voo.q3} alerta={voo.f3} limiar={limiares?.h3} limiar30={limiares30?.h3} />
+        <Previsao titulo="1 h antes da partida" p={voo.p1} q={voo.q1} alerta={voo.f1} limiar={limiares?.h1} limiar30={limiares30?.h1} />
       </div>
 
       <p className="mt-3 text-sm text-tinta-2">
-        Só cerca de {Math.round(prevalencia * 100)}% dos voos atrasam mais de 30 min, então o alerta dispara quando a chance fica bem acima do
-        normal, mesmo abaixo de 50%. Quanto mais perto da partida, mais o modelo sabe e mais confiável fica o alerta.
+        Cerca de {Math.round(prevalencia * 100)}% dos voos atrasam 15 min ou mais, então o alerta dispara quando a chance fica bem acima do
+        normal, mesmo abaixo de 50%. Entre os que atrasam, a maioria passa de 30 min, por isso a segunda chance costuma ser alta. Quanto
+        mais perto da partida, mais o modelo sabe e mais confiável fica o alerta.
       </p>
 
       <div className="mt-5 grid gap-4 md:grid-cols-2">
@@ -124,13 +159,7 @@ export default function DetalheVoo({
             : {descreverAtraso(voo.a)}.
           </p>
           <p className="mt-1 text-sm text-tinta-2">
-            {voo.f1 === voo.f
-              ? voo.f || voo.a <= 0
-                ? "A previsão de 1 h antes acertou."
-                : "A previsão de 1 h antes acertou: o alerta só cobre atrasos de mais de 30 min, e este ficou abaixo disso."
-              : voo.f1
-                ? "Alarme falso: a previsão de 1 h antes avisou, mas o atraso não passou de 30 min."
-                : "A previsão de 1 h antes não avisou deste atraso."}
+            {veredito(voo.f1, voo.f)}
           </p>
         </section>
       </div>

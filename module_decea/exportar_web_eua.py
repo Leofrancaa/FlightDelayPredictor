@@ -1,13 +1,18 @@
 """Modelo dos EUA (BTS + METAR + matrícula do avião) e JSON do site em web/public/data/.
 
-Alvo: atraso de partida > 30 min, previsto na véspera, 3 h e 1 h antes, nos 10 maiores aeroportos dos EUA.
+Duas perguntas, previstas na véspera, 3 h e 1 h antes, nos 10 maiores aeroportos dos EUA:
+    1. o voo vai atrasar (partida >= 15 min, critério do DOT)?
+    2. se atrasar, vai passar de 30 min?
+Um só classificador por horizonte, com 3 classes (< 15, 15–30, > 30 min). Dele saem P(atraso) = P(15–30) + P(> 30)
+e P(> 30 | atraso) = P(> 30) / P(atraso). Cada pergunta tem o seu limiar, escolhido na validação.
 O que a BTS traz além da programação e do clima:
     - voo de chegada pela matrícula (o voo anterior do mesmo avião) e a cadeia do avião no dia;
     - causa de cada atraso (informada depois do voo): usada só para medir o recall por causa no teste.
-Treino 2022, validação 2023 (limiar do alerta), teste 2024. Também treina, no horizonte de 1 h, a versão sem
+Treino 2022, validação 2023 (limiares dos alertas), teste 2024. Também treina, no horizonte de 1 h, a versão sem
 matrícula (voo de chegada inferido pela companhia) para mostrar quanto a matrícula vale.
 
     uv run python -m module_decea.exportar_web_eua    # precisa de data/raw/bts/BTS_*.parquet e data/raw/metar_eua/
+    uv run python -m module_decea.exportar_web_eua --meses 12    # teste rápido do código, só dezembro
 """
 
 import argparse
@@ -20,7 +25,7 @@ import airportsdata
 import numpy as np
 import pandas as pd
 from sklearn.inspection import permutation_importance
-from sklearn.metrics import average_precision_score, log_loss
+from sklearn.metrics import average_precision_score, balanced_accuracy_score, log_loss
 
 from module_decea import experimento_bts as B
 from module_decea import modelagem as M
@@ -113,8 +118,11 @@ def _r(x, n=4):
 
 
 def _taxa(df, chave):
-    g = df.groupby(chave, observed=True)["atr"].agg(["mean", "size"]).reset_index()
-    return [{"chave": str(k), "taxa30": _r(m), "voos": int(n)} for k, m, n in g.itertuples(index=False)]
+    """Taxa de atraso >= 15 min (atr15) e > 30 min (atr) por categoria."""
+    g = df.groupby(chave, observed=True).agg(t15=("atr15", "mean"), t30=("atr", "mean"), n=("atr", "size")).reset_index()
+    return [
+        {"chave": str(k), "taxa15": _r(a), "taxa30": _r(b), "voos": int(n)} for k, a, b, n in g.itertuples(index=False)
+    ]
 
 
 def _mensal(info_te, y_te, p_te, limiar):
@@ -214,27 +222,37 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--pasta", default=str(RAW_DATA_DIR / "bts"))
     ap.add_argument("--metar", default=str(RAW_DATA_DIR / "metar_eua"))
+    ap.add_argument("--meses", default="", help="só para testar o código: meses a usar, ex. 11,12")
     a = ap.parse_args()
     fusos = airportsdata.load("IATA")
 
     todos = B.carregar(a.pasta)
+    if a.meses:
+        todos = todos[todos["dep_local"].dt.month.isin([int(m) for m in a.meses.split(",")])].copy()
     metar = carregar_metar(a.metar)
     log(f"BTS: {len(todos):,} voos | METAR: {len(metar):,} horas")
     v = todos[todos["Origin"].isin(B.AEROPORTOS)]
     prog = pd.concat([B.programacao(v), B.historico(v)], axis=1)
     ok = v["realizado"].to_numpy()
     ano = v["dep_local"].dt.year.to_numpy()[ok]
-    y = v["atr30"].astype(int)[ok].reset_index(drop=True)
+    # Alvo em 3 classes: < 15 min (no horário pelo critério do DOT), 15–30 min e > 30 min
+    atraso = v["DepDelay"].to_numpy()[ok]
+    y3 = pd.Series(np.select([atraso > 30, atraso >= 15], [2, 1], 0)).astype(int)
+    y15, y30 = (y3 >= 1).astype(int), (y3 == 2).astype(int)
     tr0, val, tr, te = ano == 2022, ano == 2023, ano <= 2023, ano == 2024
     vo = v[ok].reset_index(drop=True)
     causas = vo[list(B.CAUSAS)].fillna(0)
     causa_ok, causa_dom = (causas.sum(axis=1) > 0).to_numpy(), causas.idxmax(axis=1).to_numpy()
-    log(f"partidas realizadas: {ok.sum():,} | atraso > 30 no teste: {y[te].mean():.2%}")
+    log(
+        f"partidas realizadas: {ok.sum():,} | teste: atraso >= 15 {y15[te].mean():.2%}, > 30 {y30[te].mean():.2%}, "
+        f"> 30 entre os atrasados {y30[te & (y15 == 1).to_numpy()].mean():.2%}"
+    )
 
     resumo = {
         "gerado_em": datetime.now(UTC).isoformat(timespec="seconds"),
         "pais": "eua",
-        "alvo": "partida com atraso > 30 min",
+        "alvo": "vai atrasar (>= 15 min)? se atrasar, passa de 30 min?",
+        "classes": M.CLASSES3,
         "desde": 2022,
         "periodos": {"treino": "2022", "validacao": "2023", "teste": "2024"},
         "periodos_anomalos": [],
@@ -242,34 +260,57 @@ def main():
         "hiperparametros": {k: v_ for k, v_ in B.PARAMS.items()},
         "busca": [],
         "n": {"treino": int(tr0.sum()), "validacao": int(val.sum()), "teste": int(te.sum())},
+        "prevalencias": {
+            "atraso15": _r(y15[te].mean()),
+            "mais30": _r(y30[te].mean()),
+            "mais30_dado_atraso": _r(y30[te & (y15 == 1).to_numpy()].mean()),
+        },
         "modelos": {},
         "mensal": {},
         "janelas": [],
         "causas": {
-            c: {"descricao": d, "parcela": _r((causa_dom[te & (y.to_numpy() == 1) & causa_ok] == c).mean())}
+            c: {"descricao": d, "parcela": _r((causa_dom[te & (y15.to_numpy() == 1) & causa_ok] == c).mean())}
             for c, d in B.CAUSAS.items()
         },
     }
     demo = {}
     na_demo = (vo.loc[te, "dep_local"] >= INICIO_DEMO).to_numpy()
+    y3t, y15t, y30t = y3[te].to_numpy(), y15[te].to_numpy(), y30[te].to_numpy()
+    atrasou_t = y15t == 1  # a pergunta "passa de 30 min?" é avaliada só nos voos que de fato atrasaram
 
     def treinar(X, nome):
         X = _float32(X.loc[:, X[tr0].notna().any().to_numpy()])
-        p_val = M.hgb(**B.PARAMS).fit(X[tr0], y[tr0]).predict_proba(X[val])
-        limiar, _ = M.ajustar_limiar(p_val, y[val])
-        modelo = M.hgb(**B.PARAMS).fit(X[tr], y[tr])
+        pv = M.hgb(**B.PARAMS).fit(X[tr0], y3[tr0]).predict_proba(X[val])
+        l15, _ = M.ajustar_limiar(M.binaria(M.p_atraso(pv)), y15[val])
+        sv = y15[val].to_numpy() == 1
+        l30, _ = M.ajustar_limiar_balanceado(M.binaria(M.p_mais_30(pv)[sv]), y30[val].to_numpy()[sv])
+        modelo = M.hgb(**B.PARAMS).fit(X[tr], y3[tr])
         p = modelo.predict_proba(X[te])
-        log(f"{nome}: limiar {limiar} | PR-AUC {average_precision_score(y[te], p[:, 1]):.4f}")
-        return X, modelo, p, limiar
+        log(
+            f"{nome}: limiares {l15} / {l30} | PR-AUC atraso {average_precision_score(y15t, M.p_atraso(p)):.4f}, "
+            f"> 30 | atraso {average_precision_score(y30t[atrasou_t], M.p_mais_30(p)[atrasou_t]):.4f}"
+        )
+        return X, modelo, p, l15, l30
 
     def recall_causa(p, limiar):
-        alerta = M.decidir(p, limiar).astype(bool)
-        yt = y[te].to_numpy() == 1
+        alerta = M.decidir(M.binaria(M.p_atraso(p)), limiar).astype(bool)
         out = {}
         for c in B.CAUSAS:
-            sel = yt & causa_ok[te] & (causa_dom[te] == c)
+            sel = atrasou_t & causa_ok[te] & (causa_dom[te] == c)
             out[c] = _r(alerta[sel].mean()) if sel.any() else None
         return out
+
+    def pergunta30(p, l30):
+        """Métricas de "se atrasar, passa de 30 min?" nos voos do teste que atrasaram >= 15 min."""
+        pc = M.binaria(M.p_mais_30(p)[atrasou_t])
+        yc = y30t[atrasou_t]
+        return {
+            "limiar": l30,
+            **{m: _r(x) for m, x in M.metricas(yc, pc, l30).items()},
+            "acuracia_balanceada": _r(balanced_accuracy_score(yc, M.decidir(pc, l30))),
+            "pontos_operacao": [{c: _r(x) for c, x in d.items()} for d in M.pontos_operacao(yc, pc)],
+            "confusao": [[_r(x, 2) for x in linha] for linha in M.matriz_confusao(yc, M.decidir(pc, l30)).values],
+        }
 
     for k, (h, nome) in HORIZ.items():
         if h is None:
@@ -284,25 +325,36 @@ def main():
             ]
         X = pd.concat([prog, *extra], axis=1)[ok].reset_index(drop=True)
         del extra
-        X, modelo, p, limiar = treinar(X, nome)
-        yt = y[te].to_numpy()
-        cm = M.matriz_confusao(yt, M.decidir(p, limiar))
+        X, modelo, p, l15, l30 = treinar(X, nome)
+        pa = M.binaria(M.p_atraso(p))
+        alerta3 = M.decidir3(p, l15, l30)
         resumo["modelos"][k] = {
             "nome": nome,
-            "limiar": limiar,
-            **{m: _r(x) for m, x in M.metricas(yt, p, limiar).items()},
-            "pontos_operacao": [{c: _r(x) for c, x in d.items()} for d in M.pontos_operacao(yt, p)],
-            "confusao": [[_r(x, 2) for x in linha] for linha in cm.values],
-            "recall_por_causa": recall_causa(p, limiar),
+            "limiar": l15,
+            **{m: _r(x) for m, x in M.metricas(y15t, pa, l15).items()},
+            "pontos_operacao": [{c: _r(x) for c, x in d.items()} for d in M.pontos_operacao(y15t, pa)],
+            "confusao": [[_r(x, 2) for x in linha] for linha in M.matriz_confusao(y15t, M.decidir(pa, l15)).values],
+            "recall_por_causa": recall_causa(p, l15),
+            "q30": pergunta30(p, l30),
+            "confusao3": [[_r(x, 2) for x in linha] for linha in M.matriz_confusao3(y3t, alerta3)],
+            "log_loss3": _r(log_loss(y3t, p, labels=[0, 1, 2])),
+            "pr_auc_mais30": _r(average_precision_score(y30t, p[:, 2])),  # P(> 30) direto, para comparar
         }
         info_te = pd.DataFrame({"partida_prev": vo.loc[te, "dep_local"].to_numpy()})
-        resumo["mensal"][k] = _mensal(info_te, yt, p, limiar)
+        resumo["mensal"][k] = _mensal(info_te, y15t, pa, l15)
         log(f"{nome}: {resumo['modelos'][k]['precisão']} precisão | {resumo['modelos'][k]['recall']} recall")
-        demo[k] = {"p": np.rint(p[na_demo, 1] * 100).astype(int), "alerta": M.decidir(p[na_demo], limiar)}
+        demo[k] = {
+            "p": np.rint(M.p_atraso(p[na_demo]) * 100).astype(int),
+            "q": np.rint(M.p_mais_30(p[na_demo]) * 100).astype(int),
+            "alerta": alerta3[na_demo],
+        }
 
         if k == "h1":
-            prior = np.tile([1 - y[tr].mean(), y[tr].mean()], (len(yt), 1))
-            resumo["chute"] = {m: _r(x) for m, x in M.metricas(yt, prior, 0.5).items()}
+            prior = np.tile([1 - y15[tr].mean(), y15[tr].mean()], (len(y15t), 1))
+            resumo["chute"] = {m: _r(x) for m, x in M.metricas(y15t, prior, 0.5).items()}
+            q = y30[tr & (y15 == 1).to_numpy()].mean()
+            prior30 = np.tile([1 - q, q], (int(atrasou_t.sum()), 1))
+            resumo["chute30"] = {m: _r(x) for m, x in M.metricas(y30t[atrasou_t], prior30, 0.5).items()}
             # Sem matrícula (chegada inferida pela companhia), mesmo clima e mesmo resto
             Xs = pd.concat(
                 [
@@ -313,42 +365,32 @@ def main():
                 ],
                 axis=1,
             )
-            Xs, _, ps, ls = treinar(Xs[ok].reset_index(drop=True), "1 h, sem matrícula")
+            Xs, _, ps, ls, ls30 = treinar(Xs[ok].reset_index(drop=True), "1 h, sem matrícula")
+            chaves = ["limiar", "PR-AUC", "ROC-AUC", "log_loss", "precisão", "recall", "F1", "recall_por_causa"]
             resumo["matricula"] = {
                 "sem": {
                     "limiar": ls,
-                    **{m: _r(x) for m, x in M.metricas(yt, ps, ls).items()},
+                    **{m: _r(x) for m, x in M.metricas(y15t, M.binaria(M.p_atraso(ps)), ls).items()},
                     "recall_por_causa": recall_causa(ps, ls),
+                    "q30": pergunta30(ps, ls30),
                 },
-                "com": {
-                    key: resumo["modelos"]["h1"][key]
-                    for key in [
-                        "limiar",
-                        "PR-AUC",
-                        "ROC-AUC",
-                        "log_loss",
-                        "precisão",
-                        "recall",
-                        "F1",
-                        "recall_por_causa",
-                    ]
-                },
+                "com": {key: resumo["modelos"]["h1"][key] for key in [*chaves, "q30"]},
             }
             del Xs, ps
             # Quanto histórico (mesmo teste)
-            p23 = M.hgb(**B.PARAMS).fit(X[val], y[val]).predict_proba(X[te])
+            p23 = M.hgb(**B.PARAMS).fit(X[val], y3[val]).predict_proba(X[te])
             for nome_j, pj, n in [("2022–2023", p, int(tr.sum())), ("só 2023", p23, int(val.sum()))]:
                 resumo["janelas"].append(
                     {
                         "janela": nome_j,
                         "voos_treino": n,
-                        "pr_auc": _r(average_precision_score(yt, pj[:, 1])),
-                        "log_loss": _r(log_loss(yt, pj)),
+                        "pr_auc": _r(average_precision_score(y15t, M.p_atraso(pj))),
+                        "log_loss": _r(log_loss(y15t, M.binaria(M.p_atraso(pj)))),
                     }
                 )
-            idx = np.random.default_rng(1).choice(np.flatnonzero(te), 20_000, replace=False)
+            idx = np.random.default_rng(1).choice(np.flatnonzero(te), min(20_000, int(te.sum())), replace=False)
             imp = permutation_importance(
-                modelo, X.iloc[idx], y.iloc[idx], scoring="neg_log_loss", n_repeats=2, random_state=0
+                modelo, X.iloc[idx], y3.iloc[idx], scoring="neg_log_loss", n_repeats=2, random_state=0
             )
             imp = pd.Series(imp.importances_mean, index=X.columns).sort_values(ascending=False).head(20)
             resumo["importancia"] = [
@@ -357,7 +399,8 @@ def main():
             ]
             d = pd.DataFrame(
                 {
-                    "atr": y.to_numpy(),
+                    "atr": y30.to_numpy(),
+                    "atr15": y15.to_numpy(),
                     "hora": vo["dep_local"].dt.hour,
                     "mes": vo["dep_local"].dt.month,
                     "ano": ano,
@@ -383,7 +426,12 @@ def main():
                 "por_dia_semana": _taxa(d, "dia_semana"),
                 "por_ano": _taxa(d, "ano"),
                 "clima": [
-                    {"chave": n, "taxa30": _r(d.loc[m, "atr"].mean()), "voos": int(m.sum())}
+                    {
+                        "chave": n,
+                        "taxa15": _r(d.loc[m, "atr15"].mean()),
+                        "taxa30": _r(d.loc[m, "atr"].mean()),
+                        "voos": int(m.sum()),
+                    }
                     for n, m in condicoes.items()
                 ],
             }
@@ -391,9 +439,7 @@ def main():
         del X, modelo, p
         gc.collect()
 
-    gravar(
-        resumo, demo, vo[te].reset_index(drop=True)[na_demo].reset_index(drop=True), y[te].to_numpy()[na_demo], fusos
-    )
+    gravar(resumo, demo, vo[te].reset_index(drop=True)[na_demo].reset_index(drop=True), y3t[na_demo], fusos)
     log(f"pronto: {SAIDA}")
 
 
@@ -420,6 +466,7 @@ def gravar(resumo, demo, it, yd, fusos):
     }
     dias = it["dep_local"].dt.strftime("%Y-%m-%d").to_numpy()
     num = it["Flight_Number_Reporting_Airline"].astype("Int64").astype(str).to_numpy()
+    sufixos = [("v", "vespera"), ("3", "h3"), ("1", "h1")]
     aps = set()
     for dia in sorted(set(dias)):
         lista = []
@@ -434,9 +481,10 @@ def gravar(resumo, demo, it, yd, fusos):
                     "d": de,
                     "h": it.at[i, "dep_local"].strftime("%H:%M"),
                     "a": int(np.rint(it.at[i, "DepDelay"])),
-                    "f": int(yd[i]),
-                    **{f"p{s}": int(demo[k]["p"][i]) for s, k in [("v", "vespera"), ("3", "h3"), ("1", "h1")]},
-                    **{f"f{s}": int(demo[k]["alerta"][i]) for s, k in [("v", "vespera"), ("3", "h3"), ("1", "h1")]},
+                    "f": int(yd[i]),  # 0 = < 15 min, 1 = 15–30 min, 2 = > 30 min
+                    **{f"p{s}": int(demo[k]["p"][i]) for s, k in sufixos},  # chance (%) de atrasar >= 15 min
+                    **{f"q{s}": int(demo[k]["q"][i]) for s, k in sufixos},  # chance (%) de passar de 30, se atrasar
+                    **{f"f{s}": int(demo[k]["alerta"][i]) for s, k in sufixos},  # alerta 0 / 1 / 2
                     "c": {c: _r(xt.at[i, col], 3) if col in xt else None for c, col in ctx.items()},
                 }
             )
@@ -451,6 +499,7 @@ def gravar(resumo, demo, it, yd, fusos):
         "aeroportos": {c: cidade(c) for c in sorted(aps)},
         "coordenadas": {c: [round(fusos[c]["lat"], 3), round(fusos[c]["lon"], 3)] for c in sorted(aps) if c in fusos},
         "limiares": {k: m["limiar"] for k, m in resumo["modelos"].items()},
+        "limiares30": {k: m["q30"]["limiar"] for k, m in resumo["modelos"].items()},
     }
     (SAIDA / "indice.json").write_text(json.dumps(indice, ensure_ascii=False), encoding="utf-8")
 
