@@ -1,72 +1,55 @@
-# Exploração da API AISWEB (DECEA)
+# Previsão de atraso de voos (EUA)
 
-Notebooks para explorar as rotas da API do [AISWEB](https://aisweb.decea.mil.br/), o portal de informação aeronáutica do DECEA, e procurar uma situação-problema de ML cruzando esses dados com METAR histórico (IEM) e os voos da ANAC (VRA).
+Modelo que estima a chance de uma partida atrasar mais de 30 min, previsto na véspera, 3 h e 1 h antes, nos 10 maiores aeroportos dos EUA. Dados: BTS On-Time Performance 2022–2024 (com a matrícula de cada avião e a causa de cada atraso) e METAR histórico do Iowa Environmental Mesonet (IEM).
 
 ## Setup
 
 ```bash
 make requirements      # = uv sync: cria a .venv e instala o pacote module_decea
-cp .env.example .env   # e preencha AISWEB_API_KEY e AISWEB_API_PASS
 ```
 
-Depois abra os notebooks em `notebooks/` e selecione o kernel `.venv`:
+## Dados
 
-1. `01_explorar_aisweb.ipynb`: mapa das rotas da API AISWEB.
-2. `02_insights_ml.ipynb`: exploração dos dados em busca de uma situação-problema de ML. Cruza a AISWEB com METAR histórico (IEM) e os voos da ANAC (VRA) de 2025. Na primeira execução baixa ~330 MB para `data/raw/` (pasta ignorada pelo git).
+Os dados brutos ficam na Release `dados-bts` do GitHub, gerados pelos workflows (aba Actions):
 
-3. `03_modelo_atraso.ipynb`: primeira versão do modelo (faixas de atraso, só 2025). Mantido como histórico.
-4. `04_modelo_final.ipynb`: modelo final, **binário**: a partida atrasa mais de 30 min? Previsto na véspera, 3 h e 1 h antes. Dados de 2011 a 2025 (sem os períodos anômalos), treino até 2022, validação 2023 (hiperparâmetros e limiar do alerta), teste 2024–2025. Lê `reports/modelo_final/resumo.json`, gerado por `uv run python -m module_decea.exportar_web` (ou pelo workflow *Treinar modelo final* no GitHub Actions). Variáveis em `module_decea/features.py`, métricas em `module_decea/modelagem.py`.
+1. *Baixar BTS (EUA)*: um parquet por ano (`BTS_2022.parquet` ...), só os voos que tocam os 10 aeroportos.
+2. *Baixar METAR (IEM)*: um zip por ano (`METAR_EUA_2022.zip` ...) com o METAR dos 10 aeroportos.
 
-5. **EUA (BTS)**: `module_decea/exportar_web_eua.py` treina o modelo dos EUA (10 maiores aeroportos, BTS 2022–2024 + METAR + matrícula do avião) que aparece no site em `/eua`. Teste 2024, 1 h antes, atraso > 30 min: sem matrícula PR-AUC 0,42 (precisão 38%, recall 48%); com matrícula PR-AUC 0,64 (precisão 58%, recall 57%). O modelo com matrícula pega 79% dos atrasos por "avião chegou atrasado", mas só 32% dos atrasos da companhia (manutenção, tripulação, embarque), que somam 37% dos atrasos. Tempo de solo e folga calculados pela matrícula ficam de fora: a BTS grava o avião que de fato voou, e a troca de avião por causa de atraso vazava para o modelo. `module_decea/experimento_bts.py` compara as versões sem/com matrícula (`reports/bts/resumo.json`). Dados via workflows *Baixar BTS (EUA)*, *Baixar METAR (IEM)* e *Treinar modelo EUA*.
+Para rodar local, baixe para `data/raw/bts/` e descompacte os CSVs do METAR em `data/raw/metar_eua/` (pasta ignorada pelo git).
 
-As siglas e os termos técnicos dos notebooks (METAR, NOTAM, IMC, PR-AUC...) estão explicados em [`docs/glossario.md`](docs/glossario.md).
+## Modelo
+
+`module_decea/exportar_web_eua.py` treina o modelo e exporta os dados do site para `web/public/data/` (`make treinar`, ou o workflow *Treinar modelo EUA*). Treino 2022, validação 2023 (limiar do alerta), teste 2024.
+
+No teste, 1 h antes, atraso > 30 min: sem matrícula PR-AUC 0,42 (precisão 38%, recall 48%); com matrícula PR-AUC 0,64 (precisão 58%, recall 57%). O modelo com matrícula pega 79% dos atrasos por "avião chegou atrasado", mas só 32% dos atrasos da companhia (manutenção, tripulação, embarque), que somam 37% dos atrasos. Tempo de solo e folga calculados pela matrícula ficam de fora: a BTS grava o avião que de fato voou, e a troca de avião por causa de atraso vazava para o modelo.
+
+`module_decea/experimento_bts.py` compara as versões sem/com matrícula (`make experimento`, resultado em `reports/bts/resumo.json`).
+
+Como o modelo funciona (classificação, gradient boosting, validação temporal, métricas): [`docs/MODELO.md`](docs/MODELO.md).
+
+As siglas e os termos técnicos (METAR, IMC, PR-AUC...) estão explicados em [`docs/glossario.md`](docs/glossario.md).
 
 Outros comandos: `make test`, `make lint`, `make format`, `make clean` (`make` sozinho lista todos).
-
-## Coleta diária de NOTAMs
-
-A AISWEB só mostra os NOTAMs vigentes agora. Para montar um histórico:
-
-```bash
-make agendar_notam                 # cron todo dia às 9h; outro horário: make agendar_notam NOTAM_HORA=12
-make desagendar_notam              # tira do cron
-tail ~/Library/Logs/decea-coleta-notam.log
-```
-
-Cada coleta salva um retrato em `data/raw/notam_coleta/`. No fim, `historico_notam()` (em `module_decea/dataset.py`) junta os retratos em uma linha por NOTAM, com a primeira e a última coleta em que ele apareceu. Se o computador estiver desligado ou dormindo no horário, o cron pula aquele dia.
 
 ## Organização
 
 ```
-├── data
-│   ├── external       <- PDFs de cartas baixados no notebook 01
-│   ├── interim        <- dados intermediários, já transformados
-│   ├── processed      <- bases finais para modelagem
-│   └── raw            <- downloads originais: aisweb/, metar/, vra/, notam_coleta/
+├── .github/workflows  <- download dos dados (BTS, METAR) e treino na nuvem
+├── data/raw           <- bts/, metar_eua/ (ignorado pelo git)
 ├── docs               <- glossario.md: siglas e termos técnicos
-├── models             <- modelos treinados
 ├── module_decea       <- código Python do projeto
-│   ├── config.py      <- caminhos do projeto e leitura do .env
-│   ├── aisweb.py      <- cliente da API AISWEB
-│   ├── dataset.py     <- downloads com cache (AISWEB, METAR/IEM, VRA/ANAC) e coleta de NOTAMs
-│   ├── metar.py       <- decodificação de METAR
-│   └── vra.py         <- leitura do VRA
-├── notebooks          <- numerados na ordem de leitura
-├── references         <- dicionários de dados, manuais, ICAs
-├── reports
-│   └── figures        <- gráficos gerados para o relatório
+│   ├── config.py           <- caminhos do projeto
+│   ├── metar.py            <- decodificação de METAR
+│   ├── modelagem.py        <- treino, limiar do alerta e métricas
+│   ├── experimento_bts.py  <- leitura da BTS, variáveis e experimento sem/com matrícula
+│   └── exportar_web_eua.py <- modelo final e JSON do site
+├── reports            <- bts/ e eua/: métricas e logs do treino
 ├── tests
-├── .env.example
+├── web                <- site Next.js
 ├── Makefile
 └── pyproject.toml
 ```
 
-## Rotas disponíveis
-
-`localidades`, `rotaer`, `met`, `sol`, `notam`, `cartas`, `suplementos`, `infotemp`, `pub` e `waypoints`. O notebook 01 detalha os parâmetros de cada uma.
-
-> Os links de download das cartas contêm a `apiKey`. Limpe os outputs do notebook antes de commitar.
-
 ## App web
 
-`web/` tem um app Next.js (TypeScript + Tailwind) com duas áreas: **Meu voo**, onde o passageiro consulta um voo e vê o alerta de atraso, e **Análise do modelo**, com as métricas e a análise dos dados. Os dados do app são gerados com `uv run python -m module_decea.exportar_web`. Como rodar e publicar no Vercel: [`web/README.md`](web/README.md).
+`web/` tem um app Next.js (TypeScript + Tailwind) com duas áreas: **Meu voo**, onde o passageiro consulta um voo e vê o alerta de atraso, e **Análise do modelo**, com as métricas e a análise dos dados. Como rodar e publicar no Vercel: [`web/README.md`](web/README.md).

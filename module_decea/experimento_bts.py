@@ -1,14 +1,13 @@
 """Experimento com a BTS (EUA): quanto vale saber qual avião faz cada voo (matrícula)?
 
-O VRA da ANAC não tem a matrícula, então o voo que traz o avião é adivinhado (mesma companhia e modelo chegando
-na origem). A BTS tem a matrícula (Tail_Number) e a causa de cada atraso. O experimento treina o mesmo tipo de modelo
+Sem a matrícula, o voo que traz o avião precisa ser adivinhado (mesma companhia chegando na origem). A BTS tem a matrícula (Tail_Number) e a causa de cada atraso. O experimento treina o mesmo tipo de modelo
 (atraso de partida > 30 min, 1 h antes) nos 10 maiores aeroportos dos EUA em três versões que só mudam o voo de chegada:
 
-    A  "como no Brasil": último voo da mesma companhia chegando na origem (a BTS não tem o modelo do avião)
+    A  "sem matrícula": último voo da mesma companhia chegando na origem (a BTS não tem o modelo do avião)
     B  "com matrícula": o voo anterior do mesmo avião
     B+ matrícula + a cadeia do avião no dia (quantos voos já fez, atraso conhecido do voo de antes)
 
-Divisão igual à do Brasil: treino 2022, validação 2023 (limiar do alerta), teste 2024. Sem METAR (igual nas três).
+Divisão temporal: treino 2022, validação 2023 (limiar do alerta), teste 2024. Sem METAR (igual nas três).
 No teste, o recall é separado pela causa principal do atraso (companhia, clima, controle de tráfego, segurança,
 avião atrasado), que a BTS informa depois do voo e que, por isso, não entra como variável.
 
@@ -133,7 +132,7 @@ def historico(v):
 
 
 def recente(v, todos, h=H):
-    """Atraso recente (mesma regra do Brasil: só horas até ref - 2 h, janela de 3 h) na origem, na companhia na
+    """Atraso recente (só horas até ref - 2 h, janela de 3 h) na origem, na companhia na
     origem e na companhia na rede."""
     f = pd.DataFrame(index=v.index)
     r = todos[todos["realizado"]].assign(hb=lambda x: x["dep_utc"].dt.floor("h"))
@@ -184,7 +183,7 @@ COLS_M = ["dep_utc", "dep_real", "arr_prev", "arr_real", "DepDelay", "ArrDelay",
 
 
 def chegada_sem_matricula(v, todos, h=H):
-    """Como no Brasil: último voo da mesma companhia chegando na origem >= 25 min antes, em até 4 h."""
+    """Sem matrícula: último voo da mesma companhia chegando na origem >= 25 min antes, em até 4 h."""
     cheg = todos[["Reporting_Airline", "Dest", *COLS_M]].rename(columns={"Dest": "Origin", "dep_utc": "dep_utc_m"})
     cheg = cheg.astype({"Reporting_Airline": str, "Origin": str}).sort_values("arr_prev")
     esq = (

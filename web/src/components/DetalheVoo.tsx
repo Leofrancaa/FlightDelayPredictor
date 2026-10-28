@@ -1,6 +1,5 @@
 import dynamic from "next/dynamic";
 import BarraProbabilidade from "./BarraProbabilidade";
-import { COORDENADAS } from "@/lib/coordenadas";
 import { ALERTA, COR, descreverAtraso, pct, situacao } from "@/lib/faixas";
 import type { Horizonte, Indice, Voo } from "@/lib/types";
 
@@ -49,7 +48,7 @@ export default function DetalheVoo({
   indice,
   data,
   limiares,
-  prevalencia = 0.08,
+  prevalencia = 0.15,
 }: {
   voo: Voo;
   indice: Indice;
@@ -57,7 +56,7 @@ export default function DetalheVoo({
   limiares?: Partial<Record<Horizonte, number>>;
   prevalencia?: number;
 }) {
-  const coord = { ...COORDENADAS, ...indice.coordenadas };
+  const coord = indice.coordenadas ?? {};
   const [nomeEmpresa, iata] = indice.empresas[voo.e] ?? [voo.e, voo.e];
   const sinais = motivos(voo);
   const dataBr = new Date(`${data}T12:00:00`).toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" });

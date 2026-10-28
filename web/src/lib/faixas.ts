@@ -1,18 +1,18 @@
 import type { Horizonte } from "./types";
 
-/** Alvo binário: a partida atrasou mais de 30 min (tolerância usada pela ANAC)? */
+/** Alvo binário: a partida atrasou mais de 30 min? */
 export const CLASSES = ["até 30 min", "> 30 min"] as const;
 
 /** O que aconteceu de fato. */
 export const STATUS = ["No horário", "Atrasou mais de 30 min"] as const;
 
 /**
- * Previsão. O limiar foi calibrado em 2023 para equilibrar precisão e recall (F1). Como só ~8% dos voos atrasam
+ * Previsão. O limiar foi calibrado em 2023 para equilibrar precisão e recall (F1). Como só ~15% dos voos atrasam
  * mais de 30 min, o alerta dispara bem abaixo de 50%: é um alerta de risco, não uma certeza.
  */
 export const ALERTA = ["Sem alerta", "Alerta de atraso"] as const;
 
-/** O que aconteceu de fato. Atraso de até 30 min não é "no horário": é atraso, só não passa do critério da ANAC. */
+/** O que aconteceu de fato. Atraso de até 30 min não é "no horário": é atraso, só não passa do critério de 30 min. */
 export function situacao(atrasoMin: number): { texto: string; cor: string; painel: string } {
   if (atrasoMin <= 0) return { texto: "No horário", cor: "var(--f0)", painel: "#3fb394" };
   if (atrasoMin <= 30) return { texto: "Atrasou até 30 min", cor: "var(--f1)", painel: "#e2b232" };

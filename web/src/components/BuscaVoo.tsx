@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import DetalheVoo from "./DetalheVoo";
 import { situacao } from "@/lib/faixas";
-import { PAISES, type Pais } from "@/lib/pais";
 import type { Horizonte, Indice, Resumo, Voo } from "@/lib/types";
 
 const PAGINA = 60;
@@ -15,19 +14,18 @@ const PERIODOS = [
   { id: "tarde", nome: "Tarde", de: 12, ate: 18 },
   { id: "noite", nome: "Noite", de: 18, ate: 24 },
 ];
-const IATA: Record<string, string> = {
-  SBGR: "GRU", SBSP: "CGH", SBKP: "VCP", SBCF: "CNF", SBBR: "BSB",
-  SBGL: "GIG", SBRJ: "SDU", SBPA: "POA", SBCT: "CWB", SBRF: "REC",
-};
+const BASE = "/data";
+const AEROPORTO_PADRAO = "ATL";
+const EXEMPLO = "DL 774";
 const DIAS = ["DOM", "SEG", "TER", "QUA", "QUI", "SEX", "SÁB"];
 const MESES = ["JAN", "FEV", "MAR", "ABR", "MAI", "JUN", "JUL", "AGO", "SET", "OUT", "NOV", "DEZ"];
 const VERDE = "#3fb394";
 const VERMELHO = "#e55a4c";
 
-/** "G3 1402", "g31402", "1402" -> { iata: "G3" | null, numero: "1402" } */
+/** "DL 774", "dl774", "774" -> { iata: "DL" | null, numero: "774" } */
 function lerBusca(texto: string): { iata: string | null; numero: string } {
   const t = texto.toUpperCase().replace(/\s+/g, "");
-  // código IATA tem ao menos uma letra (G3, LA, AD, 2Z), senão "3321" viraria iata "33" + número "21"
+  // código IATA tem ao menos uma letra (DL, AA, B6, 9E), senão "3321" viraria iata "33" + número "21"
   const m = t.match(/^([A-Z][A-Z0-9]|[0-9][A-Z])?(\d{1,4})$/);
   if (!m) return { iata: null, numero: t.replace(/\D/g, "") };
   return { iata: m[1] ?? null, numero: m[2].replace(/^0+/, "") };
@@ -94,8 +92,10 @@ function Modal({ aberto, onFechar, titulo, children }: { aberto: boolean; onFech
   );
 }
 
-export default function BuscaVoo({ pais = "br" }: { pais?: Pais }) {
-  const { base, aeroporto: aeroportoPadrao, exemplo } = PAISES[pais];
+export default function BuscaVoo() {
+  const base = BASE;
+  const aeroportoPadrao = AEROPORTO_PADRAO;
+  const exemplo = EXEMPLO;
   const [indice, setIndice] = useState<Indice | null>(null);
   const [data, setData] = useState("");
   const [voos, setVoos] = useState<Voo[] | null>(null);
@@ -125,7 +125,7 @@ export default function BuscaVoo({ pais = "br" }: { pais?: Pais }) {
         setIndice(i);
         setData(i.datas[0]);
       })
-      .catch(() => setErro("Não encontrei os dados do modelo. Rode module_decea.exportar_web e publique de novo."));
+      .catch(() => setErro("Não encontrei os dados do modelo. Rode module_decea.exportar_web_eua e publique de novo."));
   }, [base]);
 
   useEffect(() => {
@@ -169,7 +169,6 @@ export default function BuscaVoo({ pais = "br" }: { pais?: Pais }) {
   const lim = indice.limiares ?? limiares;
   const origens = voos ? [...new Set(voos.map((v) => v.o))].sort() : [];
   const nomeAp = (c: string) => indice.aeroportos[c] ?? c;
-  const curto = (c: string) => nomeAp(c).replace("Rio de Janeiro/", "Rio/").replace("Belo Horizonte/", "BH/");
   const iataDe = (v: Voo) => indice.empresas[v.e]?.[1] ?? v.e;
   const d = data ? new Date(`${data}T12:00:00`) : null;
   const dataLonga = d ? `${DIAS[d.getDay()]} ${data.slice(8)} ${MESES[d.getMonth()]} ${data.slice(0, 4)}` : "";
@@ -197,8 +196,8 @@ export default function BuscaVoo({ pais = "br" }: { pais?: Pais }) {
                   ativo ? "bg-painel text-sinal" : "bg-cartao text-tinta-2 hover:text-tinta"
                 }`}
               >
-                <span className="block text-lg font-semibold">{c ? (IATA[c] ?? c) : "Todos"}</span>
-                <span className="block max-w-28 truncate text-xs">{c ? curto(c) : "os 10 aeroportos"}</span>
+                <span className="block text-lg font-semibold">{c || "Todos"}</span>
+                <span className="block max-w-28 truncate text-xs">{c ? nomeAp(c) : "os 10 aeroportos"}</span>
               </button>
             );
           })}
@@ -312,8 +311,8 @@ export default function BuscaVoo({ pais = "br" }: { pais?: Pais }) {
                     <Plaquinhas texto={`${iataDe(v)} ${v.n}`} inicio={inicio + 3} />
                   </span>
                   <span className="min-w-0 truncate uppercase tracking-wide text-white">
-                    {buscando && <span className="text-white/50">{IATA[v.o] ?? v.o} → </span>}
-                    {curto(v.d)}
+                    {buscando && <span className="text-white/50">{v.o} → </span>}
+                    {nomeAp(v.d)}
                   </span>
                   <span className="col-span-3 flex items-center gap-2 text-[15px] uppercase tracking-wide md:col-span-1 md:text-base">
                     <span

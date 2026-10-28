@@ -13,8 +13,7 @@ from sklearn.metrics import (
     roc_auc_score,
 )
 
-from module_decea.features import FAIXAS
-
+FAIXAS = ["até 30 min", "> 30 min"]  # alvo binário: a partida atrasou mais de 30 min?
 LIMIARES = np.round(np.arange(0.05, 0.71, 0.01), 2)  # limiares testados na calibração do alerta
 
 

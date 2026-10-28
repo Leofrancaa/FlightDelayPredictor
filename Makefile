@@ -56,31 +56,16 @@ create_environment:
 #################################################################################
 
 
-## Save a snapshot of the current NOTAMs (schedule it daily to build a history)
-.PHONY: notam
-notam:
-	uv run python -c "from module_decea.dataset import coletar_notam; coletar_notam()"
+## Train the US model and export the site data to web/public/data (needs data/raw/bts and data/raw/metar_eua)
+.PHONY: treinar
+treinar:
+	uv run python -m module_decea.exportar_web_eua
 
 
-# Daily NOTAM collection via cron. Another hour: make agendar_notam NOTAM_HORA=12
-NOTAM_HORA ?= 9
-NOTAM_LOG ?= $(HOME)/Library/Logs/decea-coleta-notam.log
-NOTAM_CRON = 0 $(NOTAM_HORA) * * * $(CURDIR)/.venv/bin/python -c "from module_decea.dataset import coletar_notam; coletar_notam()" >> $(NOTAM_LOG) 2>&1
-
-## Schedule the daily NOTAM collection in cron (at 9h unless NOTAM_HORA is given)
-.PHONY: agendar_notam
-agendar_notam: requirements
-	mkdir -p $(dir $(NOTAM_LOG))
-	(crontab -l 2>/dev/null | grep -v -e coletar_notam -e '^# decea'; \
-	 echo '# decea: coleta diária de NOTAMs (remover com make desagendar_notam)'; \
-	 echo '$(NOTAM_CRON)') | crontab -
-	crontab -l
-
-## Remove the daily NOTAM collection from cron
-.PHONY: desagendar_notam
-desagendar_notam:
-	crontab -l 2>/dev/null | grep -v -e coletar_notam -e '^# decea' | crontab -
-	@echo ">>> Coleta de NOTAMs removida do cron"
+## Run the "with vs without tail number" BTS experiment (writes reports/bts)
+.PHONY: experimento
+experimento:
+	uv run python -m module_decea.experimento_bts
 
 
 #################################################################################

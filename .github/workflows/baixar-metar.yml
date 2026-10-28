@@ -1,5 +1,5 @@
 # Baixa o METAR histórico (Iowa Environmental Mesonet) dos 10 aeroportos e publica um zip por ano
-# na Release "dados-vra". Uso: aba Actions -> "Baixar METAR (IEM)" -> Run workflow.
+# na Release "dados-bts". Uso: aba Actions -> "Baixar METAR (IEM)" -> Run workflow.
 name: Baixar METAR (IEM)
 
 on:
@@ -7,7 +7,7 @@ on:
     inputs:
       ano_inicio:
         description: "Primeiro ano"
-        default: "2011"
+        default: "2022"
         required: true
       ano_fim:
         description: "Último ano"
@@ -15,15 +15,15 @@ on:
         required: true
       estacoes:
         description: "Estações ICAO, separadas por vírgula"
-        default: "SBGR,SBSP,SBKP,SBCF,SBBR,SBGL,SBRJ,SBPA,SBCT,SBRF"
+        default: "KATL,KDFW,KDEN,KORD,KLAX,KCLT,KLAS,KPHX,KMCO,KSEA"
         required: true
       release:
         description: "Release de destino"
-        default: "dados-vra"
+        default: "dados-bts"
         required: true
       prefixo:
-        description: "Prefixo dos zips (METAR para o Brasil, METAR_EUA para os EUA)"
-        default: "METAR"
+        description: "Prefixo dos zips (o treino lê METAR_EUA_*.zip)"
+        default: "METAR_EUA"
         required: true
 
 permissions:

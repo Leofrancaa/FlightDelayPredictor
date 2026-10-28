@@ -8,8 +8,9 @@ export default function Passageiro() {
     <>
       <h1 className="font-cond text-4xl font-semibold">Painel de partidas</h1>
       <p className="mt-2 max-w-2xl text-tinta-2">
-        Escolha o aeroporto e o dia, encontre o seu voo no painel e clique nele. Os voos são reais, de outubro a dezembro
-        de 2025, e o modelo não os viu no treino: dá para comparar a previsão com o que aconteceu.
+        Os 10 maiores aeroportos dos EUA, de 15 a 31 de dezembro de 2024, que o modelo não viu no treino. Escolha o
+        aeroporto e o dia, encontre o seu voo e clique nele: o modelo sabe qual avião faz cada voo (matrícula) e segue o
+        atraso dele ao longo do dia.
       </p>
       <BuscaVoo />
     </>
