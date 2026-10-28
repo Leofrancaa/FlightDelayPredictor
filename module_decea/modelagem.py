@@ -5,6 +5,7 @@ import pandas as pd
 from sklearn.ensemble import HistGradientBoostingClassifier
 from sklearn.metrics import (
     average_precision_score,
+    balanced_accuracy_score,
     confusion_matrix,
     fbeta_score,
     log_loss,
@@ -13,8 +14,10 @@ from sklearn.metrics import (
     roc_auc_score,
 )
 
-FAIXAS = ["até 30 min", "> 30 min"]  # alvo binário: a partida atrasou mais de 30 min?
+FAIXAS = ["não", "sim"]  # cada pergunta do modelo é binária: vai atrasar? / se atrasar, passa de 30 min?
+CLASSES3 = ["< 15 min", "15–30 min", "> 30 min"]  # alvo do modelo: atraso de partida em 3 classes
 LIMIARES = np.round(np.arange(0.05, 0.71, 0.01), 2)  # limiares testados na calibração do alerta
+LIMIARES_COND = np.round(np.arange(0.05, 0.96, 0.01), 2)  # idem para "passa de 30 min?" (prevalência ~62%)
 
 
 def hgb(**params):
@@ -50,6 +53,41 @@ def ajustar_limiar(proba, y, grade=LIMIARES):
     y = np.asarray(y)
     melhor = max(grade, key=lambda t: fbeta_score(y, decidir(proba, t), beta=1, zero_division=0))
     return round(float(melhor), 2), float(fbeta_score(y, decidir(proba, melhor), beta=1, zero_division=0))
+
+
+def ajustar_limiar_balanceado(proba, y, grade=LIMIARES_COND):
+    """Limiar que maximiza a acurácia balanceada (média do recall de "sim" e de "não"). Usado em "se atrasar, passa de
+    30 min?": como ~62% dos atrasos passam de 30 min, o F1 da classe "sim" levaria a dizer "sim" para quase todos."""
+    y = np.asarray(y)
+    melhor = max(grade, key=lambda t: balanced_accuracy_score(y, decidir(proba, t)))
+    return round(float(melhor), 2), float(balanced_accuracy_score(y, decidir(proba, melhor)))
+
+
+def binaria(p):
+    """Probabilidade da classe positiva (vetor) -> matriz (n, 2), o formato que as funções deste módulo esperam."""
+    p = np.clip(np.asarray(p, dtype=float), 0, 1)
+    return np.column_stack([1 - p, p])
+
+
+def p_atraso(p3):
+    """P(atraso >= 15 min) a partir das 3 classes (< 15, 15–30, > 30)."""
+    return p3[:, 1] + p3[:, 2]
+
+
+def p_mais_30(p3):
+    """P(> 30 min | atraso >= 15 min)."""
+    pa = p_atraso(p3)
+    return np.divide(p3[:, 2], pa, out=np.zeros_like(pa), where=pa > 0)
+
+
+def decidir3(p3, limiar15, limiar30):
+    """0 = sem alerta, 1 = atraso provável (até 30 min), 2 = atraso de mais de 30 min provável."""
+    return np.where(p_atraso(p3) < limiar15, 0, np.where(p_mais_30(p3) >= limiar30, 2, 1))
+
+
+def matriz_confusao3(y3, pred3):
+    """Linhas = classe real (< 15, 15–30, > 30), colunas = alerta (0, 1, 2), em % da linha."""
+    return confusion_matrix(y3, pred3, labels=[0, 1, 2], normalize="true") * 100
 
 
 def metricas(y, proba, limiar=0.5):
