@@ -25,6 +25,8 @@ No teste, 1 h antes, atraso > 30 min: sem matrícula PR-AUC 0,42 (precisão 38%,
 
 `module_decea/experimento_bts.py` compara as versões sem/com matrícula (`make experimento`, resultado em `reports/bts/resumo.json`).
 
+Como o modelo funciona (classificação, gradient boosting, validação temporal, métricas): [`docs/MODELO.md`](docs/MODELO.md).
+
 As siglas e os termos técnicos (METAR, IMC, PR-AUC...) estão explicados em [`docs/glossario.md`](docs/glossario.md).
 
 Outros comandos: `make test`, `make lint`, `make format`, `make clean` (`make` sozinho lista todos).
