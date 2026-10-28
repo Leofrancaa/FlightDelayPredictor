@@ -30,7 +30,7 @@ def decodificar(metar):
         d["vis_m"], d["teto_ft"] = 9999, 99999
     elif m := RE_VIS_SM.search(corpo):
         milhas = (int(m[1]) if m[1] else 0) + (int(m[2]) / int(m[3]) if m[2] else int(m[4]))
-        d["vis_m"] = min(round(milhas * 1609.34), 9999)  # mesma escala do Brasil: 9999 = 10 km ou mais
+        d["vis_m"] = min(round(milhas * 1609.34), 9999)  # escala do METAR métrico: 9999 = 10 km ou mais
     elif m := RE_VIS.search(corpo):
         d["vis_m"] = int(m[1])
     # Teto = camada BKN/OVC/VV mais baixa (em pés). Sem camada assim, céu "ilimitado".
@@ -58,7 +58,7 @@ def carregar_iem(caminho):
     df.insert(0, "icao", bruto["station"])
     # O IEM tira o prefixo METAR/SPECI. Boletins fora da hora cheia são SPECI (emitidos quando o tempo muda).
     df["speci"] = df["hora_utc"].dt.minute != 0
-    # Regra VMC do ICA 100-12 para aeródromo controlado: visibilidade >= 5 km e teto >= 1500 ft
+    # Regra VMC da ICAO (Anexo 2) para aeródromo controlado: visibilidade >= 5 km e teto >= 1500 ft
     df["imc"] = (df["vis_m"] < 5000) | (df["teto_ft"] < 1500)
     df["abaixo_minimos"] = (df["vis_m"] < 800) | (df["teto_ft"] < 200)  # ~ mínimos ILS CAT I
     return df

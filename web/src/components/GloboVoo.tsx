@@ -431,9 +431,9 @@ export default function GloboVoo({ origem, destino, siglaOrigem, siglaDestino, h
     fantasma.scale.setScalar(escala * 1.7);
     cena.add(real, fantasma);
 
-    // Câmera olhando o meio da rota, um pouco ao sul para mostrar o Brasil
+    // Câmera olhando o meio da rota
     const meio = a.clone().add(b).normalize();
-    camera.position.copy(meio.clone().multiplyScalar(distCam)).add(new THREE.Vector3(0, -0.08 * distCam, 0));
+    camera.position.copy(meio.clone().multiplyScalar(distCam));
     camera.lookAt(meio.clone().multiplyScalar(0.9));
     const controles = new OrbitControls(camera, renderer.domElement);
     controles.target.copy(meio.clone().multiplyScalar(0.9));

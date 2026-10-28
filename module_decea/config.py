@@ -1,12 +1,7 @@
 """Caminhos do projeto, relativos à raiz: funcionam de qualquer pasta (inclusive de notebooks/)."""
 from pathlib import Path
 
-from dotenv import load_dotenv
-
 PROJ_ROOT = Path(__file__).resolve().parents[1]
-
-# Credenciais da AISWEB (AISWEB_API_KEY e AISWEB_API_PASS)
-load_dotenv(PROJ_ROOT / ".env")
 
 DATA_DIR = PROJ_ROOT / "data"
 RAW_DATA_DIR = DATA_DIR / "raw"

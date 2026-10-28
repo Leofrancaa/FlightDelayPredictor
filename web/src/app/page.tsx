@@ -1,9 +1,9 @@
 import Link from "next/link";
 
 const EXEMPLO = [
-  { h: "07:10", voo: "G3 1402", destino: "Congonhas", status: "Sem alerta", cor: "var(--f0)" },
-  { h: "17:45", voo: "LA 3321", destino: "Brasília", status: "Alerta de atraso", cor: "var(--f3)" },
-  { h: "19:20", voo: "AD 4870", destino: "Recife", status: "Sem alerta", cor: "var(--f0)" },
+  { h: "07:10", voo: "DL 774", destino: "Nova York", status: "Sem alerta", cor: "var(--f0)" },
+  { h: "17:45", voo: "AA 2321", destino: "Chicago", status: "Alerta de atraso", cor: "var(--f3)" },
+  { h: "19:20", voo: "WN 1870", destino: "Denver", status: "Sem alerta", cor: "var(--f0)" },
 ];
 
 export default function Inicio() {
@@ -15,22 +15,15 @@ export default function Inicio() {
         </h1>
         <p className="mt-5 max-w-xl text-lg text-tinta-2">
           Modelos que estimam a chance de cada partida atrasar mais de 30 minutos, na véspera, 3 horas e 1 hora antes do
-          embarque. No Brasil, 15 anos de voos domésticos (2011–2025) nos 10 maiores aeroportos. Nos EUA, os 10 maiores
-          aeroportos (2022–2024), com a matrícula de cada avião, que mostra o quanto essa informação faz falta nos dados da
-          ANAC.
+          embarque. Voos dos 10 maiores aeroportos dos EUA (2022–2024), com a matrícula de cada avião para seguir o
+          atraso dele ao longo do dia.
         </p>
         <div className="mt-8 flex flex-wrap gap-3">
           <Link href="/passageiro" className="rounded-md bg-sinal px-5 py-3 font-semibold text-[#172230] hover:brightness-95">
-            Painel do Brasil
-          </Link>
-          <Link href="/eua/passageiro" className="rounded-md bg-painel px-5 py-3 font-semibold text-white hover:brightness-110">
-            Painel dos EUA
+            Painel de partidas
           </Link>
           <Link href="/analista" className="rounded-md border border-linha bg-cartao px-5 py-3 font-semibold hover:border-tinta-2">
             Ver a análise do modelo
-          </Link>
-          <Link href="/comparacao" className="rounded-md border border-linha bg-cartao px-5 py-3 font-semibold hover:border-tinta-2">
-            Brasil × EUA
           </Link>
         </div>
       </section>

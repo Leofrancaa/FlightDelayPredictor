@@ -102,20 +102,20 @@ export default function PainelAnalista({ r }: { r: Resumo }) {
     ...ORDEM_H.map((k) => ({ nome: NOME_H[k], m: r.modelos[k], limiar: r.modelos[k].limiar })),
   ];
   const cm = r.modelos[h].confusao;
-  const eua = r.pais === "eua";
 
   return (
     <div className="space-y-6">
       <header>
-        <h1 className="font-cond text-4xl font-semibold">Análise do modelo{eua ? ": EUA" : ": Brasil"}</h1>
+        <h1 className="font-cond text-4xl font-semibold">Análise do modelo</h1>
         <p className="mt-2 max-w-3xl text-tinta-2">
           Gradient boosting em árvores que estima a chance de uma partida atrasar mais de 30 min. Treino em{" "}
-          {r.periodos.treino} ({inteiro(r.n.treino)} partidas), validação em {r.periodos.validacao} para escolher
-          {eua ? "o limiar do alerta" : "hiperparâmetros e o limiar do alerta"}, e teste em {r.periodos.teste} (
+          {r.periodos.treino} ({inteiro(r.n.treino)} partidas), validação em {r.periodos.validacao} para escolher o limiar
+          do alerta, e teste em {r.periodos.teste} (
           {inteiro(r.n.teste)} partidas que o modelo nunca viu).
-          {eua
-            ? " Dados da BTS nos 10 maiores aeroportos dos EUA, com a matrícula de cada avião e METAR. Na véspera o modelo não usa nada que dependa da matrícula: a BTS registra o avião que de fato voou, e a troca de avião por causa de um atraso vazaria para o modelo."
-            : ""}
+          {" "}
+          Dados da BTS nos 10 maiores aeroportos dos EUA, com a matrícula de cada avião e METAR. Na véspera o modelo não
+          usa nada que dependa da matrícula: a BTS registra o avião que de fato voou, e a troca de avião por causa de um
+          atraso vazaria para o modelo.
           {r.periodos_anomalos.length > 0 && (
             <>
               {" "}
@@ -227,7 +227,7 @@ export default function PainelAnalista({ r }: { r: Resumo }) {
         <div className="grid gap-6 lg:grid-cols-2">
           <Secao
             titulo="Quanto vale saber qual avião faz o voo"
-            nota="Mesmo modelo de 1 h, com o mesmo clima e o mesmo resto. Sem matrícula, o voo que traz o avião é adivinhado (o último da mesma companhia chegando na origem), como é preciso fazer com os dados da ANAC."
+            nota="Mesmo modelo de 1 h, com o mesmo clima e o mesmo resto. Sem matrícula, o voo que traz o avião é adivinhado (o último da mesma companhia chegando na origem)."
           >
             <table className="w-full text-left text-[15px]">
               <thead className="text-sm text-tinta-2">
@@ -241,7 +241,7 @@ export default function PainelAnalista({ r }: { r: Resumo }) {
               </thead>
               <tbody>
                 {[
-                  ["Sem matrícula (como no Brasil)", r.matricula.sem],
+                  ["Sem matrícula", r.matricula.sem],
                   ["Com matrícula", r.matricula.com],
                 ].map(([nome, m]) => {
                   const x = m as typeof r.matricula.sem;

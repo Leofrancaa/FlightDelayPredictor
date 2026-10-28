@@ -1,4 +1,4 @@
-// Formato dos JSON gerados por module_decea/exportar_web.py
+// Formato dos JSON gerados por module_decea/exportar_web_eua.py
 
 export type Horizonte = "h1" | "h3" | "vespera";
 
@@ -12,11 +12,11 @@ export interface Indice {
 
 /** Um voo da demonstração (chaves curtas para o arquivo ficar leve). */
 export interface Voo {
-  e: string; // empresa (ICAO)
+  e: string; // empresa (código da BTS)
   n: string; // número do voo
   o: string; // origem
   d: string; // destino
-  h: string; // partida prevista HH:MM (Brasília)
+  h: string; // partida prevista HH:MM (hora local da origem)
   a: number; // atraso real da partida, min
   f: 0 | 1; // 1 = atrasou mais de 30 min
   pv: number; // chance (%) de atrasar > 30 min, prevista na véspera

@@ -1,5 +1,5 @@
 # Treina o modelo dos EUA (BTS + METAR + matrícula) na máquina do GitHub, roda de novo o experimento BTS e publica
-# os dados do site (web/public/data/eua) e os relatórios numa branch nova "dados/eua-<n>".
+# os dados do site (web/public/data) e os relatórios numa branch nova "dados/eua-<n>".
 name: Treinar modelo EUA
 
 on:
@@ -45,7 +45,7 @@ jobs:
           git checkout -b "$destino"
           cp treino_eua.log reports/eua/treino.log
           cp experimento.log reports/bts/experimento.log
-          git add web/public/data/eua reports/eua reports/bts
+          git add web/public/data reports/eua reports/bts
           git commit -m "dados: modelo EUA treinado (run ${{ github.run_number }})"
           git push origin "$destino"
           echo "Resultados na branch $destino" >> "$GITHUB_STEP_SUMMARY"

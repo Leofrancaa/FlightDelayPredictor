@@ -1,11 +1,11 @@
-"""Modelo dos EUA (BTS + METAR + matrícula do avião) e JSON do site em web/public/data/eua/.
+"""Modelo dos EUA (BTS + METAR + matrícula do avião) e JSON do site em web/public/data/.
 
-Mesmo alvo e mesmos horizontes do Brasil (atraso de partida > 30 min, na véspera, 3 h e 1 h antes), nos 10 maiores
-aeroportos dos EUA. Diferenças em relação ao Brasil, todas porque a BTS tem mais informação:
+Alvo: atraso de partida > 30 min, previsto na véspera, 3 h e 1 h antes, nos 10 maiores aeroportos dos EUA.
+O que a BTS traz além da programação e do clima:
     - voo de chegada pela matrícula (o voo anterior do mesmo avião) e a cadeia do avião no dia;
     - causa de cada atraso (informada depois do voo): usada só para medir o recall por causa no teste.
 Treino 2022, validação 2023 (limiar do alerta), teste 2024. Também treina, no horizonte de 1 h, a versão sem
-matrícula (como no Brasil) para mostrar quanto a matrícula vale.
+matrícula (voo de chegada inferido pela companhia) para mostrar quanto a matrícula vale.
 
     uv run python -m module_decea.exportar_web_eua    # precisa de data/raw/bts/BTS_*.parquet e data/raw/metar_eua/
 """
@@ -25,10 +25,9 @@ from sklearn.metrics import average_precision_score, log_loss
 from module_decea import experimento_bts as B
 from module_decea import modelagem as M
 from module_decea.config import PROJ_ROOT, RAW_DATA_DIR, REPORTS_DIR
-from module_decea.exportar_web import _mensal, _r, _taxa
 from module_decea.metar import carregar_iem
 
-SAIDA = PROJ_ROOT / "web" / "public" / "data" / "eua"
+SAIDA = PROJ_ROOT / "web" / "public" / "data"
 INICIO_DEMO = __import__("os").environ.get(
     "BTS_DEMO", "2024-12-15"
 )  # voos mostrados no painel de partidas (as festas de fim de ano)
@@ -107,6 +106,36 @@ for c, n in NOME_CLIMA.items():
     DESCRICOES[f"d_{c}"] = f"{n} no destino"
     DESCRICOES[f"o_{c}_var3h"] = f"{n} na origem: variação em 3 h"
 log = B.log
+
+
+def _r(x, n=4):
+    return None if x is None or pd.isna(x) else round(float(x), n)
+
+
+def _taxa(df, chave):
+    g = df.groupby(chave, observed=True)["atr"].agg(["mean", "size"]).reset_index()
+    return [{"chave": str(k), "taxa30": _r(m), "voos": int(n)} for k, m, n in g.itertuples(index=False)]
+
+
+def _mensal(info_te, y_te, p_te, limiar):
+    """Métricas por mês do teste."""
+    mes = info_te["partida_prev"].dt.strftime("%Y-%m").to_numpy()
+    alerta = p_te[:, 1] >= limiar
+    linhas = []
+    for m in sorted(set(mes)):
+        i = mes == m
+        y, a = y_te[i], alerta[i]
+        linhas.append(
+            {
+                "mes": m,
+                "voos": int(i.sum()),
+                "prevalencia": _r(y.mean()),
+                "pr_auc": _r(average_precision_score(y, p_te[i, 1])),
+                "precisao": _r(y[a].mean()) if a.any() else None,
+                "recall": _r(a[y == 1].mean()),
+            }
+        )
+    return linhas
 
 
 def _grupo(col):
@@ -274,7 +303,7 @@ def main():
         if k == "h1":
             prior = np.tile([1 - y[tr].mean(), y[tr].mean()], (len(yt), 1))
             resumo["chute"] = {m: _r(x) for m, x in M.metricas(yt, prior, 0.5).items()}
-            # Sem matrícula (como no Brasil), mesmo clima e mesmo resto
+            # Sem matrícula (chegada inferida pela companhia), mesmo clima e mesmo resto
             Xs = pd.concat(
                 [
                     prog,

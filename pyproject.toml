@@ -5,7 +5,7 @@ build-backend = "flit_core.buildapi"
 [project]
 name = "module_decea"
 version = "0.0.1"
-description = "Dados do DECEA (AISWEB), METAR e VRA/ANAC em busca de uma situação-problema de ML"
+description = "Previsão de atraso de voos nos EUA (BTS On-Time Performance + METAR)"
 authors = [
   { name = "rmotti" },
 ]
@@ -21,8 +21,6 @@ dependencies = [
     "matplotlib",
     "numpy",
     "pandas",
-    "python-dotenv",
-    "requests",
     "scikit-learn",
 ]
 requires-python = "~=3.12.0"

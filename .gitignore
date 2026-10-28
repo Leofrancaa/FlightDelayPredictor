@@ -1,9 +1,8 @@
-# Dados baixados pelos notebooks (~330 MB). Só as .gitkeep vão para o git.
+# Dados brutos (BTS, METAR). Só as .gitkeep vão para o git.
 /data/**
 !/data/**/
 !/data/**/.gitkeep
 
-# Credenciais da AISWEB
 .env
 
 # Ambiente e caches
