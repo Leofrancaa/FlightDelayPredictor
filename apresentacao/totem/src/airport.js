@@ -193,7 +193,7 @@ export function buildAirport(scene, { quality = 'high', flights }) {
   mkSpot(0, -10, 0, -10, 100, false);
   mkSpot(0, 11, 0, 11, 90, false);
   out.entranceKey = mkSpot(9, 11.5, 8, 12, 110, quality === 'high');
-  mkSpot(3.5, 10, 3, 11.5, 90, false);
+  mkSpot(0.2, 10, -0.2, 11.5, 90, false);
   // lights flicker during a strike (power dip)
   let flick = 0; out.flicker = () => { flick = 0.9; };
 

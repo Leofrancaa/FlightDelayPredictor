@@ -84,6 +84,7 @@ export const LINES = {
   l1: { who: 'leo', audio: 'l1.mp3', text: 'Atrasou de novo? O painel dizia no horário até agora há pouco!' },
   mt1: { who: 'motti', audio: 'mt1.mp3', text: 'Ô, senhor! Vi que o senhor tá com pressa…' },
   sa1: { who: 'sa', audio: 'sa1.mp3', text: 'Então dá uma olhada no totem ali pra saber do seu voo.' },
+  p10: { who: 'prof', audio: 'p10.mp3', text: 'Obrigado, moço! Fica com Deus.' },
   p8: { who: 'prof', audio: 'p8.mp3', text: 'Se eu soubesse que existia isso, podia ter visto e saído de casa sem essa pressa toda.' },
   p6: { who: 'prof', audio: 'p6.mp3', text: 'Amor… o voo vai atrasar uns quarenta minutos. Não, não fui eu, foi o avião!' },
   p7: { who: 'prof', audio: 'p7.mp3', text: 'Mas fala pro seu pai que o presente vai chegar sequinho.' },

@@ -122,7 +122,7 @@ export function signTex(lines, { w = 1024, h = 256, bg = '#111', fg = '#ffd200',
 }
 
 // Departures board (split-flap look)
-export function departuresBoard(flights, clock = 'SAT  12:05') {
+export function departuresBoard(flights, clock = 'SAT  12:05', mine = 'AA 1455') {
   const W = 2048, H = 1152, c = canvas(W, H), g = c.getContext('2d');
   g.fillStyle = '#050608'; g.fillRect(0, 0, W, H);
   g.fillStyle = '#0d1a33'; g.fillRect(0, 0, W, 150);
@@ -136,6 +136,7 @@ export function departuresBoard(flights, clock = 'SAT  12:05') {
   flights.forEach((f, i) => {
     const y = 270 + i * rowH;
     if (i % 2 === 0) { g.fillStyle = '#0b0d12'; g.fillRect(0, y - rowH / 2, W, rowH); }
+    if (f[1] === mine) { g.fillStyle = '#16305e'; g.fillRect(0, y - rowH / 2, W, rowH); g.strokeStyle = '#ffd21f'; g.lineWidth = 8; g.strokeRect(8, y - rowH / 2 + 4, W - 16, rowH - 8); g.fillStyle = '#ffd21f'; g.beginPath(); g.moveTo(12, y - 22); g.lineTo(40, y); g.lineTo(12, y + 22); g.fill(); }
     g.font = 'bold 54px "Consolas", "DejaVu Sans Mono", monospace';
     // split flap cells
     const cell = (txt, x, color, n) => {

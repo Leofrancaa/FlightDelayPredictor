@@ -237,8 +237,7 @@ function flushWaiters() {
 function walkTo(a, pts, speed = WALK_SPEED, rate = 1) {
   return new Promise((res) => {
     a.walk = { pts: pts.map((p) => p.clone()), i: 0, speed, res, rate };
-    if (!SIM) a.head.playAnimation(ANIM.walk, null, 120);
-    else a.head.playAnimation(ANIM.walk, null, 120);
+    play(a, ANIM.walk, 120);
   });
 }
 function updateWalk(a, dt) {
@@ -248,13 +247,20 @@ function updateWalk(a, dt) {
   const dist = d.length(), step = w.speed * dt;
   if (dist <= step) {
     a.pos.copy(tgt); w.i++;
-    if (w.i >= w.pts.length) { a.walk = null; if (a.head.mixer) a.head.mixer.timeScale = 1; a.head.stopAnimation(); w.res(); return; }
+    if (w.i >= w.pts.length) { a.walk = null; if (a.head.mixer) a.head.mixer.timeScale = 1; softStop(a, 0.35); w.res(); return; }
   } else {
     a.pos.add(d.multiplyScalar(step / dist));
     a.yawGoal = Math.atan2(d.x, d.z);
   }
 }
 function turnTo(a, yaw) { a.yawGoal = yaw; }
+// fade a Mixamo clip out instead of cutting it (avoids the pose snapping between shots)
+function softStop(a, t = 0.4) {
+  const m = a.head.mixer; if (!m) return;
+  for (const act of m._actions) act.fadeOut(t);
+  a.fadeStopAt = vt + t;
+}
+function play(a, url, dur) { a.fadeStopAt = null; a.head.playAnimation(url, null, dur); }
 function angleLerp(a, b, k) { let d = b - a; while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI; return a + d * k; }
 
 // look at something (Object3D) for ms; null => partner
@@ -305,7 +311,7 @@ async function say(id, { gesture = null, anim = null } = {}) {
   const L = LINES[id], a = ACT[L.who];
   showSub(L.who, L.text);
   const t0 = vt;
-  if (anim && !a.walk) a.head.playAnimation(ANIM[anim], null, 30);
+  if (anim && !a.walk) play(a, ANIM[anim], 30);
   if (gesture) setTimeout(() => a.head.playGesture(gesture[0], gesture[1] || 2.5, gesture[2] || false), 250);
   let durMs;
   if (SIM) {
@@ -329,11 +335,11 @@ async function say(id, { gesture = null, anim = null } = {}) {
       speechSynthesis.cancel(); speechSynthesis.speak(u);
     }
     a.head.speakAudio({ audio: silent, ...wordTiming(L.text, durMs * 0.95, 0) }, { lipsyncLang: 'pt_br' });
-    if (ended) { await Promise.race([ended, wait(durMs / 1000 * 2 + 1)]); await wait(0.2); if (anim) a.head.stopAnimation(); showSub(null); return; }
+    if (ended) { await Promise.race([ended, wait(durMs / 1000 * 2 + 1)]); await wait(0.2); if (anim && !a.walk) softStop(a); showSub(null); return; }
   }
   EVENTS.push({ t: t0, type: 'line', id, who: L.who, name: NAMES[L.who], text: L.text, dur: durMs / 1000, file: audioBuffers[id] ? L.audio : null });
   await wait(durMs / 1000 + 0.25);
-  if (anim) a.head.stopAnimation();
+  if (anim && !a.walk) softStop(a);
   showSub(null);
 }
 
@@ -387,6 +393,16 @@ function curlFingers(a, side, amt) {
   a.arm.updateMatrixWorld(true);
 }
 
+// phone against the right ear: screen toward the cheek, long axis from ear down toward the mouth
+const _bx = new THREE.Vector3(), _by = new THREE.Vector3(), _bz = new THREE.Vector3(), _m4 = new THREE.Matrix4();
+function earPos(a) { const r = V(-Math.cos(a.yaw), 0, Math.sin(a.yaw)), f = V(Math.sin(a.yaw), 0, Math.cos(a.yaw)); return a.headPos().addScaledVector(r, 0.095).addScaledVector(f, 0.02).add(V(0, -0.06, 0)); }
+function placeAtEar(ph, a) {
+  const p = earPos(a), r = V(-Math.cos(a.yaw), 0, Math.sin(a.yaw)), f = V(Math.sin(a.yaw), 0, Math.cos(a.yaw));
+  _bz.copy(r).multiplyScalar(-1);                                   // screen faces the head
+  _by.set(0, 1, 0).addScaledVector(f, -0.55).normalize();           // top behind the ear, bottom toward the mouth
+  _by.addScaledVector(_bz, -_by.dot(_bz)).normalize(); _bx.crossVectors(_by, _bz);
+  ph.quaternion.setFromRotationMatrix(_m4.makeBasis(_bx, _by, _bz)); ph.position.copy(p).addScaledVector(r, 0.012);
+}
 function updateProps(dt) {
   // gift bag hangs from prof's left hand
   curlFingers(prof, 'Left', 1.0);
@@ -421,12 +437,12 @@ function updateProps(dt) {
   if (state.phone) {
     gripPoint(prof, 'Right', hand);
     const face = prof.headPos();
-    if (state.phone === 'ear') { phone.position.copy(hand).add(V(0, 0.05, 0)); phone.lookAt(face); phone.rotateX(-0.3); }
-    else { phone.position.copy(hand).add(face.clone().sub(hand).normalize().multiplyScalar(0.035)); phone.lookAt(face); }
+    if (state.phone === 'ear') placeAtEar(phone, prof);
+    else { phone.position.copy(hand).add(V(0, 0.075, 0)).add(face.clone().sub(hand).normalize().multiplyScalar(0.03)); phone.lookAt(face); }
     M_PHONE.position.copy(phone.position);
   }
   leoPhone.visible = !!leo.onPhone;
-  if (leo.onPhone) { curlFingers(leo, 'Right', 0.6); gripPoint(leo, 'Right', hand); leoPhone.position.copy(hand).add(V(0, 0.05, 0)); leoPhone.lookAt(leo.headPos()); leoPhone.rotateX(-0.3); }
+  if (leo.onPhone) { curlFingers(leo, 'Right', 0.6); placeAtEar(leoPhone, leo); }
   // boarding pass
   pass.visible = state.passMode !== 'hidden';
   if (state.passOwner) {
@@ -454,6 +470,7 @@ function guardArms(a) {
 
 function updateActors(dt) {
   for (const a of actors) {
+    if (a.fadeStopAt != null && vt >= a.fadeStopAt) { a.fadeStopAt = null; a.head.stopAnimation(); }
     updateWalk(a, dt);
     a.yaw = angleLerp(a.yaw, a.yawGoal, Math.min(1, dt * 5));
     a.arm.position.copy(a.pos); a.arm.rotation.y = a.yaw;
@@ -461,7 +478,7 @@ function updateActors(dt) {
     a.arm.updateMatrixWorld(true);
   }
   // procedural targets
-  const earPt = (a) => { const r = V(-Math.cos(a.yaw), 0, Math.sin(a.yaw)), f = V(Math.sin(a.yaw), 0, Math.cos(a.yaw)); return a.headPos().addScaledVector(r, 0.13).addScaledVector(f, 0.0).add(V(0, -0.17, 0)); };
+  const earPt = (a) => { const r = V(-Math.cos(a.yaw), 0, Math.sin(a.yaw)), f = V(Math.sin(a.yaw), 0, Math.cos(a.yaw)); return earPos(a).addScaledVector(r, 0.04).addScaledVector(f, 0.03).add(V(0, -0.1, 0)); };
   if (state.phone === 'ear') prof.ikR.set(earPt(prof), 1);
   if (state.phone === 'hand' && !state.typing) { const f = fwdOf(prof), r = V(-Math.cos(prof.yaw), 0, Math.sin(prof.yaw)); prof.ikR.set(prof.pos.clone().addScaledVector(f, 0.42).addScaledVector(r, 0.05).add(V(0, 1.18, 0)), 1); }
   if (leo.onPhone) leo.ikR.set(earPt(leo), 1);
@@ -492,7 +509,7 @@ const TX = land.taxi;
 const EXT_START = TX.rearDoor.clone();
 const DOOR_OUT = V(8.2, 0, 17.4), DOOR_IN = V(8.4, 0, 13.9);
 const BOARD2 = V(14.2, 4.6, 7.6), BOARD2_SPOT = V(11.5, 0, 12.3);
-const DESK_STOP = V(4.05, 0, 11.75), MOTTI_POS = V(2.15, 0, 11.05), SA_POS = V(2.15, 0, 12.15);
+const DESK_STOP = V(0.65, 0, 11.75), MOTTI_POS = V(-1.25, 0, 11.05), SA_POS = V(-1.25, 0, 12.15);
 const LEO_A = V(10.4, 0, 14.4), LEO_B = V(12.9, 0, 14.0);
 const M_BOARD2 = marker(BOARD2), M_FEET = marker(V(0, 0.1, 0));
 let rainOut = null;
@@ -534,10 +551,11 @@ async function scene1() {
   cut({ p0: () => V(7.55, 1.22, 19.9), l0: headOf(diniz, -0.05), fov: 20, focus: headOf(diniz), aperture: 0.0022, handheld: 0.004 });
   await wait(0.4);
   await say('m1');
-  // Soussa: thanks with a hand, turns to the doors
   cut({ p0: V(8.05, 1.62, 18.4), p1: V(8.15, 1.62, 18.9), l0: headOf(prof, -0.12), dur: 4, fov: 30, focus: headOf(prof), aperture: 0.002 });
-  look(prof, diniz.head); prof.head.playGesture('handup', 1.4, true);
-  await wait(1.5);
+  look(prof, diniz.head);
+  const p10 = say('p10'); await wait(0.3); prof.head.playGesture('handup', 1.4, true); await p10;
+  // Soussa: thanks with a hand, turns to the doors
+  await wait(0.3);
   look(prof, null); state.suitMode = 'pull';
   const go = walkTo(prof, [V(8.8, 0, 19.6), DOOR_OUT], 1.35);
   await wait(1.2);
@@ -566,7 +584,7 @@ async function scene2() {
   phone.setChat([{ me: false, text: 'Já tá no aeroporto? Papai tá de roupa nova desde as 7h.' }]);
   state.phone = 'hand'; state.suitMode = 'parked'; look(prof, M_PHONE);
   await wait(0.4);
-  cut({ p0: rel(prof, -0.26, 1.86, -0.06), p1: rel(prof, -0.22, 1.84, 0.0), l0: () => M_PHONE.position.clone(), dur: 5, fov: 22, focus: () => M_PHONE.position.clone(), aperture: 0.0014, handheld: 0.003 });
+  cut({ p0: rel(prof, -0.26, 1.86, -0.06), p1: rel(prof, -0.22, 1.84, 0.0), l0: () => M_PHONE.position.clone(), dur: 5, fov: 12, focus: () => M_PHONE.position.clone(), aperture: 0.0014, handheld: 0.003 });
   await wait(2.4);
   state.typing = true; await wait(1.4); state.typing = false;
   phone.setChat([{ me: false, text: 'Já tá no aeroporto? Papai tá de roupa nova desde as 7h.' }, { me: true, text: 'Cheguei. Tudo no horário.' }]);
@@ -607,8 +625,8 @@ async function scene3() {
 // 4 — the information desk
 async function scene4() {
   prof.head.setMood('neutral'); look(prof, null); state.suitMode = 'pull';
-  cut({ p0: V(6.9, 1.62, 9.3), l0: V(3.4, 1.3, 11.7), fov: 34, focus: () => V(3.0, 1.4, 11.6), aperture: 0.0012 });
-  const go = walkTo(prof, [V(8.0, 0, 12.0), DESK_STOP], 1.3);
+  cut({ p0: V(3.5, 1.62, 9.3), l0: V(0.0, 1.3, 11.7), fov: 34, focus: () => V(-0.4, 1.4, 11.6), aperture: 0.0012 });
+  const go = walkTo(prof, [V(8.0, 0, 12.0), V(3.5, 0, 11.9), DESK_STOP], 1.3);
   look(motti, prof.head); look(sa, prof.head);
   await wait(1.6);
   const call = say('mt1', { gesture: ['handup', 1.6] });
@@ -619,7 +637,7 @@ async function scene4() {
   cut({ p0: rel(motti, -0.3, 1.62, -0.55), l0: headOf(prof, -0.08), fov: 28, focus: headOf(prof), aperture: 0.0022 });
   await say('p1', { anim: 'talk1' });
   // Motti and Sá exchange a look
-  cut({ p0: () => V(3.4, 1.5, 14.2), l0: () => mid(headOf(motti), headOf(sa))(), fov: 30, focus: headOf(motti), aperture: 0.0015 });
+  cut({ p0: () => V(0.1, 1.5, 14.2), l0: () => mid(headOf(motti), headOf(sa))(), fov: 30, focus: headOf(motti), aperture: 0.0015 });
   look(motti, sa.head); look(sa, motti.head);
   await wait(1.4);
   // Sá points to the kiosk
@@ -639,12 +657,12 @@ async function scene4() {
 async function scene5() {
   look(prof, totem.head); state.suitMode = 'pull';
   look(motti, prof.head); look(sa, prof.head);
-  const run = walkTo(prof, [V(3.75, 0, 7.6), V(2.8, 0, 5.0), V(1.6, 0, 2.6), PROF_STOP], 2.0, 1.55);
-  cut({ p0: V(4.25, 0.32, 3.9), l0: V(3.1, 0.35, 5.6), fov: 38, focus: () => V(3.0, 0.3, 5.2), aperture: 0.0012, handheld: 0.003 });
+  const run = walkTo(prof, [V(0.85, 0, 7.8), V(1.05, 0, 5.0), V(0.95, 0, 2.6), PROF_STOP], 2.0, 1.55);
+  cut({ p0: V(2.35, 0.32, 3.7), l0: V(1.2, 0.35, 5.5), fov: 38, focus: () => V(1.3, 0.3, 5.2), aperture: 0.0012, handheld: 0.003 });
   await until(() => prof.pos.z < 5.5);
   prof.slip = 0.9; sfx('squeak', 0.9);
   await wait(0.7);
-  cut({ p0: V(2.2, 1.55, 3.6), p1: V(2.0, 1.5, 3.2), l0: () => prof.headPos().add(V(0, -0.35, 0)), dur: 3, fov: 32, focus: headOf(prof), smoothPos: true });
+  cut({ p0: V(2.4, 1.55, 3.2), p1: V(2.2, 1.5, 2.8), l0: () => prof.headPos().add(V(0, -0.35, 0)), dur: 3, fov: 32, focus: headOf(prof), smoothPos: true });
   look(att, prof.head);
   await run;
   turnTo(prof, PROF_YAW); state.suitMode = 'parked'; prof.ikR.release();

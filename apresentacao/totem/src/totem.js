@@ -34,10 +34,10 @@ export function createTotem(cfg) {
   const tex = new THREE.CanvasTexture(canvas); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 8;
 
   // ---------- 3D body
-  const shell = new THREE.MeshPhysicalMaterial({ color: 0xf4f5f7, roughness: 0.28, metalness: 0.0, clearcoat: 0.8, clearcoatRoughness: 0.15 });
+  const shell = new THREE.MeshPhysicalMaterial({ color: 0xdfe1e4, roughness: 0.38, metalness: 0.0, clearcoat: 0.3, clearcoatRoughness: 0.3 });
   const dark = new THREE.MeshStandardMaterial({ color: 0x15171b, roughness: 0.4, metalness: 0.3 });
   const steel = new THREE.MeshStandardMaterial({ color: 0xc4c8ce, roughness: 0.25, metalness: 1 });
-  const led = new THREE.MeshBasicMaterial({ color: new THREE.Color(0.2, 0.75, 1).multiplyScalar(1.4) });
+  const led = new THREE.MeshBasicMaterial({ color: new THREE.Color(0.2, 0.75, 1).multiplyScalar(0.6) });
   const mk = (geo, mat, x, y, z, rx = 0) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.rotation.x = rx; m.castShadow = m.receiveShadow = true; group.add(m); return m; };
   mk(new RoundedBoxGeometry(0.7, 0.04, 0.5, 3, 0.015), steel, 0, 0.02, 0);
   mk(new RoundedBoxGeometry(0.5, 1.0, 0.3, 4, 0.06), shell, 0, 0.54, -0.02);
@@ -56,7 +56,7 @@ export function createTotem(cfg) {
   hg.fillStyle = '#fff'; hg.font = `bold 78px ${FONT}`; hg.textBaseline = 'middle'; hg.fillText(cfg.brand.title, 200, 88);
   hg.fillStyle = '#93c9ff'; hg.font = `46px ${FONT}`; hg.fillText(cfg.brand.subtitle, 202, 160);
   const hTex = new THREE.CanvasTexture(hdr); hTex.colorSpace = THREE.SRGBColorSpace;
-  const hMat = new THREE.MeshBasicMaterial({ map: hTex }); hMat.color.setScalar(1.6);
+  const hMat = new THREE.MeshBasicMaterial({ map: hTex }); hMat.color.setScalar(0.95);
   hm(new RoundedBoxGeometry(0.64, 0.16, 0.12, 3, 0.03), shell, 0, 0.64, -0.02);
   hm(new THREE.PlaneGeometry(0.6, 0.13), hMat, 0, 0.64, 0.041);
   // side LED strips
