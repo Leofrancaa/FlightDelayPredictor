@@ -64,7 +64,7 @@ export const CFG = {
 // com o nome indicado em `audio`. Sem arquivo, usa a voz sintética do navegador.
 export const LINES = {
   p1: { who: 'prof', audio: 'p1.mp3', text: 'Aniversário de noventa e quatro anos do meu sogro… Se eu chegar atrasado, não é ele que vai reclamar. É a minha esposa.' },
-  p2: { who: 'prof', audio: 'p2.mp3', text: 'Moça, esse totem aí diz se o meu voo vai atrasar?' },
+  p2: { who: 'prof', audio: 'p2.mp3', text: 'Moço, esse totem aí diz se o meu voo vai atrasar?' },
   a1: { who: 'att', audio: 'a1.mp3', text: 'Diz sim, senhor. Me passa o cartão de embarque?' },
   a2: { who: 'att', audio: 'a2.mp3', text: 'Ele já puxa o clima do aeroporto e a situação do avião que vai fazer o seu voo.' },
   a3: { who: 'att', audio: 'a3.mp3', text: 'Olha… a chance maior é de atrasar mais de meia hora.' },

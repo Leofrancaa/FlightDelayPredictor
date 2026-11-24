@@ -51704,7 +51704,7 @@ var CFG = {
 };
 var LINES = {
   p1: { who: "prof", audio: "p1.mp3", text: "Anivers\xE1rio de noventa e quatro anos do meu sogro\u2026 Se eu chegar atrasado, n\xE3o \xE9 ele que vai reclamar. \xC9 a minha esposa." },
-  p2: { who: "prof", audio: "p2.mp3", text: "Mo\xE7a, esse totem a\xED diz se o meu voo vai atrasar?" },
+  p2: { who: "prof", audio: "p2.mp3", text: "Mo\xE7o, esse totem a\xED diz se o meu voo vai atrasar?" },
   a1: { who: "att", audio: "a1.mp3", text: "Diz sim, senhor. Me passa o cart\xE3o de embarque?" },
   a2: { who: "att", audio: "a2.mp3", text: "Ele j\xE1 puxa o clima do aeroporto e a situa\xE7\xE3o do avi\xE3o que vai fazer o seu voo." },
   a3: { who: "att", audio: "a3.mp3", text: "Olha\u2026 a chance maior \xE9 de atrasar mais de meia hora." },
@@ -51819,7 +51819,7 @@ function ambience() {
   lp.type = "lowpass";
   lp.frequency.value = 1400;
   const g = audioCtx.createGain();
-  g.gain.value = 0.035;
+  g.gain.value = 0.012;
   src.connect(lp).connect(g).connect(master);
   src.start();
   if (audioBuffers.murmur) {
@@ -51881,7 +51881,11 @@ var M_BOARD = marker(V(-7.5, 4.6, -4.5));
 var M_SCREEN = marker(V(0, 1.45, 0.08));
 var M_BAG = marker(V(0, 0.8, 0));
 var M_PHONE = marker(V(0, 1.3, 0));
-async function fetchGlb(url) {
+var glbCache = {};
+function fetchGlb(url) {
+  return glbCache[url] ||= fetchGlbRaw(url);
+}
+async function fetchGlbRaw(url) {
   try {
     const r2 = await fetch(url + ".glb");
     const ct = r2.headers.get("content-type") || "";
@@ -51908,7 +51912,7 @@ async function makeActor(cfg) {
     avatarIdleHeadMove: 0.35,
     avatarSpeakingHeadMove: 0.45
   });
-  const data = await fetchGlb(cfg.avatar.url);
+  const data = (await fetchGlb(cfg.avatar.url)).slice(0);
   await head.showAvatar({ lipsyncLang: "pt_br", ...cfg.avatar, data });
   head.audioReverbNode.disconnect();
   head.audioReverbNode.connect(master);
@@ -52377,13 +52381,13 @@ async function scene3() {
   att.ikR.set(screenPt(0.5, 0.67), 1);
   await wait(0.6);
   att.ikR.release();
-  await wait(1.4);
+  await wait(2.6);
   setTotem("auto");
   {
     const c = screenCam(0.55, 1.25);
     cut({ p0: c.p, l0: c.l, fov: 30, focus: c.l, aperture: 8e-4, handheld: 2e-3 });
   }
-  await wait(4.2);
+  await wait(6.5);
   cut({ p0: () => att.pos.clone().add(V(0.95, 1.55, 1.05)), p1: () => att.pos.clone().add(V(0.8, 1.55, 0.9)), l0: headOf(att, -0.08), dur: 6, fov: 30, focus: headOf(att), aperture: 22e-4 });
   look(att, totem.head);
   const sp = say("a2", { gesture: ["index", 2.2, true] });
@@ -52394,7 +52398,7 @@ async function scene3() {
     const c = screenCam(0.55, 1.25);
     cut({ p0: c.p, l0: c.l, fov: 30, focus: c.l, aperture: 8e-4, handheld: 3e-3 });
   }
-  await wait(2.2);
+  await wait(3.5);
 }
 async function scene4() {
   att.ikR.set(screenPt(0.5, 0.78), 1);
@@ -52411,12 +52415,12 @@ async function scene4() {
     const c0 = screenCam(0.36, 1.2), c1 = screenCam(0.4, 1.1);
     cut({ p0: c0.p, p1: c1.p, l0: c0.l, l1: c1.l, dur: 5, fov: 30, focus: c1.l, aperture: 8e-4, handheld: 2e-3 });
   }
-  await wait(4.8);
+  await wait(7);
   {
     const c0 = screenCam(0.62, 1.15), c1 = screenCam(0.72, 1.1);
     cut({ p0: c0.p, p1: c1.p, l0: c0.l, l1: c1.l, dur: 4, fov: 30, focus: c1.l, aperture: 8e-4, handheld: 2e-3 });
   }
-  await wait(3.8);
+  await wait(6);
   cut({ p0: rel(prof, 0.38, 1.66, -0.62), l0: headOf(att, -0.06), fov: 25, focus: headOf(att), aperture: 28e-4 });
   look(att, prof.head);
   att.head.setMood("neutral");
@@ -52433,7 +52437,7 @@ async function scene4() {
     const c = screenCam(0.72, 1.1);
     cut({ p0: c.p, l0: c.l, fov: 30, focus: c.l, aperture: 8e-4, handheld: 2e-3 });
   }
-  await wait(3.8);
+  await wait(5);
   cut({ p0: rel(prof, 0.38, 1.66, -0.62), l0: headOf(att, -0.06), fov: 25, focus: headOf(att), aperture: 28e-4 });
   await s;
   att.head.setMood("happy");
@@ -52512,7 +52516,7 @@ async function boot() {
   audioBuffers.murmur = await loadBuffer("./audio/murmur.mp3");
   [prof, att] = await Promise.all([
     makeActor({ name: "prof", pos: V(8.5, 0, 9.2), yaw: -2.1, avatar: { url: AV_DIR + "avatarsdk", body: "M", avatarMood: "neutral", retarget: { Neck: { z: -0.01, rx: -0.15 }, Neck1: { z: -0.01, rx: -0.15 }, Neck2: { z: -0.01, rx: -0.15 }, LeftShoulder: { rz: -0.3 }, RightShoulder: { rz: 0.3 }, scaleToEyesLevel: 1, origin: { y: -0.1 } }, baseline: { headRotateX: -0.04, eyeBlinkLeft: 0.05, eyeBlinkRight: 0.05 } } }),
-    makeActor({ name: "att", pos: ATT_POS, yaw: ATT_YAW, avatar: { url: AV_DIR + "avaturn", body: "F", avatarMood: "happy", retarget: { Hips: { y: 0.03 }, Spine: { y: 0.02 }, Spine1: { y: 0.02, z: 0.01 }, Spine2: { y: 0.02, z: 0.01 }, Neck: { z: 0.02, y: 0.01 }, Head: { z: 0.02 }, LeftShoulder: { rx: -0.5 }, RightShoulder: { rx: -0.5 }, scaleToHipsLevel: 1 }, baseline: { headRotateX: -0.05, eyeBlinkLeft: 0.15, eyeBlinkRight: 0.15 } } })
+    makeActor({ name: "att", pos: ATT_POS, yaw: ATT_YAW, avatar: { url: AV_DIR + "avatarsdk", body: "M", avatarMood: "happy", retarget: { Neck: { z: -0.01, rx: -0.15 }, Neck1: { z: -0.01, rx: -0.15 }, Neck2: { z: -0.01, rx: -0.15 }, LeftShoulder: { rz: -0.3 }, RightShoulder: { rz: 0.3 }, scaleToEyesLevel: 1, origin: { y: -0.1 } }, baseline: { headRotateX: -0.04, eyeBlinkLeft: 0.05, eyeBlinkRight: 0.05 } } })
   ]);
   actors.push(prof, att);
   for (let i2 = 0; i2 < 20; i2++) for (const a of actors) {
@@ -52524,23 +52528,47 @@ async function boot() {
     a.arm.updateMatrixWorld(true);
     a.look.calibrate();
   }
-  att.arm.scale.setScalar(0.92);
-  const shirt = await new TextureLoader().loadAsync("./avatars/prof_shirt.jpg");
-  shirt.flipY = false;
-  shirt.colorSpace = SRGBColorSpace;
-  const headTex = await new TextureLoader().loadAsync("./avatars/prof_head.jpg");
-  headTex.flipY = false;
-  headTex.colorSpace = SRGBColorSpace;
-  prof.arm.traverse((o) => {
+  att.arm.scale.setScalar(0.97);
+  const tex2 = async (u) => {
+    const t = await new TextureLoader().loadAsync(u);
+    t.flipY = false;
+    t.colorSpace = SRGBColorSpace;
+    return t;
+  };
+  const [shirt, headTex, aShirt, aHead, aJeans] = await Promise.all(["prof_shirt", "prof_head", "att_shirt", "att_head", "att_jeans"].map((n) => tex2("./avatars/" + n + ".jpg")));
+  const restyle = (arm, maps) => arm.traverse((o) => {
+    if (!o.isMesh || !maps[o.material?.name]) return;
+    o.material = o.material.clone();
+    o.material.map = maps[o.material.name];
+    o.material.needsUpdate = true;
+  });
+  restyle(prof.arm, { outfit_top: shirt, AvatarHead: headTex });
+  restyle(att.arm, { outfit_top: aShirt, AvatarHead: aHead, outfit_bottom: aJeans });
+  att.arm.traverse((o) => {
     if (!o.isMesh) return;
-    if (o.material?.name === "outfit_top") {
-      o.material.map = shirt;
-      o.material.needsUpdate = true;
+    const name = o.material?.name;
+    if (name !== "outfit_top" && name !== "outfit_bottom") return;
+    o.geometry = o.geometry.clone();
+    const pos = o.geometry.attributes.position, nor = o.geometry.attributes.normal;
+    o.geometry.computeBoundingBox();
+    const bb = o.geometry.boundingBox, h = bb.max.y - bb.min.y;
+    const unit = h > 10 ? 100 : 1;
+    for (let i2 = 0; i2 < pos.count; i2++) {
+      let k = 0;
+      if (name === "outfit_top") k = 0.022;
+      else {
+        const knee = bb.min.y + h * 0.42, y = pos.getY(i2);
+        if (y < knee) {
+          const t = (knee - y) / (knee - bb.min.y);
+          k = 0.075 * t * t;
+        }
+      }
+      if (!k) continue;
+      const nx = nor.getX(i2), ny = name === "outfit_top" ? nor.getY(i2) : 0, nz = nor.getZ(i2);
+      pos.setXYZ(i2, pos.getX(i2) + nx * k * unit, pos.getY(i2) + ny * k * unit, pos.getZ(i2) + nz * k * unit);
     }
-    if (o.material?.name === "AvatarHead") {
-      o.material.map = headTex;
-      o.material.needsUpdate = true;
-    }
+    pos.needsUpdate = true;
+    o.geometry.computeBoundingSphere();
   });
   $("loading").textContent = "Carregando anima\xE7\xF5es\u2026";
   await preloadAnims(prof, ["walk", "talk1"]);
