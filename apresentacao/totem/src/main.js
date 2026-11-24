@@ -9,10 +9,11 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { TalkingHead } from './talkinghead.mjs';
 import { buildAirport } from './airport.js';
+import { buildLandside, CURB, DESK } from './landside.js';
 import { createTotem } from './totem.js';
 import { ArmIK, HeadLook } from './ik.js';
 import * as PROPS from './props.js';
-import { CFG, LINES } from './config.js';
+import { CFG, LINES, NAMES, CREDITS } from './config.js';
 
 // ---------------------------------------------------------------- params
 const Q = new URLSearchParams(location.search);
@@ -49,6 +50,7 @@ camera.position.set(6, 1.7, 9);
 
 // ---------------------------------------------------------------- world
 const airport = buildAirport(scene, { quality: QUALITY, flights: CFG.board });
+const land = buildLandside(scene, { quality: QUALITY });
 const totem = createTotem(CFG);
 scene.add(totem.group);
 
@@ -126,12 +128,18 @@ function thunder(delay = 0.6) {
   s.connect(lp).connect(g).connect(master); s.start(t0);
 }
 const EVENTS = (window.__events = []);
-airport.onStrike = () => { const d = 0.5 + Math.random() * 0.8; EVENTS.push({ t: vt + d, type: 'thunder' }); thunder(d); };
+function sfx(name, vol = 1) {
+  EVENTS.push({ t: vt, type: 'sfx', file: name + '.mp3', vol });
+  const b = audioBuffers['sfx_' + name]; if (!b || SIM || audioCtx.state !== 'running') return null;
+  const s = audioCtx.createBufferSource(); s.buffer = b; const g = audioCtx.createGain(); g.gain.value = vol; s.connect(g).connect(master); s.start(); return { s, g };
+}
+airport.onStrike = () => { const d = 0.5 + Math.random() * 0.8; EVENTS.push({ t: vt + d, type: 'thunder' }); thunder(d); airport.flicker?.(); };
 
 // ---------------------------------------------------------------- props
 const bag = PROPS.giftBag(); scene.add(bag);
 const suit = PROPS.suitcase(); scene.add(suit);
-const phone = PROPS.phone(); phone.visible = false; scene.add(phone);
+const phone = PROPS.chatPhone(); phone.visible = false; scene.add(phone);
+const leoPhone = PROPS.phone(); scene.add(leoPhone);
 const pass = PROPS.boardingPass(); pass.visible = false; scene.add(pass);
 
 // ---------------------------------------------------------------- actors
@@ -210,8 +218,9 @@ async function preloadAnims(a, keys) {
   }
 }
 
-let prof, att;
+let prof, att, diniz, leo, motti, sa;
 const actors = [];
+const ACT = {};
 
 // ---------------------------------------------------------------- virtual clock & director helpers
 let vt = 0, runId = 0;
@@ -225,26 +234,33 @@ function flushWaiters() {
   }
 }
 
-function walkTo(a, pts, speed = WALK_SPEED) {
+function walkTo(a, pts, speed = WALK_SPEED, rate = 1) {
   return new Promise((res) => {
-    a.walk = { pts: pts.map((p) => p.clone()), i: 0, speed, res };
-    if (!SIM) a.head.playAnimation(ANIM.walk, null, 120);
-    else a.head.playAnimation(ANIM.walk, null, 120);
+    a.walk = { pts: pts.map((p) => p.clone()), i: 0, speed, res, rate };
+    play(a, ANIM.walk, 120);
   });
 }
 function updateWalk(a, dt) {
   const w = a.walk; if (!w) return;
+  if (a.head.mixer) a.head.mixer.timeScale = w.rate;
   const tgt = w.pts[w.i]; const d = tgt.clone().sub(a.pos); d.y = 0;
   const dist = d.length(), step = w.speed * dt;
   if (dist <= step) {
     a.pos.copy(tgt); w.i++;
-    if (w.i >= w.pts.length) { a.walk = null; a.head.stopAnimation(); w.res(); return; }
+    if (w.i >= w.pts.length) { a.walk = null; if (a.head.mixer) a.head.mixer.timeScale = 1; softStop(a, 0.35); w.res(); return; }
   } else {
     a.pos.add(d.multiplyScalar(step / dist));
     a.yawGoal = Math.atan2(d.x, d.z);
   }
 }
 function turnTo(a, yaw) { a.yawGoal = yaw; }
+// fade a Mixamo clip out instead of cutting it (avoids the pose snapping between shots)
+function softStop(a, t = 0.4) {
+  const m = a.head.mixer; if (!m) return;
+  for (const act of m._actions) act.fadeOut(t);
+  a.fadeStopAt = vt + t;
+}
+function play(a, url, dur) { a.fadeStopAt = null; a.head.playAnimation(url, null, dur); }
 function angleLerp(a, b, k) { let d = b - a; while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI; return a + d * k; }
 
 // look at something (Object3D) for ms; null => partner
@@ -289,13 +305,13 @@ function pickVoice(who) {
 }
 let ttsRatio = 1; // learned ratio (real synth duration / estimate), keeps lips in step with the browser voice
 let subtitlesOn = true;
-function showSub(who, text) { const el = $('sub'); if (!subtitlesOn || !text) { el.classList.remove('on'); return; } el.innerHTML = `<span class="who">${who === 'prof' ? 'Soussa' : 'Guis'}</span>${text}`; el.classList.add('on'); }
+function showSub(who, text) { const el = $('sub'); if (!subtitlesOn || !text) { el.classList.remove('on'); return; } el.innerHTML = `<span class="who">${NAMES[who] || who}</span>${text}`; el.classList.add('on'); }
 
 async function say(id, { gesture = null, anim = null } = {}) {
-  const L = LINES[id], a = L.who === 'prof' ? prof : att;
+  const L = LINES[id], a = ACT[L.who];
   showSub(L.who, L.text);
   const t0 = vt;
-  if (anim && !a.walk) a.head.playAnimation(ANIM[anim], null, 30);
+  if (anim && !a.walk) play(a, ANIM[anim], 30);
   if (gesture) setTimeout(() => a.head.playGesture(gesture[0], gesture[1] || 2.5, gesture[2] || false), 250);
   let durMs;
   if (SIM) {
@@ -319,11 +335,11 @@ async function say(id, { gesture = null, anim = null } = {}) {
       speechSynthesis.cancel(); speechSynthesis.speak(u);
     }
     a.head.speakAudio({ audio: silent, ...wordTiming(L.text, durMs * 0.95, 0) }, { lipsyncLang: 'pt_br' });
-    if (ended) { await Promise.race([ended, wait(durMs / 1000 * 2 + 1)]); await wait(0.2); if (anim) a.head.stopAnimation(); showSub(null); return; }
+    if (ended) { await Promise.race([ended, wait(durMs / 1000 * 2 + 1)]); await wait(0.2); if (anim && !a.walk) softStop(a); showSub(null); return; }
   }
-  EVENTS.push({ t: t0, type: 'line', id, who: L.who, text: L.text, dur: durMs / 1000, file: audioBuffers[id] ? L.audio : null });
+  EVENTS.push({ t: t0, type: 'line', id, who: L.who, name: NAMES[L.who], text: L.text, dur: durMs / 1000, file: audioBuffers[id] ? L.audio : null });
   await wait(durMs / 1000 + 0.25);
-  if (anim) a.head.stopAnimation();
+  if (anim && !a.walk) softStop(a);
   showSub(null);
 }
 
@@ -377,6 +393,16 @@ function curlFingers(a, side, amt) {
   a.arm.updateMatrixWorld(true);
 }
 
+// phone against the right ear: screen toward the cheek, long axis from ear down toward the mouth
+const _bx = new THREE.Vector3(), _by = new THREE.Vector3(), _bz = new THREE.Vector3(), _m4 = new THREE.Matrix4();
+function earPos(a) { const r = V(-Math.cos(a.yaw), 0, Math.sin(a.yaw)), f = V(Math.sin(a.yaw), 0, Math.cos(a.yaw)); return a.headPos().addScaledVector(r, 0.095).addScaledVector(f, 0.02).add(V(0, -0.06, 0)); }
+function placeAtEar(ph, a) {
+  const p = earPos(a), r = V(-Math.cos(a.yaw), 0, Math.sin(a.yaw)), f = V(Math.sin(a.yaw), 0, Math.cos(a.yaw));
+  _bz.copy(r).multiplyScalar(-1);                                   // screen faces the head
+  _by.set(0, 1, 0).addScaledVector(f, -0.55).normalize();           // top behind the ear, bottom toward the mouth
+  _by.addScaledVector(_bz, -_by.dot(_bz)).normalize(); _bx.crossVectors(_by, _bz);
+  ph.quaternion.setFromRotationMatrix(_m4.makeBasis(_bx, _by, _bz)); ph.position.copy(p).addScaledVector(r, 0.012);
+}
 function updateProps(dt) {
   // gift bag hangs from prof's left hand
   curlFingers(prof, 'Left', 1.0);
@@ -406,15 +432,17 @@ function updateProps(dt) {
     suit.quaternion.slerp(new THREE.Quaternion().setFromEuler(new THREE.Euler(0, prof.yaw, 0)), Math.min(1, dt * 3));
     suitWheel.copy(suit.position);
   }
-  // phone in prof right hand
-  phone.visible = state.phone;
+  // phone in prof right hand (looking at it, or at the ear)
+  phone.visible = !!state.phone;
   if (state.phone) {
     gripPoint(prof, 'Right', hand);
     const face = prof.headPos();
-    phone.position.copy(hand).add(face.clone().sub(hand).normalize().multiplyScalar(0.035));
-    phone.lookAt(face);
+    if (state.phone === 'ear') placeAtEar(phone, prof);
+    else { phone.position.copy(hand).add(V(0, 0.075, 0)).add(face.clone().sub(hand).normalize().multiplyScalar(0.03)); phone.lookAt(face); }
     M_PHONE.position.copy(phone.position);
   }
+  leoPhone.visible = !!leo.onPhone;
+  if (leo.onPhone) { curlFingers(leo, 'Right', 0.6); placeAtEar(leoPhone, leo); }
   // boarding pass
   pass.visible = state.passMode !== 'hidden';
   if (state.passOwner) {
@@ -442,6 +470,7 @@ function guardArms(a) {
 
 function updateActors(dt) {
   for (const a of actors) {
+    if (a.fadeStopAt != null && vt >= a.fadeStopAt) { a.fadeStopAt = null; a.head.stopAnimation(); }
     updateWalk(a, dt);
     a.yaw = angleLerp(a.yaw, a.yawGoal, Math.min(1, dt * 5));
     a.arm.position.copy(a.pos); a.arm.rotation.y = a.yaw;
@@ -449,66 +478,208 @@ function updateActors(dt) {
     a.arm.updateMatrixWorld(true);
   }
   // procedural targets
+  const earPt = (a) => { const r = V(-Math.cos(a.yaw), 0, Math.sin(a.yaw)), f = V(Math.sin(a.yaw), 0, Math.cos(a.yaw)); return earPos(a).addScaledVector(r, 0.04).addScaledVector(f, 0.03).add(V(0, -0.1, 0)); };
+  if (state.phone === 'ear') prof.ikR.set(earPt(prof), 1);
+  if (state.phone === 'hand' && !state.typing) { const f = fwdOf(prof), r = V(-Math.cos(prof.yaw), 0, Math.sin(prof.yaw)); prof.ikR.set(prof.pos.clone().addScaledVector(f, 0.42).addScaledVector(r, 0.05).add(V(0, 1.18, 0)), 1); }
+  if (leo.onPhone) leo.ikR.set(earPt(leo), 1);
+  for (const a of actors) {
+    if (a.slip > 0) {
+      a.slip -= dt; const k = Math.max(0, a.slip) / 0.9;
+      a.arm.rotation.z = Math.sin((0.9 - a.slip) * 14) * 0.16 * k; a.arm.rotation.x = -Math.sin((0.9 - a.slip) * 9) * 0.08 * k;
+      const r = V(-Math.cos(a.yaw), 0, Math.sin(a.yaw)), f = V(Math.sin(a.yaw), 0, Math.cos(a.yaw));
+      a.ikR.set(a.pos.clone().addScaledVector(r, 0.55).addScaledVector(f, 0.1).add(V(0, 1.45, 0)), k);
+      if (a.slip <= 0) { a.ikR.release(); a.arm.rotation.z = a.arm.rotation.x = 0; }
+    }
+  }
   if (state.typing && prof.ikR) {
     const fwd = V(Math.sin(prof.yaw), 0, Math.cos(prof.yaw)), right = V(-Math.cos(prof.yaw), 0, Math.sin(prof.yaw));
-    const p = prof.pos.clone().addScaledVector(fwd, 0.3).addScaledVector(right, 0.04); p.y = 1.27 + Math.sin(vt * 9) * 0.004;
+    const p = prof.pos.clone().addScaledVector(fwd, 0.42).addScaledVector(right, 0.05); p.y = 1.18 + Math.sin(vt * 9) * 0.004;
     prof.ikR.set(p, 1);
   }
+  if (diniz.head.poseName !== 'sitting') diniz.head.playPose('sitting', null, 1e6);
   for (const a of actors) { guardArms(a); a.look.update(dt); a.ikL.update(dt); a.ikR.update(dt); }
   updateProps(dt);
 }
 
 // ---------------------------------------------------------------- scenes
 function setTotem(s) { totem.setState(s); }
+const yawTo = (from, to) => Math.atan2(to.x - from.x, to.z - from.z);
+const fwdOf = (a) => V(Math.sin(a.yaw), 0, Math.cos(a.yaw));
+const TX = land.taxi;
+const EXT_START = TX.rearDoor.clone();
+const DOOR_OUT = V(8.2, 0, 17.4), DOOR_IN = V(8.4, 0, 13.9);
+const BOARD2 = V(14.2, 4.6, 7.6), BOARD2_SPOT = V(11.5, 0, 12.3);
+const DESK_STOP = V(0.65, 0, 11.75), MOTTI_POS = V(-1.25, 0, 11.05), SA_POS = V(-1.25, 0, 12.15);
+const LEO_A = V(10.4, 0, 14.4), LEO_B = V(12.9, 0, 14.0);
+const M_BOARD2 = marker(BOARD2), M_FEET = marker(V(0, 0.1, 0));
+let rainOut = null;
+
 function resetWorld() {
-  prof.pos.set(8.5, 0, 9.2); prof.yaw = prof.yawGoal = -2.1; prof.walk = null; prof.head.stopAnimation();
+  prof.pos.copy(EXT_START); prof.yaw = prof.yawGoal = Math.PI; prof.walk = null; prof.head.stopAnimation(); prof.slip = 0;
   att.pos.copy(ATT_POS); att.yaw = att.yawGoal = ATT_YAW;
-  state.suitMode = 'pull'; state.phone = false; state.typing = false; state.passMode = 'hidden'; state.passOwner = null;
-  [prof, att].forEach((a) => { a.ikL.weight = a.ikL.goal = 0; a.ikR.weight = a.ikR.goal = 0; a.look.weight = a.look.goal = 0; a.look.target = null; });
-  suitWheel.set(9, 0, 10);
+  diniz.pos.copy(TX.driverSeat).add(V(0, 0.47, 0)); diniz.yaw = diniz.yawGoal = -Math.PI / 2;
+  leo.pos.copy(LEO_A); leo.yaw = leo.yawGoal = Math.PI / 2; leo.onPhone = true; leo.walk = null;
+  motti.pos.copy(MOTTI_POS); motti.yaw = motti.yawGoal = Math.PI / 2;
+  sa.pos.copy(SA_POS); sa.yaw = sa.yawGoal = Math.PI / 2;
+  state.suitMode = 'parked'; state.phone = false; state.typing = false; state.passMode = 'hidden'; state.passOwner = null;
+  actors.forEach((a) => { a.ikL.weight = a.ikL.goal = 0; a.ikR.weight = a.ikR.goal = 0; a.look.weight = a.look.goal = 0; a.look.target = null; a.arm.rotation.x = a.arm.rotation.z = 0; });
+  suit.position.copy(EXT_START).add(V(0.45, 0, 0.1)); suit.quaternion.setFromEuler(new THREE.Euler(0, Math.PI, 0));
+  airport.setDelayed(false); land.doors(false); TX.setDoor(true);
   setTotem('idle'); grade.uniforms.uFade.value = 1; $('endcard').classList.remove('on'); showSub(null);
 }
 function placeAtKiosk() {
   prof.pos.copy(PROF_STOP); prof.yaw = prof.yawGoal = PROF_YAW; state.suitMode = 'parked';
   const right = V(-Math.cos(PROF_YAW), 0, Math.sin(PROF_YAW));
   suit.position.copy(PROF_STOP).addScaledVector(right, 0.45); suit.quaternion.setFromEuler(new THREE.Euler(0, PROF_YAW, 0));
-  look(prof, att.head); look(att, prof.head);
+  look(prof, att.head); look(att, prof.head); leo.onPhone = false; leo.pos.set(14, 0, 18);
 }
 // camera framing a horizontal band of the kiosk screen (v = 0 top … 1 bottom)
 const screenCam = (v, dist = 1.1, dx = -0.18) => ({ p: () => screenPt(0.5, v).add(V(dx, 0.13 * dist, 0.99 * dist)), l: () => screenPt(0.5, v) });
 const screenPt = (u, v) => totem.screen.localToWorld(V((u - 0.5) * 0.54, (0.5 - v) * 0.96, 0.03));
+const until = async (cond, max = 20) => { const t = vt; while (!cond() && vt - t < max) await wait(1 / 30); };
 
+// 1 — the taxi under the canopy
 async function scene1() {
-  // Establishing: wide, slow push while he walks in
-  cut({ p0: V(-3.5, 3.4, 14.5), p1: V(-1.8, 2.3, 12.5), l0: V(3, 1.6, 6), l1: () => prof.headPos().add(V(-1.2, -0.3, -1)), dur: 9, fov: 34, focus: headOf(prof), aperture: 0.0008 });
-  const walking = walkTo(prof, [V(5.5, 0, 7.9), V(0.6, 0, 7.3), V(-1.6, 0, 5.6), BOARD_SPOT]);
-  await wait(4.6);
-  cut({ p0: rel(prof, -1.0, 1.55, 3.4), p1: rel(prof, -0.8, 1.55, 2.6), l0: headOf(prof, -0.3), dur: 6, fov: 30, focus: headOf(prof), smoothPos: true });
-  await walking;
-  turnTo(prof, -2.6); look(prof, M_BOARD);
-  await wait(0.6);
-  cut({ p0: () => prof.pos.clone().add(V(-1.7, 1.62, 1.3)), l0: headOf(prof, -0.18), p1: () => prof.pos.clone().add(V(-1.4, 1.62, 1.05)), dur: 8, fov: 28, focus: headOf(prof), aperture: 0.002 });
-  await say('p1', { anim: 'talk1' });
+  rainOut = sfx('rain_out', 1.0);
+  look(diniz, prof.head); look(prof, TX.group);
+  // through the wet entrance glass: taxi parked, Soussa getting out
+  cut({ p0: V(7.5, 1.55, 13.4), p1: V(7.7, 1.55, 14.2), l0: V(9.0, 1.15, 22.2), dur: 6, fov: 30, focus: () => V(9.0, 1.1, 22.0), aperture: 0.0012 });
+  await wait(2.2);
+  sfx('carDoor', 0.8); TX.setDoor(false);
+  await wait(1.3);
+  // close on Diniz through the open passenger window
+  cut({ p0: () => V(7.55, 1.22, 19.9), l0: headOf(diniz, -0.05), fov: 20, focus: headOf(diniz), aperture: 0.0022, handheld: 0.004 });
+  await wait(0.4);
+  await say('m1');
+  cut({ p0: V(8.05, 1.62, 18.4), p1: V(8.15, 1.62, 18.9), l0: headOf(prof, -0.12), dur: 4, fov: 30, focus: headOf(prof), aperture: 0.002 });
+  look(prof, diniz.head);
+  const p10 = say('p10'); await wait(0.3); prof.head.playGesture('handup', 1.4, true); await p10;
+  // Soussa: thanks with a hand, turns to the doors
   await wait(0.3);
+  look(prof, null); state.suitMode = 'pull';
+  const go = walkTo(prof, [V(8.8, 0, 19.6), DOOR_OUT], 1.35);
+  await wait(1.2);
+  // Diniz, almost to himself, Soussa already walking away
+  cut({ p0: () => V(7.3, 1.2, 20.1), l0: headOf(diniz, -0.05), fov: 22, focus: headOf(diniz), aperture: 0.002, handheld: 0.004 });
+  look(diniz, prof.head);
+  await say('m2');
+  airport.strikeNow();
+  await go;
 }
 
+// 2 — the wet entrance
 async function scene2() {
-  look(prof, totem.head);
-  cut({ p0: V(3.4, 1.55, 4.2), p1: V(2.6, 1.5, 3.4), l0: () => prof.headPos().add(V(0, -0.35, 0)), dur: 5, fov: 32, focus: headOf(prof), smoothPos: true });
-  await walkTo(prof, [V(-0.8, 0, 3.0), V(0.55, 0, 1.55), PROF_STOP], 1.15);
-  turnTo(prof, PROF_YAW); state.suitMode = 'parked'; prof.ikR.release();
-  look(prof, att.head); look(att, prof.head);
+  cut({ p0: V(7.1, 1.5, 12.4), p1: V(7.3, 1.5, 12.9), l0: V(8.3, 1.45, 16.5), dur: 6, fov: 32, focus: headOf(prof), aperture: 0.0015 });
+  land.doors(true); sfx('door', 0.7);
   await wait(0.5);
-  // over attendant's shoulder onto the professor
+  const inn = walkTo(prof, [V(8.3, 0, 15.6), DOOR_IN], 1.25);
+  await until(() => prof.pos.z < 15.2);
+  if (rainOut) rainOut.g.gain.setTargetAtTime(0.35, audioCtx.currentTime, 0.4);
+  EVENTS.push({ t: vt, type: 'rainDuck' });
+  await inn;
+  land.doors(false); sfx('door', 0.5);
+  turnTo(prof, Math.PI + 0.35);
+  // phone buzzes: message from his wife
+  sfx('buzz', 0.8);
+  phone.setChat([{ me: false, text: 'Já tá no aeroporto? Papai tá de roupa nova desde as 7h.' }]);
+  state.phone = 'hand'; state.suitMode = 'parked'; look(prof, M_PHONE);
+  await wait(0.4);
+  cut({ p0: rel(prof, -0.26, 1.86, -0.06), p1: rel(prof, -0.22, 1.84, 0.0), l0: () => M_PHONE.position.clone(), dur: 5, fov: 12, focus: () => M_PHONE.position.clone(), aperture: 0.0014, handheld: 0.003 });
+  await wait(2.4);
+  state.typing = true; await wait(1.4); state.typing = false;
+  phone.setChat([{ me: false, text: 'Já tá no aeroporto? Papai tá de roupa nova desde as 7h.' }, { me: true, text: 'Cheguei. Tudo no horário.' }]);
+  await wait(1.8);
+  state.phone = false; prof.ikR.release();
+}
+
+// 3 — the board says ON TIME
+async function scene3() {
+  state.suitMode = 'pull'; look(prof, M_BOARD2);
+  leo.onPhone = true;
+  cut({ p0: V(9.4, 1.6, 15.2), l0: headOf(prof, -0.2), fov: 34, focus: headOf(prof), aperture: 0.0012, smoothPos: true });
+  await walkTo(prof, [V(10.2, 0, 13.2), BOARD2_SPOT], 1.2);
+  turnTo(prof, yawTo(prof.pos, BOARD2)); state.suitMode = 'parked'; prof.ikR.release();
+  // over his shoulder: the board, AA 1455 ON TIME
+  cut({ p0: () => prof.pos.clone().add(V(-0.75, 1.75, 1.15)), p1: () => prof.pos.clone().add(V(-0.6, 1.72, 0.9)), l0: () => BOARD2.clone().add(V(0.45, -0.1, 0.1)), dur: 4.5, fov: 27, focus: () => BOARD2.clone(), aperture: 0.0008, handheld: 0.002 });
+  await wait(3.6);
+  // relief, then the lightning and the lights dip
+  cut({ p0: rel(prof, 0.1, 1.58, 1.55), l0: headOf(prof, -0.05), fov: 28, focus: headOf(prof), aperture: 0.0016 });
+  prof.head.setMood('happy');
+  walkTo(leo, [LEO_B], 0.9);
+  await wait(1.1);
+  airport.strikeNow();
+  await wait(0.9);
+  prof.head.setMood('neutral');
+  // Leo, behind him on the phone
+  cut({ p0: rel(prof, 0.45, 1.6, 1.5), l0: headOf(leo, -0.15), fov: 22, focus: headOf(leo), aperture: 0.002 });
+  look(leo, null);
+  const l1 = say('l1', { anim: 'talk1' });
+  await wait(1.0); look(prof, leo.head); turnTo(prof, yawTo(prof.pos, leo.pos) - 0.6);
+  await l1;
+  walkTo(leo, [LEO_A, V(9.2, 0, 15.0)], 0.9);
+  cut({ p0: rel(prof, -0.2, 1.6, 1.3), l0: headOf(prof, -0.06), fov: 26, focus: headOf(prof), aperture: 0.002 });
+  look(prof, M_BOARD2); prof.head.setMood('sad');
+  await wait(1.6);
+}
+
+// 4 — the information desk
+async function scene4() {
+  prof.head.setMood('neutral'); look(prof, null); state.suitMode = 'pull';
+  cut({ p0: V(3.5, 1.62, 9.3), l0: V(0.0, 1.3, 11.7), fov: 34, focus: () => V(-0.4, 1.4, 11.6), aperture: 0.0012 });
+  const go = walkTo(prof, [V(8.0, 0, 12.0), V(3.5, 0, 11.9), DESK_STOP], 1.3);
+  look(motti, prof.head); look(sa, prof.head);
+  await wait(1.6);
+  const call = say('mt1', { gesture: ['handup', 1.6] });
+  await go;
+  turnTo(prof, -Math.PI / 2 + 0.25); state.suitMode = 'parked'; prof.ikR.release(); look(prof, motti.head);
+  await call;
+  // Soussa explains (over Motti's shoulder)
+  cut({ p0: rel(motti, -0.3, 1.62, -0.55), l0: headOf(prof, -0.08), fov: 28, focus: headOf(prof), aperture: 0.0022 });
+  await say('p1', { anim: 'talk1' });
+  // Motti and Sá exchange a look
+  cut({ p0: () => V(0.1, 1.5, 14.2), l0: () => mid(headOf(motti), headOf(sa))(), fov: 30, focus: headOf(motti), aperture: 0.0015 });
+  look(motti, sa.head); look(sa, motti.head);
+  await wait(1.4);
+  // Sá points to the kiosk
+  look(sa, totem.head); turnTo(sa, yawTo(sa.pos, KIOSK) + 0.5);
+  const sp = say('sa1', { gesture: ['index', 2.6] });
+  await wait(1.6);
+  // his point of view: the kiosk across the hall
+  cut({ p0: () => prof.headPos().add(V(-0.15, 0, -0.1)), l0: () => totem.head.getWorldPosition(new THREE.Vector3()), fov: 26, focus: () => totem.head.getWorldPosition(new THREE.Vector3()), aperture: 0.0016, handheld: 0.004 });
+  look(prof, totem.head);
+  await sp;
+  cut({ p0: rel(motti, -0.3, 1.62, -0.55), l0: headOf(prof, -0.08), fov: 28, focus: headOf(prof), aperture: 0.0022 });
+  look(prof, sa.head); prof.head.playGesture('thumbup', 1.2, true);
+  await wait(1.3);
+}
+
+// 5 — the slip
+async function scene5() {
+  look(prof, totem.head); state.suitMode = 'pull';
+  look(motti, prof.head); look(sa, prof.head);
+  const run = walkTo(prof, [V(0.85, 0, 7.8), V(1.05, 0, 5.0), V(0.95, 0, 2.6), PROF_STOP], 2.0, 1.55);
+  cut({ p0: V(2.35, 0.32, 3.7), l0: V(1.2, 0.35, 5.5), fov: 38, focus: () => V(1.3, 0.3, 5.2), aperture: 0.0012, handheld: 0.003 });
+  await until(() => prof.pos.z < 5.5);
+  prof.slip = 0.9; sfx('squeak', 0.9);
+  await wait(0.7);
+  cut({ p0: V(2.4, 1.55, 3.2), p1: V(2.2, 1.5, 2.8), l0: () => prof.headPos().add(V(0, -0.35, 0)), dur: 3, fov: 32, focus: headOf(prof), smoothPos: true });
+  look(att, prof.head);
+  await run;
+  turnTo(prof, PROF_YAW); state.suitMode = 'parked'; prof.ikR.release();
+  look(prof, att.head);
+  await wait(0.4);
+}
+
+// 6 — the question
+async function scene6() {
   cut({ p0: rel(att, -0.55, 1.6, -0.45), l0: headOf(prof, -0.08), fov: 30, focus: headOf(prof), aperture: 0.0025 });
-    await say('p2', { gesture: ['index', 1.6, true] });
-  // reverse: over prof's shoulder onto the attendant
+  await say('p2', { gesture: ['index', 1.6, true] });
   cut({ p0: rel(prof, 0.55, 1.62, -0.45), l0: headOf(att, -0.08), fov: 30, focus: headOf(att), aperture: 0.0025 });
   await say('a1', { gesture: ['side', 2, true] });
 }
 
-async function scene3() {
-  // hand-off of the boarding pass (two-shot)
+// 7 — the lookup
+async function scene7() {
   cut({ p0: V(1.9, 1.45, 2.6), p1: V(1.6, 1.4, 2.2), l0: V(-0.15, 1.15, 0.55), dur: 4, fov: 32, focus: () => V(-0.15, 1.1, 0.7) });
   state.passMode = 'prof'; state.passOwner = prof; state.passHand = 'RightHand';
   const meet = V(-0.2, 1.05, 0.85);
@@ -517,15 +688,13 @@ async function scene3() {
   state.passOwner = att; state.passHand = 'RightHand'; prof.ikR.release();
   att.ikR.set(V(0.0, 0.92, 0.22), 1); await wait(0.9);
   state.passMode = 'hidden'; state.passOwner = null; setTotem('form'); look(att, M_SCREEN); look(prof, M_SCREEN);
-  // close on the screen, typing
   { const c0 = screenCam(0.36, 1.25), c1 = screenCam(0.42, 1.1); cut({ p0: c0.p, p1: c1.p, l0: c0.l, l1: c1.l, dur: 5, fov: 30, focus: c1.l, aperture: 0.0008, handheld: 0.003 }); }
   for (let i = 0; i < 4; i++) { att.ikR.set(screenPt(0.6, 0.27 + i * 0.1), 1); await wait(0.45); att.ikR.set(screenPt(0.62, 0.25 + i * 0.1).add(V(0, 0, 0.05)), 1); await wait(0.45); }
   att.ikR.set(screenPt(0.5, 0.67), 1); await wait(0.6); att.ikR.release();
-  await wait(2.6);                    // let the filled-in form be read
+  await wait(2.6);
   setTotem('auto');
   { const c = screenCam(0.55, 1.25); cut({ p0: c.p, l0: c.l, fov: 30, focus: c.l, aperture: 0.0008, handheld: 0.002 }); }
-  await wait(6.5);                    // the three live-data cards slide in and stay readable
-  // attendant explains, screen glow on her face
+  await wait(6.5);
   cut({ p0: () => att.pos.clone().add(V(0.95, 1.55, 1.05)), p1: () => att.pos.clone().add(V(0.8, 1.55, 0.9)), l0: headOf(att, -0.08), dur: 6, fov: 30, focus: headOf(att), aperture: 0.0022 });
   look(att, totem.head);
   const sp = say('a2', { gesture: ['index', 2.2, true] });
@@ -535,17 +704,17 @@ async function scene3() {
   await wait(3.5);
 }
 
-async function scene4() {
+// 8 — the result
+async function scene8() {
   att.ikR.set(screenPt(0.5, 0.78), 1); await wait(0.5); att.ikR.release();
   setTotem('analyzing');
   { const c0 = screenCam(0.5, 1.3), c1 = screenCam(0.38, 1.15); cut({ p0: c0.p, p1: c1.p, l0: c0.l, l1: c1.l, dur: 6, fov: 30, focus: c1.l, aperture: 0.0008, handheld: 0.002 }); }
   await wait(2.8);
   setTotem('result');
   { const c0 = screenCam(0.33, 1.25), c1 = screenCam(0.37, 1.15); cut({ p0: c0.p, p1: c1.p, l0: c0.l, l1: c1.l, dur: 5, fov: 30, focus: c1.l, aperture: 0.0008, handheld: 0.002 }); }
-  await wait(7.0);                    // probabilities: bars grow, then hold
+  await wait(7.0);
   { const c0 = screenCam(0.7, 0.98), c1 = screenCam(0.76, 0.92); cut({ p0: c0.p, p1: c1.p, l0: c0.l, l1: c1.l, dur: 4, fov: 30, focus: c1.l, aperture: 0.0008, handheld: 0.002 }); }
-  await wait(6.0);                    // main factors
-  // reaction: attendant
+  await wait(6.0);
   cut({ p0: rel(prof, 0.38, 1.66, -0.62), l0: headOf(att, -0.06), fov: 25, focus: headOf(att), aperture: 0.0028 });
   look(att, prof.head); att.head.setMood('neutral');
   await say('a3');
@@ -560,53 +729,83 @@ async function scene4() {
   await wait(5.0);
   cut({ p0: rel(prof, 0.38, 1.66, -0.62), l0: headOf(att, -0.06), fov: 25, focus: headOf(att), aperture: 0.0028 });
   await s;
-  att.head.setMood('happy');
+  // he looks at the screen, then down at his soaked shoes
+  cut({ p0: rel(prof, 0.45, 1.58, 1.15), p1: rel(prof, 0.4, 1.58, 1.0), l0: headOf(prof, -0.12), dur: 9, fov: 26, focus: headOf(prof), aperture: 0.003 });
+  look(prof, M_SCREEN); await wait(0.9);
+  M_FEET.position.copy(prof.pos).addScaledVector(fwdOf(prof), 0.35); look(prof, M_FEET); await wait(1.0);
+  look(prof, att.head);
+  await say('p8', { anim: 'talk1' });
 }
 
-async function scene5() {
-  // prof close-up, looks at the gift
+// 9 — the reaction
+async function scene9() {
   cut({ p0: rel(prof, 0.5, 1.56, 1.25), p1: rel(prof, 0.42, 1.57, 1.1), l0: headOf(prof, -0.12), dur: 10, fov: 26, focus: headOf(prof), aperture: 0.003 });
-  look(prof, M_BAG); await wait(1.6);
-  // checks watch (left wrist up)
-  const fwd = () => V(Math.sin(prof.yaw), 0, Math.cos(prof.yaw));
-  prof.ikL.set(prof.pos.clone().addScaledVector(fwd(), 0.28).add(V(0, 1.12, 0)), 1);
-  await wait(1.6); prof.ikL.release();
+  look(prof, M_BAG); await wait(1.4);
+  prof.ikL.set(prof.pos.clone().addScaledVector(fwdOf(prof), 0.28).add(V(0, 1.12, 0)), 1);
+  await wait(1.4); prof.ikL.release();
   look(prof, att.head);
   await say('p4');
-  await wait(0.9);       // comic pause
-  look(prof, att.head);
+  await wait(0.9);
   look(prof, camera);
   await say('p5');
-  // takes his phone and starts typing
-  cut({ p0: rel(prof, -0.3, 1.95, -0.22), p1: rel(prof, -0.27, 1.92, -0.17), l0: () => M_PHONE.position.clone(), dur: 5, fov: 30, focus: () => M_PHONE.position.clone(), aperture: 0.0015 });
-  state.phone = true; state.typing = true; look(prof, M_PHONE);
-  airport.strikeNow();
+}
+
+// 10 — the call
+async function scene10() {
+  turnTo(prof, PROF_YAW + 0.7); look(prof, null);
+  state.phone = 'ear'; phone.setChat([]);
+  sfx('buzz', 0.4);
+  cut({ p0: rel(prof, 0.35, 1.58, 1.5), p1: rel(prof, 0.3, 1.58, 1.3), l0: headOf(prof, -0.1), dur: 10, fov: 28, focus: headOf(prof), aperture: 0.0026 });
+  await wait(1.2);
+  await say('p6', { anim: 'talk1' });
+  look(prof, M_BAG);
+  await say('p7');
+}
+
+// 11 — the board confirms
+async function scene11() {
+  state.phone = false; prof.ikR.release(); look(prof, M_BOARD);
+  turnTo(prof, yawTo(prof.pos, M_BOARD.position));
+  const toB = M_BOARD.position.clone().sub(prof.pos).setY(0).normalize();
+  const camP = () => prof.pos.clone().addScaledVector(toB, -1.5).add(V(-toB.z * 0.45, 1.72, toB.x * 0.45));
+  cut({ p0: camP, l0: () => M_BOARD.position.clone().add(V(0, -0.2, 0)), fov: 24, focus: headOf(prof), aperture: 0.0016 });
   await wait(1.6);
-  // fade out
-  for (let i = 0; i <= 30; i++) { grade.uniforms.uFade.value = 1 - i / 30; await wait(1.4 / 30); }
+  airport.setDelayed(true); sfx('buzz', 0.0);
+  cut({ p0: camP, l0: () => M_BOARD.position.clone().add(V(0, -0.2, 0)), fov: 24, focus: () => M_BOARD.position.clone(), aperture: 0.0016 });
+  await wait(2.6);
+  // close on him: board, kiosk, Guis
+  cut({ p0: rel(prof, -0.15, 1.6, 1.15), p1: rel(prof, -0.1, 1.6, 1.0), l0: headOf(prof, -0.06), dur: 12, fov: 26, focus: headOf(prof), aperture: 0.003 });
+  await wait(0.8); look(prof, totem.head); await wait(0.9); look(prof, att.head); await wait(0.7);
+  look(prof, null);
+  await say('p9', { anim: 'talk1' });
+  grade.uniforms.uFade.value = 0;   // hard cut to black
+  await wait(0.8);
 }
 
-async function scene6() {
+// 12 — end card + credits
+async function scene12() {
   grade.uniforms.uFade.value = 0;
-  $('realcase').innerHTML = `Voo real: ${CFG.flight.airline} ${CFG.flight.code}, ${CFG.flight.origin} → ${CFG.flight.dest}, ${CFG.flight.date}<br>Previsão 1 h antes: ${Math.round(CFG.result.p * 100)}% · ${CFG.result.actual}`;
-  EVENTS.push({ t: vt, type: 'end', title: 'Como esse totem funciona?', sub: $('realcase').innerHTML.split('<br>') });
+  const cr = CREDITS.map(([n, r]) => `${n} · ${r}`).join('<br>');
+  $('realcase').innerHTML = `Voo real: ${CFG.flight.airline} ${CFG.flight.code}, ${CFG.flight.origin} → ${CFG.flight.dest}, ${CFG.flight.date}<br>Previsão 1 h antes: ${Math.round(CFG.result.p * 100)}% · ${CFG.result.actual}<br><br><span style="font-size:.8em;opacity:.8">${cr}</span>`;
+  EVENTS.push({ t: vt, type: 'end', title: 'Como esse totem funciona?', sub: [`Voo real: ${CFG.flight.airline} ${CFG.flight.code}, ${CFG.flight.origin} → ${CFG.flight.dest}, ${CFG.flight.date}`, `Previsão 1 h antes: ${Math.round(CFG.result.p * 100)}% · ${CFG.result.actual}`, '', ...CREDITS.map(([n, r]) => `${n} · ${r}`)] });
   $('endcard').classList.add('on');
-  await wait(6);
+  await wait(8);
 }
 
-const SCENES = [scene1, scene2, scene3, scene4, scene5, scene6];
+const SCENES = [scene1, scene2, scene3, scene4, scene5, scene6, scene7, scene8, scene9, scene10, scene11, scene12];
 async function run(from = 1) {
   const id = ++runId;
   resetWorld();
-  if (from >= 2) {
-    // fast-forward state to the start of the requested scene
-    placeAtKiosk();
-    if (from >= 4) setTotem('auto');
-    if (from >= 5) setTotem('result');
-  }
+  if (from >= 2) { prof.pos.copy(DOOR_OUT); prof.yaw = prof.yawGoal = Math.PI; TX.setDoor(false); }
+  if (from >= 3) { prof.pos.copy(DOOR_IN); }
+  if (from >= 4) { prof.pos.copy(BOARD2_SPOT); }
+  if (from >= 5) { prof.pos.copy(DESK_STOP); prof.yaw = prof.yawGoal = -Math.PI / 2; leo.onPhone = false; }
+  if (from >= 6) placeAtKiosk();
+  if (from >= 8) setTotem('auto');
+  if (from >= 9) setTotem('result');
   try {
     for (let i = from; i <= SCENES.length; i++) { $('scenelabel').textContent = `Cena ${i}`; EVENTS.push({ t: vt, type: 'scene', n: i }); await SCENES[i - 1](); }
-    window.__finished = vt;
+    window.__finished = vt; console.log('SCENES', JSON.stringify(EVENTS.filter((e) => e.type === 'scene').map((e) => [e.n, +e.t.toFixed(1)])), 'END', vt.toFixed(1));
     $('controls').classList.add('on');
   } catch (e) { if (e.message !== 'abort') console.error(e); }
 }
@@ -618,6 +817,7 @@ function step(dt) {
   vt += dt;
   flushWaiters();
   airport.update(dt, vt);
+  land.update(dt); land.setLightning(airport.lightning.level);
   totemAcc += dt; if (totemAcc > 1 / 30) { totem.update(totemAcc); totemAcc = 0; }
   updateActors(dt);
   updateCamera();
@@ -631,23 +831,35 @@ function render() { composer.render(); }
 async function boot() {
   $('loading').textContent = 'Carregando personagens…';
   audioBuffers.murmur = await loadBuffer('./audio/murmur.mp3');
-  [prof, att] = await Promise.all([
-    makeActor({ name: 'prof', pos: V(8.5, 0, 9.2), yaw: -2.1, avatar: { url: AV_DIR + 'avatarsdk', body: 'M', avatarMood: 'neutral', retarget: { Neck: { z: -0.01, rx: 0.02 }, Neck1: { z: -0.01, rx: 0.02 }, Neck2: { z: -0.01, rx: 0.02 }, LeftShoulder: { rz: -0.3 }, RightShoulder: { rz: 0.3 }, scaleToEyesLevel: 1.0, origin: { y: -0.1 } }, baseline: { headRotateX: -0.08, eyeBlinkLeft: 0.05, eyeBlinkRight: 0.05 } } }),
-    makeActor({ name: 'att', pos: ATT_POS, yaw: ATT_YAW, avatar: { url: AV_DIR + 'avatarsdk', body: 'M', avatarMood: 'happy', retarget: { Neck: { z: -0.01, rx: 0.02 }, Neck1: { z: -0.01, rx: 0.02 }, Neck2: { z: -0.01, rx: 0.02 }, LeftShoulder: { rz: -0.3 }, RightShoulder: { rz: 0.3 }, scaleToEyesLevel: 1.0, origin: { y: -0.1 } }, baseline: { headRotateX: -0.08, eyeBlinkLeft: 0.05, eyeBlinkRight: 0.05 } } }),
+  const RT = { Neck: { z: -0.01, rx: 0.02 }, Neck1: { z: -0.01, rx: 0.02 }, Neck2: { z: -0.01, rx: 0.02 }, LeftShoulder: { rz: -0.3 }, RightShoulder: { rz: 0.3 }, scaleToEyesLevel: 1.0, origin: { y: -0.1 } };
+  const BL = { headRotateX: -0.08, eyeBlinkLeft: 0.05, eyeBlinkRight: 0.05 };
+  const mk = (name, pos, yaw, mood = 'neutral') => makeActor({ name, pos, yaw, avatar: { url: AV_DIR + 'avatarsdk', body: 'M', avatarMood: mood, retarget: RT, baseline: BL } });
+  [prof, att, diniz, leo, motti, sa] = await Promise.all([
+    mk('prof', V(8.5, 0, 9.2), -2.1), mk('att', ATT_POS, ATT_YAW, 'happy'), mk('diniz', V(8, 0, 23), -Math.PI / 2),
+    mk('leo', V(10, 0, 14), 0), mk('motti', V(2.15, 0, 11), Math.PI / 2, 'happy'), mk('sa', V(2.15, 0, 12), Math.PI / 2, 'happy'),
   ]);
-  actors.push(prof, att);
+  Object.assign(ACT, { prof, att, diniz, leo, motti, sa });
+  actors.push(prof, att, diniz, leo, motti, sa);
   for (let i = 0; i < 20; i++) for (const a of actors) { a.arm.position.copy(a.pos); a.arm.rotation.y = a.yaw; a.head.animate(16); }
   for (const a of actors) { a.arm.updateMatrixWorld(true); a.look.calibrate(); }
   att.arm.scale.setScalar(0.97);
   // professor's shirt: plain navy, no logo
   const tex = async (u) => { const t = await new THREE.TextureLoader().loadAsync(u); t.flipY = false; t.colorSpace = THREE.SRGBColorSpace; return t; };
-  const [shirt, headTex, aShirt, aHead, aJeans] = await Promise.all(['prof_shirt', 'prof_head', 'att_shirt', 'att_head', 'att_jeans'].map((n) => tex('./avatars/' + n + '.jpg')));
+  const [shirt, headTex, aShirt, aHead, aJeans, dHead, dShirt, lHead, lShirt, mHead, sHead, stShirt] = await Promise.all(['prof_shirt', 'prof_head', 'att_shirt', 'att_head', 'att_jeans', 'diniz_head', 'diniz_shirt', 'leo_head', 'leo_shirt', 'motti_head', 'sa_head', 'staff_shirt'].map((n) => tex('./avatars/' + n + '.jpg')));
   const restyle = (arm, maps) => arm.traverse((o) => {
     if (!o.isMesh || !maps[o.material?.name]) return;
     o.material = o.material.clone(); o.material.map = maps[o.material.name]; o.material.needsUpdate = true;
   });
   restyle(prof.arm, { outfit_top: shirt, AvatarHead: headTex });
   restyle(att.arm, { outfit_top: aShirt, AvatarHead: aHead, outfit_bottom: aJeans });
+  restyle(diniz.arm, { outfit_top: dShirt, AvatarHead: dHead });
+  restyle(leo.arm, { outfit_top: lShirt, AvatarHead: lHead });
+  restyle(motti.arm, { outfit_top: stShirt, AvatarHead: mHead });
+  restyle(sa.arm, { outfit_top: stShirt, AvatarHead: sHead });
+  diniz.arm.scale.setScalar(0.97); leo.arm.scale.setScalar(0.99); motti.arm.scale.setScalar(1.02); sa.arm.scale.setScalar(0.995);
+  // accessories: Diniz's glasses, staff badges
+  { const g = PROPS.glasses(); g.position.set(0, 0.075, 0.095); diniz.bone('Head').add(g); diniz.glasses = g; }
+  for (const a of [motti, sa]) { const b = PROPS.badge(); b.position.set(-0.09, 0.08, 0.13); b.rotation.y = 0; a.bone('Spine2').add(b); }
   // attendant: loose short-sleeve shirt (sleeve below mid upper arm painted as skin) and bell-bottom jeans
   att.arm.updateMatrixWorld(true);
   att.arm.traverse((o) => {
@@ -699,6 +911,12 @@ async function boot() {
   $('loading').textContent = 'Carregando animações…';
   await preloadAnims(prof, ['walk', 'talk1']);
   await preloadAnims(att, ['walk', 'talk0']);
+  await preloadAnims(diniz, ['walk', 'talk0']);
+  await preloadAnims(leo, ['walk', 'talk1']);
+  await preloadAnims(motti, ['walk', 'talk0']);
+  await preloadAnims(sa, ['walk', 'talk1']);
+  diniz.head.playPose('sitting', null, 1e6);
+  for (const n of ['rain_out', 'door', 'buzz', 'squeak', 'carDoor']) audioBuffers['sfx_' + n] = await loadBuffer('./audio/' + n + '.mp3');
   for (const id of Object.keys(LINES)) audioBuffers[id] = (await loadBuffer('./audio/' + LINES[id].audio)) || (await loadBuffer('./audio/' + LINES[id].audio.replace(/\.mp3$/, '.wav')));
   const got = Object.keys(LINES).filter((k) => audioBuffers[k]).length;
   $('audiostatus').textContent = got ? `${got}/${Object.keys(LINES).length} falas com áudio gravado` : 'Vozes: sintetizadas pelo navegador (placeholder)';
@@ -729,6 +947,7 @@ async function runPreview() {
   step(dt); render();
   const f = (v) => v.toArray().map((x) => x.toFixed(2)).join(',');
   console.log('DBG ikR', prof.ikR.weight.toFixed(2), prof.ikR.goal, prof.ikR.auto, 'target', f(prof.ikR.target), 'hand', f(prof.bone('RightHand').getWorldPosition(new THREE.Vector3())), 'phone', phone.visible, f(phone.position), 'typing', state.typing);
+  console.log('DBG diniz head', f(diniz.headPos()), 'hips', f(diniz.bone('Hips').getWorldPosition(new THREE.Vector3())));
   console.log('DBG prof pos', f(prof.pos), 'yaw', prof.yaw.toFixed(2), 'head', f(prof.headPos()), 'hips', f(prof.bone('Hips').getWorldPosition(new THREE.Vector3())), '| att head', f(att.headPos()), 'cam', f(camera.position));
   window.__ready = true;
 }

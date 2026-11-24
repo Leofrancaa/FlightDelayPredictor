@@ -122,13 +122,13 @@ export function signTex(lines, { w = 1024, h = 256, bg = '#111', fg = '#ffd200',
 }
 
 // Departures board (split-flap look)
-export function departuresBoard(flights) {
+export function departuresBoard(flights, clock = 'SAT  12:05', mine = 'AA 1455') {
   const W = 2048, H = 1152, c = canvas(W, H), g = c.getContext('2d');
   g.fillStyle = '#050608'; g.fillRect(0, 0, W, H);
   g.fillStyle = '#0d1a33'; g.fillRect(0, 0, W, 150);
   g.fillStyle = '#ffffff'; g.font = 'bold 90px "Segoe UI", Arial, sans-serif'; g.textBaseline = 'middle';
   g.fillText('✈  DEPARTURES', 50, 78);
-  g.font = '60px "Segoe UI", Arial, sans-serif'; g.fillStyle = '#9fb3d9'; g.textAlign = 'right'; g.fillText('SAT  12:05', W - 50, 78); g.textAlign = 'left';
+  g.font = '60px "Segoe UI", Arial, sans-serif'; g.fillStyle = '#9fb3d9'; g.textAlign = 'right'; g.fillText(clock, W - 50, 78); g.textAlign = 'left';
   const cols = [50, 330, 640, 1290, 1520];
   g.font = 'bold 44px "Segoe UI", Arial, sans-serif'; g.fillStyle = '#7f8ba3';
   ['TIME', 'FLIGHT', 'DESTINATION', 'GATE', 'STATUS'].forEach((t, i) => g.fillText(t, cols[i], 200));
@@ -136,6 +136,7 @@ export function departuresBoard(flights) {
   flights.forEach((f, i) => {
     const y = 270 + i * rowH;
     if (i % 2 === 0) { g.fillStyle = '#0b0d12'; g.fillRect(0, y - rowH / 2, W, rowH); }
+    if (f[1] === mine) { g.fillStyle = '#16305e'; g.fillRect(0, y - rowH / 2, W, rowH); g.strokeStyle = '#ffd21f'; g.lineWidth = 8; g.strokeRect(8, y - rowH / 2 + 4, W - 16, rowH - 8); g.fillStyle = '#ffd21f'; g.beginPath(); g.moveTo(12, y - 22); g.lineTo(40, y); g.lineTo(12, y + 22); g.fill(); }
     g.font = 'bold 54px "Consolas", "DejaVu Sans Mono", monospace';
     // split flap cells
     const cell = (txt, x, color, n) => {
@@ -151,7 +152,7 @@ export function departuresBoard(flights) {
     cell(f[2].toUpperCase(), cols[2], '#ffffff', 16);
     cell(f[3], cols[3], '#f5d76e', 3);
     const st = f[4], color = st.startsWith('DELAY') ? '#ffb020' : st.startsWith('CANC') ? '#ff4d4d' : st.startsWith('BOARD') ? '#5cd6ff' : '#3ee07a';
-    cell(st, cols[4], color, 12);
+    cell(st, cols[4], color, 13);
   });
   const t = tex(c); t.wrapS = t.wrapT = THREE.ClampToEdgeWrapping; return t;
 }
