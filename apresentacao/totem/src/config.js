@@ -70,6 +70,6 @@ export const LINES = {
   a3: { who: 'att', audio: 'a3.mp3', text: 'Olha… a chance maior é de atrasar mais de meia hora.' },
   p3: { who: 'prof', audio: 'p3.mp3', text: 'Mas por quê?' },
   a4: { who: 'att', audio: 'a4.mp3', text: 'Principalmente porque o avião que vai fazer o seu voo ainda está chegando atrasado, tem trovoada aqui agora, e é sexta à noite, horário de pico.' },
-  p4: { who: 'prof', audio: 'p4.mp3', text: 'Noventa e quatro anos esperando… meu sogro aguenta mais meia hora.' },
+  p4: { who: 'prof', audio: 'p4.mp3', text: 'Noventa e quatro anos esperando… meu sogro aguenta mais meia hora. Tranquilo.' },
   p5: { who: 'prof', audio: 'p5.mp3', text: 'A minha esposa é que não.' },
 };

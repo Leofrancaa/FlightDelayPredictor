@@ -51710,7 +51710,7 @@ var LINES = {
   a3: { who: "att", audio: "a3.mp3", text: "Olha\u2026 a chance maior \xE9 de atrasar mais de meia hora." },
   p3: { who: "prof", audio: "p3.mp3", text: "Mas por qu\xEA?" },
   a4: { who: "att", audio: "a4.mp3", text: "Principalmente porque o avi\xE3o que vai fazer o seu voo ainda est\xE1 chegando atrasado, tem trovoada aqui agora, e \xE9 sexta \xE0 noite, hor\xE1rio de pico." },
-  p4: { who: "prof", audio: "p4.mp3", text: "Noventa e quatro anos esperando\u2026 meu sogro aguenta mais meia hora." },
+  p4: { who: "prof", audio: "p4.mp3", text: "Noventa e quatro anos esperando\u2026 meu sogro aguenta mais meia hora. Tranquilo." },
   p5: { who: "prof", audio: "p5.mp3", text: "A minha esposa \xE9 que n\xE3o." }
 };
 
