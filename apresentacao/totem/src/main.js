@@ -404,6 +404,22 @@ function updateProps(dt) {
   }
 }
 
+// keep hands/elbows out of the torso: if the animation pushes them inside, steer the hand outward with IK
+const _h = new THREE.Vector3(), _e = new THREE.Vector3();
+function guardArms(a) {
+  for (const [ik, sgn] of [[a.ikL, 1], [a.ikR, -1]]) {
+    if (!ik.ok) continue;
+    if (ik.goal > 0 && !ik.auto) continue; // scripted IK wins
+    ik.hand.getWorldPosition(_h); a.arm.worldToLocal(_h);
+    ik.fore.getWorldPosition(_e); a.arm.worldToLocal(_e);
+    const inside = (p, r) => p.y > 0.75 && p.y < 1.45 && Math.abs(p.x) < r && p.z > -0.14 && p.z < 0.16;
+    if (inside(_h, 0.2) || inside(_e, 0.19)) {
+      _h.x = sgn * Math.max(Math.abs(_h.x), 0.27); _h.z = Math.max(_h.z, 0.02);
+      ik.set(a.arm.localToWorld(_h.clone()), 0.85); ik.auto = true;
+    } else if (ik.auto) { ik.release(); ik.auto = false; }
+  }
+}
+
 function updateActors(dt) {
   for (const a of actors) {
     updateWalk(a, dt);
@@ -418,7 +434,7 @@ function updateActors(dt) {
     const p = prof.pos.clone().addScaledVector(fwd, 0.3).addScaledVector(right, 0.04); p.y = 1.18 + Math.sin(vt * 9) * 0.004;
     prof.ikR.set(p, 1);
   }
-  for (const a of actors) { a.look.update(dt); a.ikL.update(dt); a.ikR.update(dt); }
+  for (const a of actors) { guardArms(a); a.look.update(dt); a.ikL.update(dt); a.ikR.update(dt); }
   updateProps(dt);
 }
 
@@ -596,8 +612,8 @@ async function boot() {
   $('loading').textContent = 'Carregando personagens…';
   audioBuffers.murmur = await loadBuffer('./audio/murmur.mp3');
   [prof, att] = await Promise.all([
-    makeActor({ name: 'prof', pos: V(8.5, 0, 9.2), yaw: -2.1, avatar: { url: AV_DIR + 'avatarsdk', body: 'M', avatarMood: 'neutral', retarget: { Neck: { z: -0.01, rx: -0.15 }, Neck1: { z: -0.01, rx: -0.15 }, Neck2: { z: -0.01, rx: -0.15 }, LeftShoulder: { rz: -0.3 }, RightShoulder: { rz: 0.3 }, scaleToEyesLevel: 1.0, origin: { y: -0.1 } }, baseline: { headRotateX: -0.04, eyeBlinkLeft: 0.05, eyeBlinkRight: 0.05 } } }),
-    makeActor({ name: 'att', pos: ATT_POS, yaw: ATT_YAW, avatar: { url: AV_DIR + 'avatarsdk', body: 'M', avatarMood: 'happy', retarget: { Neck: { z: -0.01, rx: -0.15 }, Neck1: { z: -0.01, rx: -0.15 }, Neck2: { z: -0.01, rx: -0.15 }, LeftShoulder: { rz: -0.3 }, RightShoulder: { rz: 0.3 }, scaleToEyesLevel: 1.0, origin: { y: -0.1 } }, baseline: { headRotateX: -0.04, eyeBlinkLeft: 0.05, eyeBlinkRight: 0.05 } } }),
+    makeActor({ name: 'prof', pos: V(8.5, 0, 9.2), yaw: -2.1, avatar: { url: AV_DIR + 'avatarsdk', body: 'M', avatarMood: 'neutral', retarget: { Neck: { z: -0.01, rx: 0.02 }, Neck1: { z: -0.01, rx: 0.02 }, Neck2: { z: -0.01, rx: 0.02 }, LeftShoulder: { rz: -0.3 }, RightShoulder: { rz: 0.3 }, scaleToEyesLevel: 1.0, origin: { y: -0.1 } }, baseline: { headRotateX: -0.08, eyeBlinkLeft: 0.05, eyeBlinkRight: 0.05 } } }),
+    makeActor({ name: 'att', pos: ATT_POS, yaw: ATT_YAW, avatar: { url: AV_DIR + 'avatarsdk', body: 'M', avatarMood: 'happy', retarget: { Neck: { z: -0.01, rx: 0.02 }, Neck1: { z: -0.01, rx: 0.02 }, Neck2: { z: -0.01, rx: 0.02 }, LeftShoulder: { rz: -0.3 }, RightShoulder: { rz: 0.3 }, scaleToEyesLevel: 1.0, origin: { y: -0.1 } }, baseline: { headRotateX: -0.08, eyeBlinkLeft: 0.05, eyeBlinkRight: 0.05 } } }),
   ]);
   actors.push(prof, att);
   for (let i = 0; i < 20; i++) for (const a of actors) { a.arm.position.copy(a.pos); a.arm.rotation.y = a.yaw; a.head.animate(16); }
@@ -612,24 +628,47 @@ async function boot() {
   });
   restyle(prof.arm, { outfit_top: shirt, AvatarHead: headTex });
   restyle(att.arm, { outfit_top: aShirt, AvatarHead: aHead, outfit_bottom: aJeans });
-  // attendant: oversized shirt (inflated) and bell-bottom jeans (legs flare below the knee)
+  // attendant: loose short-sleeve shirt and bell-bottom jeans (legs flare below the knee)
+  att.arm.updateMatrixWorld(true);
   att.arm.traverse((o) => {
     if (!o.isMesh) return;
     const name = o.material?.name;
     if (name !== 'outfit_top' && name !== 'outfit_bottom') return;
     o.geometry = o.geometry.clone();
-    const pos = o.geometry.attributes.position, nor = o.geometry.attributes.normal;
-    o.geometry.computeBoundingBox(); const bb = o.geometry.boundingBox, h = bb.max.y - bb.min.y;
+    const geo = o.geometry, pos = geo.attributes.position, nor = geo.attributes.normal;
+    geo.computeBoundingBox(); const bb = geo.boundingBox, h = bb.max.y - bb.min.y;
     const unit = h > 10 ? 100 : 1; // cm vs m
     for (let i = 0; i < pos.count; i++) {
       let k = 0;
-      if (name === 'outfit_top') k = 0.022;
+      if (name === 'outfit_top') k = 0.012;
       else { const knee = bb.min.y + h * 0.42, y = pos.getY(i); if (y < knee) { const t = (knee - y) / (knee - bb.min.y); k = 0.075 * t * t; } }
       if (!k) continue;
       const nx = nor.getX(i), ny = name === 'outfit_top' ? nor.getY(i) : 0, nz = nor.getZ(i);
       pos.setXYZ(i, pos.getX(i) + nx * k * unit, pos.getY(i) + ny * k * unit, pos.getZ(i) + nz * k * unit);
     }
-    pos.needsUpdate = true; o.geometry.computeBoundingSphere();
+    pos.needsUpdate = true;
+    if (name === 'outfit_top' && o.isSkinnedMesh && geo.index) {
+      // cut the sleeves at mid upper arm (bind pose): drop triangles driven by fore arm/hand or past 45% of the upper arm
+      const bones = o.skeleton.bones, binds = o.skeleton.boneInverses.map((m) => new THREE.Vector3().setFromMatrixPosition(m.clone().invert()));
+      const bi = (n) => bones.findIndex((b) => b.name === n);
+      const sides = ['Left', 'Right'].map((sd) => ({ arm: bi(sd + 'Arm'), fore: bi(sd + 'ForeArm'), lower: new Set(bones.map((b, k) => (b.name.startsWith(sd + 'ForeArm') || b.name.startsWith(sd + 'Hand') ? k : -1)).filter((k) => k >= 0)) }));
+      const si = geo.attributes.skinIndex, sw = geo.attributes.skinWeight, v = new THREE.Vector3(), cut = new Uint8Array(pos.count);
+      for (let i = 0; i < pos.count; i++) {
+        let best = -1, bw = 0; for (let j = 0; j < 4; j++) { const w = sw.getComponent(i, j); if (w > bw) { bw = w; best = si.getComponent(i, j); } }
+        for (const sd of sides) {
+          if (sd.lower.has(best)) cut[i] = 1;
+          else if (best === sd.arm) {
+            v.fromBufferAttribute(pos, i).applyMatrix4(o.bindMatrix);
+            const s0 = binds[sd.arm], e0 = binds[sd.fore], d = e0.clone().sub(s0);
+            if (v.clone().sub(s0).dot(d) / d.lengthSq() > 0.45) cut[i] = 1;
+          }
+        }
+      }
+      const idx = geo.index.array, keep = [];
+      for (let t = 0; t < idx.length; t += 3) if (!cut[idx[t]] && !cut[idx[t + 1]] && !cut[idx[t + 2]]) keep.push(idx[t], idx[t + 1], idx[t + 2]);
+      geo.setIndex(keep);
+    }
+    geo.computeBoundingSphere();
   });
   $('loading').textContent = 'Carregando animações…';
   await preloadAnims(prof, ['walk', 'talk1']);

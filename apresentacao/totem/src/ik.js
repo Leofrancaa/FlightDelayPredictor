@@ -117,7 +117,7 @@ export class HeadLook {
       while (yaw > Math.PI) yaw -= 2 * Math.PI; while (yaw < -Math.PI) yaw += 2 * Math.PI;
       yaw = THREE.MathUtils.clamp(yaw, -1.3, 1.3);
       let pitch = Math.asin(THREE.MathUtils.clamp(want.y, -1, 1)) - Math.asin(THREE.MathUtils.clamp(fwd.y, -1, 1));
-      pitch = THREE.MathUtils.clamp(pitch, -0.55, 0.45);
+      pitch = THREE.MathUtils.clamp(pitch, -0.35, 0.3);
       const k = share * this.weight;
       const qy = new THREE.Quaternion().setFromAxisAngle(Y, yaw * k);
       const f2 = fwd.clone().applyQuaternion(qy);

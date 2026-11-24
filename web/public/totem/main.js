@@ -51518,7 +51518,7 @@ var HeadLook = class {
       while (yaw < -Math.PI) yaw += 2 * Math.PI;
       yaw = MathUtils.clamp(yaw, -1.3, 1.3);
       let pitch = Math.asin(MathUtils.clamp(want.y, -1, 1)) - Math.asin(MathUtils.clamp(fwd.y, -1, 1));
-      pitch = MathUtils.clamp(pitch, -0.55, 0.45);
+      pitch = MathUtils.clamp(pitch, -0.35, 0.3);
       const k = share * this.weight;
       const qy = new Quaternion().setFromAxisAngle(Y, yaw * k);
       const f2 = fwd.clone().applyQuaternion(qy);
@@ -52284,6 +52284,28 @@ function updateProps(dt) {
     pass.quaternion.setFromEuler(new Euler(-1.2, state.passOwner.yaw, 0.3));
   }
 }
+var _h = new Vector3();
+var _e = new Vector3();
+function guardArms(a) {
+  for (const [ik, sgn] of [[a.ikL, 1], [a.ikR, -1]]) {
+    if (!ik.ok) continue;
+    if (ik.goal > 0 && !ik.auto) continue;
+    ik.hand.getWorldPosition(_h);
+    a.arm.worldToLocal(_h);
+    ik.fore.getWorldPosition(_e);
+    a.arm.worldToLocal(_e);
+    const inside = (p2, r2) => p2.y > 0.75 && p2.y < 1.45 && Math.abs(p2.x) < r2 && p2.z > -0.14 && p2.z < 0.16;
+    if (inside(_h, 0.2) || inside(_e, 0.19)) {
+      _h.x = sgn * Math.max(Math.abs(_h.x), 0.27);
+      _h.z = Math.max(_h.z, 0.02);
+      ik.set(a.arm.localToWorld(_h.clone()), 0.85);
+      ik.auto = true;
+    } else if (ik.auto) {
+      ik.release();
+      ik.auto = false;
+    }
+  }
+}
 function updateActors(dt) {
   for (const a of actors) {
     updateWalk(a, dt);
@@ -52300,6 +52322,7 @@ function updateActors(dt) {
     prof.ikR.set(p2, 1);
   }
   for (const a of actors) {
+    guardArms(a);
     a.look.update(dt);
     a.ikL.update(dt);
     a.ikR.update(dt);
@@ -52544,8 +52567,8 @@ async function boot() {
   $("loading").textContent = "Carregando personagens\u2026";
   audioBuffers.murmur = await loadBuffer("./audio/murmur.mp3");
   [prof, att] = await Promise.all([
-    makeActor({ name: "prof", pos: V(8.5, 0, 9.2), yaw: -2.1, avatar: { url: AV_DIR + "avatarsdk", body: "M", avatarMood: "neutral", retarget: { Neck: { z: -0.01, rx: -0.15 }, Neck1: { z: -0.01, rx: -0.15 }, Neck2: { z: -0.01, rx: -0.15 }, LeftShoulder: { rz: -0.3 }, RightShoulder: { rz: 0.3 }, scaleToEyesLevel: 1, origin: { y: -0.1 } }, baseline: { headRotateX: -0.04, eyeBlinkLeft: 0.05, eyeBlinkRight: 0.05 } } }),
-    makeActor({ name: "att", pos: ATT_POS, yaw: ATT_YAW, avatar: { url: AV_DIR + "avatarsdk", body: "M", avatarMood: "happy", retarget: { Neck: { z: -0.01, rx: -0.15 }, Neck1: { z: -0.01, rx: -0.15 }, Neck2: { z: -0.01, rx: -0.15 }, LeftShoulder: { rz: -0.3 }, RightShoulder: { rz: 0.3 }, scaleToEyesLevel: 1, origin: { y: -0.1 } }, baseline: { headRotateX: -0.04, eyeBlinkLeft: 0.05, eyeBlinkRight: 0.05 } } })
+    makeActor({ name: "prof", pos: V(8.5, 0, 9.2), yaw: -2.1, avatar: { url: AV_DIR + "avatarsdk", body: "M", avatarMood: "neutral", retarget: { Neck: { z: -0.01, rx: 0.02 }, Neck1: { z: -0.01, rx: 0.02 }, Neck2: { z: -0.01, rx: 0.02 }, LeftShoulder: { rz: -0.3 }, RightShoulder: { rz: 0.3 }, scaleToEyesLevel: 1, origin: { y: -0.1 } }, baseline: { headRotateX: -0.08, eyeBlinkLeft: 0.05, eyeBlinkRight: 0.05 } } }),
+    makeActor({ name: "att", pos: ATT_POS, yaw: ATT_YAW, avatar: { url: AV_DIR + "avatarsdk", body: "M", avatarMood: "happy", retarget: { Neck: { z: -0.01, rx: 0.02 }, Neck1: { z: -0.01, rx: 0.02 }, Neck2: { z: -0.01, rx: 0.02 }, LeftShoulder: { rz: -0.3 }, RightShoulder: { rz: 0.3 }, scaleToEyesLevel: 1, origin: { y: -0.1 } }, baseline: { headRotateX: -0.08, eyeBlinkLeft: 0.05, eyeBlinkRight: 0.05 } } })
   ]);
   actors.push(prof, att);
   for (let i2 = 0; i2 < 20; i2++) for (const a of actors) {
@@ -52573,18 +52596,19 @@ async function boot() {
   });
   restyle(prof.arm, { outfit_top: shirt, AvatarHead: headTex });
   restyle(att.arm, { outfit_top: aShirt, AvatarHead: aHead, outfit_bottom: aJeans });
+  att.arm.updateMatrixWorld(true);
   att.arm.traverse((o) => {
     if (!o.isMesh) return;
     const name = o.material?.name;
     if (name !== "outfit_top" && name !== "outfit_bottom") return;
     o.geometry = o.geometry.clone();
-    const pos = o.geometry.attributes.position, nor = o.geometry.attributes.normal;
-    o.geometry.computeBoundingBox();
-    const bb = o.geometry.boundingBox, h = bb.max.y - bb.min.y;
+    const geo = o.geometry, pos = geo.attributes.position, nor = geo.attributes.normal;
+    geo.computeBoundingBox();
+    const bb = geo.boundingBox, h = bb.max.y - bb.min.y;
     const unit = h > 10 ? 100 : 1;
     for (let i2 = 0; i2 < pos.count; i2++) {
       let k = 0;
-      if (name === "outfit_top") k = 0.022;
+      if (name === "outfit_top") k = 0.012;
       else {
         const knee = bb.min.y + h * 0.42, y = pos.getY(i2);
         if (y < knee) {
@@ -52597,7 +52621,34 @@ async function boot() {
       pos.setXYZ(i2, pos.getX(i2) + nx * k * unit, pos.getY(i2) + ny * k * unit, pos.getZ(i2) + nz * k * unit);
     }
     pos.needsUpdate = true;
-    o.geometry.computeBoundingSphere();
+    if (name === "outfit_top" && o.isSkinnedMesh && geo.index) {
+      const bones = o.skeleton.bones, binds = o.skeleton.boneInverses.map((m3) => new Vector3().setFromMatrixPosition(m3.clone().invert()));
+      const bi = (n) => bones.findIndex((b) => b.name === n);
+      const sides = ["Left", "Right"].map((sd) => ({ arm: bi(sd + "Arm"), fore: bi(sd + "ForeArm"), lower: new Set(bones.map((b, k) => b.name.startsWith(sd + "ForeArm") || b.name.startsWith(sd + "Hand") ? k : -1).filter((k) => k >= 0)) }));
+      const si = geo.attributes.skinIndex, sw = geo.attributes.skinWeight, v4 = new Vector3(), cut2 = new Uint8Array(pos.count);
+      for (let i2 = 0; i2 < pos.count; i2++) {
+        let best = -1, bw = 0;
+        for (let j = 0; j < 4; j++) {
+          const w4 = sw.getComponent(i2, j);
+          if (w4 > bw) {
+            bw = w4;
+            best = si.getComponent(i2, j);
+          }
+        }
+        for (const sd of sides) {
+          if (sd.lower.has(best)) cut2[i2] = 1;
+          else if (best === sd.arm) {
+            v4.fromBufferAttribute(pos, i2).applyMatrix4(o.bindMatrix);
+            const s0 = binds[sd.arm], e0 = binds[sd.fore], d = e0.clone().sub(s0);
+            if (v4.clone().sub(s0).dot(d) / d.lengthSq() > 0.45) cut2[i2] = 1;
+          }
+        }
+      }
+      const idx = geo.index.array, keep = [];
+      for (let t = 0; t < idx.length; t += 3) if (!cut2[idx[t]] && !cut2[idx[t + 1]] && !cut2[idx[t + 2]]) keep.push(idx[t], idx[t + 1], idx[t + 2]);
+      geo.setIndex(keep);
+    }
+    geo.computeBoundingSphere();
   });
   $("loading").textContent = "Carregando anima\xE7\xF5es\u2026";
   await preloadAnims(prof, ["walk", "talk1"]);
