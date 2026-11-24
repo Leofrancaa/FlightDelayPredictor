@@ -51012,7 +51012,7 @@ function createTotem(cfg) {
   const shell = new MeshPhysicalMaterial({ color: 16053751, roughness: 0.28, metalness: 0, clearcoat: 0.8, clearcoatRoughness: 0.15 });
   const dark = new MeshStandardMaterial({ color: 1382171, roughness: 0.4, metalness: 0.3 });
   const steel = new MeshStandardMaterial({ color: 12896462, roughness: 0.25, metalness: 1 });
-  const led = new MeshBasicMaterial({ color: new Color(0.2, 0.75, 1).multiplyScalar(4) });
+  const led = new MeshBasicMaterial({ color: new Color(0.2, 0.75, 1).multiplyScalar(1.4) });
   const mk = (geo, mat, x2, y, z, rx = 0) => {
     const m3 = new Mesh(geo, mat);
     m3.position.set(x2, y, z);
@@ -51065,7 +51065,7 @@ function createTotem(cfg) {
   mk(new RoundedBoxGeometry(0.22, 0.09, 0.08, 2, 0.02), dark, 0, 0.88, 0.15);
   mk(new BoxGeometry(0.16, 6e-3, 0.01), led, 0, 0.86, 0.195);
   mk(new RoundedBoxGeometry(0.28, 0.03, 0.06, 2, 0.01), dark, 0, 0.72, 0.13);
-  const glow = new PointLight(6272767, 1, 2.5, 2);
+  const glow = new PointLight(6272767, 0.35, 2.5, 2);
   glow.position.set(0, 1.25, 0.75);
   group.add(glow);
   const ui = { state: "idle", t: 0, f: cfg.flight };
@@ -51336,11 +51336,6 @@ function createTotem(cfg) {
           g.fillText(`+${Math.round(r2.w * 100)} pts`, W - 95, y + 100);
           g.textAlign = "left";
         });
-        g.fillStyle = C.dim;
-        g.font = `30px ${FONT}`;
-        g.textAlign = "center";
-        g.fillText(cfg.brand.modelNote, W / 2, H - 120);
-        g.textAlign = "left";
         g.restore();
       }
       footer(cfg.brand.footer);
@@ -52417,7 +52412,7 @@ async function scene4() {
   }
   await wait(7);
   {
-    const c0 = screenCam(0.62, 1.15), c1 = screenCam(0.72, 1.1);
+    const c0 = screenCam(0.6, 0.95), c1 = screenCam(0.67, 0.9);
     cut({ p0: c0.p, p1: c1.p, l0: c0.l, l1: c1.l, dur: 4, fov: 30, focus: c1.l, aperture: 8e-4, handheld: 2e-3 });
   }
   await wait(6);
@@ -52434,7 +52429,7 @@ async function scene4() {
   const s = say("a4", { anim: "talk0" });
   await wait(1.5);
   {
-    const c = screenCam(0.72, 1.1);
+    const c = screenCam(0.67, 0.9);
     cut({ p0: c.p, l0: c.l, fov: 30, focus: c.l, aperture: 8e-4, handheld: 2e-3 });
   }
   await wait(5);

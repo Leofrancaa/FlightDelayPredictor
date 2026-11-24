@@ -37,7 +37,7 @@ export function createTotem(cfg) {
   const shell = new THREE.MeshPhysicalMaterial({ color: 0xf4f5f7, roughness: 0.28, metalness: 0.0, clearcoat: 0.8, clearcoatRoughness: 0.15 });
   const dark = new THREE.MeshStandardMaterial({ color: 0x15171b, roughness: 0.4, metalness: 0.3 });
   const steel = new THREE.MeshStandardMaterial({ color: 0xc4c8ce, roughness: 0.25, metalness: 1 });
-  const led = new THREE.MeshBasicMaterial({ color: new THREE.Color(0.2, 0.75, 1).multiplyScalar(4) });
+  const led = new THREE.MeshBasicMaterial({ color: new THREE.Color(0.2, 0.75, 1).multiplyScalar(1.4) });
   const mk = (geo, mat, x, y, z, rx = 0) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.rotation.x = rx; m.castShadow = m.receiveShadow = true; group.add(m); return m; };
   mk(new RoundedBoxGeometry(0.7, 0.04, 0.5, 3, 0.015), steel, 0, 0.02, 0);
   mk(new RoundedBoxGeometry(0.5, 1.0, 0.3, 4, 0.06), shell, 0, 0.54, -0.02);
@@ -66,7 +66,7 @@ export function createTotem(cfg) {
   mk(new THREE.BoxGeometry(0.16, 0.006, 0.01), led, 0.0, 0.86, 0.195);
   mk(new RoundedBoxGeometry(0.28, 0.03, 0.06, 2, 0.01), dark, 0.0, 0.72, 0.13);
   // screen glow onto the people
-  const glow = new THREE.PointLight(0x5fb6ff, 1.0, 2.5, 2); glow.position.set(0, 1.25, 0.75); group.add(glow);
+  const glow = new THREE.PointLight(0x5fb6ff, 0.35, 2.5, 2); glow.position.set(0, 1.25, 0.75); group.add(glow);
 
   // ---------- 2D screen UI
   const ui = { state: 'idle', t: 0, f: cfg.flight };
@@ -186,7 +186,6 @@ export function createTotem(cfg) {
           rr(g, 95, y + 82, (W - 400) * (r.w / maxw) * ease((ui.t - 1.8 - i * 0.2) / 0.8), 18, 9); g.fillStyle = C.red; g.fill();
           g.fillStyle = C.red; g.font = `700 38px ${FONT}`; g.textAlign = 'right'; g.fillText(`+${Math.round(r.w * 100)} pts`, W - 95, y + 100); g.textAlign = 'left';
         });
-        g.fillStyle = C.dim; g.font = `30px ${FONT}`; g.textAlign = 'center'; g.fillText(cfg.brand.modelNote, W / 2, H - 120); g.textAlign = 'left';
         g.restore();
       }
       footer(cfg.brand.footer);
