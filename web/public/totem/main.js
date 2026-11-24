@@ -50483,7 +50483,7 @@ function departuresBoard(flights) {
   g.font = '60px "Segoe UI", Arial, sans-serif';
   g.fillStyle = "#9fb3d9";
   g.textAlign = "right";
-  g.fillText("FRI  18:12", W2 - 50, 78);
+  g.fillText("MON  18:57", W2 - 50, 78);
   g.textAlign = "left";
   const cols = [50, 330, 640, 1290, 1520];
   g.font = 'bold 44px "Segoe UI", Arial, sans-serif';
@@ -51266,75 +51266,91 @@ function createTotem(cfg) {
     },
     result() {
       bg();
-      const f = ui.f;
+      const f = ui.f, R = cfg.result;
       g.fillStyle = C.dim;
       g.font = `36px ${FONT}`;
       g.fillText(`${f.code} \xB7 ${f.origin} \u2192 ${f.dest} \xB7 ${f.when}`, 60, 205);
       g.fillStyle = C.text;
-      g.font = `700 70px ${FONT}`;
-      g.fillText("Previs\xE3o de atraso", 60, 290);
-      const best = cfg.probs.reduce((a, b) => b.p > a.p ? b : a);
-      cfg.probs.forEach((pr, i2) => {
-        const y = 370 + i2 * 230, k = ease((ui.t - 0.2 - i2 * 0.25) / 1.1);
-        const isBest = pr === best;
-        rr(g, 60, y, W - 120, 200, 24);
-        g.fillStyle = isBest ? "#1a2f5c" : C.card;
+      g.font = `700 66px ${FONT}`;
+      g.fillText("Previs\xE3o para o seu voo", 60, 285);
+      const k0 = ease((ui.t - 0.1) / 1.3), alert = R.p >= R.threshold, col = alert ? C.red : C.green;
+      rr(g, 60, 330, W - 120, 330, 28);
+      g.fillStyle = "#1a2f5c";
+      g.fill();
+      g.lineWidth = 5;
+      g.strokeStyle = col;
+      g.stroke();
+      g.fillStyle = col;
+      g.font = `800 190px ${FONT}`;
+      g.fillText(`${Math.round(R.p * 100 * k0)}%`, 100, 525);
+      g.fillStyle = C.text;
+      g.font = `600 42px ${FONT}`;
+      g.fillText("de chance de atrasar", 100, 615);
+      const w0 = g.measureText("de chance de atrasar ").width;
+      g.fillStyle = col;
+      g.fillText("mais de 30 minutos", 100 + w0, 615);
+      if (k0 > 0.97) {
+        rr(g, W - 420, 360, 330, 64, 32);
+        g.fillStyle = col;
         g.fill();
-        g.lineWidth = isBest ? 5 : 2;
-        g.strokeStyle = isBest ? pr.color : C.line;
-        g.stroke();
-        g.fillStyle = C.text;
-        g.font = `700 50px ${FONT}`;
-        g.fillText(pr.label, 100, y + 70);
-        g.fillStyle = C.dim;
-        g.font = `36px ${FONT}`;
-        g.fillText(pr.sub, 100, y + 120);
-        g.fillStyle = pr.color;
-        g.font = `800 90px ${FONT}`;
-        g.textAlign = "right";
-        g.fillText(`${Math.round(pr.p * 100 * k)}%`, W - 100, y + 100);
+        g.fillStyle = "#1a0c00";
+        g.font = `800 32px ${FONT}`;
+        g.textAlign = "center";
+        g.fillText(alert ? "ALERTA DE ATRASO" : "SEM ALERTA", W - 255, 393);
         g.textAlign = "left";
-        rr(g, 100, y + 150, W - 200, 22, 11);
+      }
+      g.fillStyle = C.text;
+      g.font = `700 46px ${FONT}`;
+      g.fillText("Como a previs\xE3o mudou", 60, 745);
+      const bx = 330, bw = W - 120 - bx - 130;
+      R.horizons.forEach((h, i2) => {
+        const y = 790 + i2 * 105, k = ease((ui.t - 1.3 - i2 * 0.35) / 0.9);
+        g.fillStyle = C.dim;
+        g.font = `600 38px ${FONT}`;
+        g.fillText(h.label, 70, y + 42);
+        rr(g, bx, y + 16, bw, 34, 17);
         g.fillStyle = "#0c1b38";
         g.fill();
-        rr(g, 100, y + 150, Math.max(22, (W - 200) * pr.p * k), 22, 11);
-        g.fillStyle = pr.color;
+        const hc = h.p >= h.t ? C.red : C.green;
+        rr(g, bx, y + 16, Math.max(34, bw * h.p * k), 34, 17);
+        g.fillStyle = hc;
         g.fill();
-        if (isBest && k > 0.95) {
-          rr(g, W - 430, y - 22, 300, 52, 26);
-          g.fillStyle = pr.color;
-          g.fill();
-          g.fillStyle = "#1a0c00";
-          g.font = `700 30px ${FONT}`;
-          g.textAlign = "center";
-          g.fillText("MAIS PROV\xC1VEL", W - 280, y + 5);
-          g.textAlign = "left";
-        }
+        g.fillStyle = hc;
+        g.font = `800 44px ${FONT}`;
+        g.textAlign = "right";
+        g.fillText(`${Math.round(h.p * 100 * k)}%`, W - 60, y + 48);
+        g.textAlign = "left";
       });
-      const k2 = ease((ui.t - 1.6) / 0.8);
+      R.horizons.forEach((h, i2) => {
+        const y = 790 + i2 * 105, tx = bx + bw * h.t;
+        g.fillStyle = "rgba(255,255,255,0.8)";
+        g.fillRect(tx - 2, y + 6, 4, 54);
+      });
+      g.fillStyle = C.dim;
+      g.font = `28px ${FONT}`;
+      g.fillText("\u2502 = limiar de alerta de cada horizonte", bx, 1135);
+      const k2 = ease((ui.t - 2.6) / 0.8);
       if (k2 > 0) {
         g.save();
         g.globalAlpha = k2;
         g.fillStyle = C.text;
-        g.font = `700 50px ${FONT}`;
-        g.fillText("Principais fatores", 60, 1110);
-        const maxw = Math.max(...cfg.reasons.map((r2) => r2.w));
+        g.font = `700 46px ${FONT}`;
+        g.fillText("Por que o alerta", 60, 1235);
         cfg.reasons.forEach((r2, i2) => {
-          const y = 1160 + i2 * 150;
-          rr(g, 60, y, W - 120, 130, 20);
+          const y = 1270 + i2 * 128, kk = ease((ui.t - 2.8 - i2 * 0.25) / 0.6);
+          g.save();
+          g.globalAlpha = k2 * kk;
+          rr(g, 60, y, W - 120, 108, 20);
           g.fillStyle = C.card;
           g.fill();
-          g.fillStyle = C.text;
-          g.font = `600 40px ${FONT}`;
-          g.fillText(r2.label, 95, y + 55);
-          rr(g, 95, y + 82, (W - 400) * (r2.w / maxw) * ease((ui.t - 1.8 - i2 * 0.2) / 0.8), 18, 9);
+          g.beginPath();
+          g.arc(112, y + 54, 14, 0, 7);
           g.fillStyle = C.red;
           g.fill();
-          g.fillStyle = C.red;
-          g.font = `700 38px ${FONT}`;
-          g.textAlign = "right";
-          g.fillText(`+${Math.round(r2.w * 100)} pts`, W - 95, y + 100);
-          g.textAlign = "left";
+          g.fillStyle = C.text;
+          g.font = `600 38px ${FONT}`;
+          g.fillText(r2, 150, y + 67);
+          g.restore();
         });
         g.restore();
       }
@@ -51655,33 +51671,41 @@ var CFG = {
     footer: "Previs\xE3o com IA \xB7 dados BTS + METAR",
     modelNote: "Modelo de 3 classes \xB7 horizonte de 1 h antes da partida"
   },
-  // Voo consultado no totem (placeholder — substituir por um voo real do teste)
+  // Voo REAL do conjunto de teste (saída do modelo publicada em web/public/data/voos/2024-12-16.json)
   flight: {
-    airline: "Delta Air Lines",
-    code: "DL 1234",
-    origin: "ATL",
+    airline: "Frontier Airlines",
+    code: "F9 2886",
+    origin: "DFW",
     dest: "MCO",
-    when: "Sexta, 18:40",
-    clock: "Sex \xB7 17:41"
+    when: "Segunda, 19:57",
+    clock: "Seg \xB7 18:57",
+    date: "16/12/2024"
   },
-  // Dados puxados automaticamente
+  // Dados puxados automaticamente (valores reais das features do voo)
   auto: [
-    { icon: "storm", title: "Clima em ATL agora (METAR)", value: "Trovoada \xB7 vento 25 kt", detail: "TSRA \xB7 visibilidade 3 mi", color: "#ffb020" },
-    { icon: "plane", title: "Aeronave que far\xE1 seu voo", value: "Chegando com +40 min", detail: "Voo de entrada DL 877 (BOS)", color: "#ff5a5f" },
-    { icon: "chart", title: "Atrasos da Delta hoje", value: "Acima da m\xE9dia", detail: "38% dos voos vs. 21% habitual", color: "#ffb020" }
+    { icon: "storm", title: "Clima em DFW agora (METAR)", value: "Trovoada na origem", detail: "Teto 9.000 p\xE9s \xB7 1 h antes da partida", color: "#ffb020" },
+    { icon: "plane", title: "Avi\xE3o que far\xE1 seu voo", value: "Ainda n\xE3o decolou", detail: "Voo de entrada j\xE1 com 120 min de atraso", color: "#ff5a5f" },
+    { icon: "chart", title: "Atrasos agora em DFW", value: "40% saindo com +30 min", detail: "Frontier: 33% das partidas recentes", color: "#ffb020" }
   ],
-  analyzingMsgs: ["Lendo o clima do aeroporto\u2026", "Checando a aeronave de entrada\u2026", "Comparando com o hist\xF3rico\u2026", "Calculando probabilidades\u2026"],
-  // Saída do modelo (3 classes)
-  probs: [
-    { label: "Sem atraso", sub: "menos de 15 min", p: 0.18, color: "#2fd27a" },
-    { label: "Atraso leve", sub: "15 a 30 min", p: 0.27, color: "#ffb020" },
-    { label: "Atraso grande", sub: "mais de 30 min", p: 0.55, color: "#ff5a5f" }
-  ],
-  // Contribuição das features (ex.: SHAP local), já normalizada
+  analyzingMsgs: ["Lendo o clima do aeroporto\u2026", "Checando o avi\xE3o de entrada\u2026", "Comparando com o hist\xF3rico\u2026", "Calculando a chance de atraso\u2026"],
+  // Saída do modelo (alvo: partida com atraso > 30 min)
+  result: {
+    p: 0.99,
+    // 1 h antes da partida
+    threshold: 0.28,
+    // limiar de alerta do modelo de 1 h
+    horizons: [
+      { label: "V\xE9spera", p: 0.29, t: 0.18 },
+      { label: "3 h antes", p: 0.52, t: 0.25 },
+      { label: "1 h antes", p: 0.99, t: 0.28 }
+    ],
+    actual: "Atraso real: 2 h 27 min"
+  },
   reasons: [
-    { label: "Aeronave de entrada atrasada", w: 0.21 },
-    { label: "Trovoada no aeroporto de origem", w: 0.14 },
-    { label: "Sexta \xE0 noite (hor\xE1rio de pico)", w: 0.07 }
+    "Avi\xE3o de entrada ainda n\xE3o decolou (+120 min)",
+    "Trovoada em DFW 1 h antes da partida",
+    "40% das partidas de DFW atrasando agora",
+    "Frontier: 33% das partidas recentes atrasadas"
   ],
   // Painel de partidas ao fundo (o voo do professor aparece "ON TIME" — ironia)
   board: [
@@ -51689,7 +51713,7 @@ var CFG = {
     ["18:05", "WN 1488", "Nashville", "C03", "DELAYED 19:10"],
     ["18:20", "UA 1702", "Chicago ORD", "D07", "ON TIME"],
     ["18:30", "DL 2391", "New York LGA", "A09", "DELAYED 19:25"],
-    ["18:40", "DL 1234", "Orlando", "A14", "ON TIME"],
+    ["19:57", "F9 2886", "Orlando", "E14", "ON TIME"],
     ["18:45", "F9 1120", "Denver", "D22", "CANCELLED"],
     ["18:55", "DL 0560", "Miami", "A02", "ON TIME"],
     ["19:05", "B6 0418", "Boston", "C11", "DELAYED 19:40"],
@@ -51704,7 +51728,7 @@ var LINES = {
   a2: { who: "att", audio: "a2.mp3", text: "Ele j\xE1 puxa o clima do aeroporto e a situa\xE7\xE3o do avi\xE3o que vai fazer o seu voo." },
   a3: { who: "att", audio: "a3.mp3", text: "Olha\u2026 a chance maior \xE9 de atrasar mais de meia hora." },
   p3: { who: "prof", audio: "p3.mp3", text: "Mas por qu\xEA?" },
-  a4: { who: "att", audio: "a4.mp3", text: "Principalmente porque o avi\xE3o que vai fazer o seu voo ainda est\xE1 chegando atrasado, tem trovoada aqui agora, e \xE9 sexta \xE0 noite, hor\xE1rio de pico." },
+  a4: { who: "att", audio: "a4.mp3", text: "Principalmente porque o avi\xE3o que vai fazer o seu voo ainda nem decolou, tem trovoada aqui agora, e o aeroporto inteiro j\xE1 est\xE1 atrasando." },
   p4: { who: "prof", audio: "p4.mp3", text: "Noventa e quatro anos esperando\u2026 meu sogro aguenta mais meia hora. Tranquilo." },
   p5: { who: "prof", audio: "p5.mp3", text: "A minha esposa \xE9 que n\xE3o." }
 };
@@ -52110,7 +52134,7 @@ function showSub(who, text) {
     el.classList.remove("on");
     return;
   }
-  el.innerHTML = `<span class="who">${who === "prof" ? "Soussa" : "Atendente"}</span>${text}`;
+  el.innerHTML = `<span class="who">${who === "prof" ? "Soussa" : "Guis"}</span>${text}`;
   el.classList.add("on");
 }
 async function say(id, { gesture = null, anim = null } = {}) {
@@ -52407,12 +52431,12 @@ async function scene4() {
   await wait(2.8);
   setTotem("result");
   {
-    const c0 = screenCam(0.36, 1.2), c1 = screenCam(0.4, 1.1);
+    const c0 = screenCam(0.33, 1.25), c1 = screenCam(0.37, 1.15);
     cut({ p0: c0.p, p1: c1.p, l0: c0.l, l1: c1.l, dur: 5, fov: 30, focus: c1.l, aperture: 8e-4, handheld: 2e-3 });
   }
   await wait(7);
   {
-    const c0 = screenCam(0.6, 0.95), c1 = screenCam(0.67, 0.9);
+    const c0 = screenCam(0.7, 0.98), c1 = screenCam(0.76, 0.92);
     cut({ p0: c0.p, p1: c1.p, l0: c0.l, l1: c1.l, dur: 4, fov: 30, focus: c1.l, aperture: 8e-4, handheld: 2e-3 });
   }
   await wait(6);
@@ -52429,7 +52453,7 @@ async function scene4() {
   const s = say("a4", { anim: "talk0" });
   await wait(1.5);
   {
-    const c = screenCam(0.67, 0.9);
+    const c = screenCam(0.76, 0.92);
     cut({ p0: c.p, l0: c.l, fov: 30, focus: c.l, aperture: 8e-4, handheld: 2e-3 });
   }
   await wait(5);
@@ -52464,6 +52488,7 @@ async function scene5() {
 }
 async function scene6() {
   grade.uniforms.uFade.value = 0;
+  $("realcase").innerHTML = `Voo real: ${CFG.flight.airline} ${CFG.flight.code}, ${CFG.flight.origin} \u2192 ${CFG.flight.dest}, ${CFG.flight.date}<br>Previs\xE3o 1 h antes: ${Math.round(CFG.result.p * 100)}% \xB7 ${CFG.result.actual}`;
   $("endcard").classList.add("on");
   await wait(6);
 }

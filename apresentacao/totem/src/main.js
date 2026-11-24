@@ -287,7 +287,7 @@ function pickVoice(who) {
 }
 let ttsRatio = 1; // learned ratio (real synth duration / estimate), keeps lips in step with the browser voice
 let subtitlesOn = true;
-function showSub(who, text) { const el = $('sub'); if (!subtitlesOn || !text) { el.classList.remove('on'); return; } el.innerHTML = `<span class="who">${who === 'prof' ? 'Soussa' : 'Atendente'}</span>${text}`; el.classList.add('on'); }
+function showSub(who, text) { const el = $('sub'); if (!subtitlesOn || !text) { el.classList.remove('on'); return; } el.innerHTML = `<span class="who">${who === 'prof' ? 'Soussa' : 'Guis'}</span>${text}`; el.classList.add('on'); }
 
 async function say(id, { gesture = null, anim = null } = {}) {
   const L = LINES[id], a = L.who === 'prof' ? prof : att;
@@ -501,9 +501,9 @@ async function scene4() {
   { const c0 = screenCam(0.5, 1.3), c1 = screenCam(0.38, 1.15); cut({ p0: c0.p, p1: c1.p, l0: c0.l, l1: c1.l, dur: 6, fov: 30, focus: c1.l, aperture: 0.0008, handheld: 0.002 }); }
   await wait(2.8);
   setTotem('result');
-  { const c0 = screenCam(0.36, 1.2), c1 = screenCam(0.4, 1.1); cut({ p0: c0.p, p1: c1.p, l0: c0.l, l1: c1.l, dur: 5, fov: 30, focus: c1.l, aperture: 0.0008, handheld: 0.002 }); }
+  { const c0 = screenCam(0.33, 1.25), c1 = screenCam(0.37, 1.15); cut({ p0: c0.p, p1: c1.p, l0: c0.l, l1: c1.l, dur: 5, fov: 30, focus: c1.l, aperture: 0.0008, handheld: 0.002 }); }
   await wait(7.0);                    // probabilities: bars grow, then hold
-  { const c0 = screenCam(0.6, 0.95), c1 = screenCam(0.67, 0.9); cut({ p0: c0.p, p1: c1.p, l0: c0.l, l1: c1.l, dur: 4, fov: 30, focus: c1.l, aperture: 0.0008, handheld: 0.002 }); }
+  { const c0 = screenCam(0.7, 0.98), c1 = screenCam(0.76, 0.92); cut({ p0: c0.p, p1: c1.p, l0: c0.l, l1: c1.l, dur: 4, fov: 30, focus: c1.l, aperture: 0.0008, handheld: 0.002 }); }
   await wait(6.0);                    // main factors
   // reaction: attendant
   cut({ p0: rel(prof, 0.38, 1.66, -0.62), l0: headOf(att, -0.06), fov: 25, focus: headOf(att), aperture: 0.0028 });
@@ -516,7 +516,7 @@ async function scene4() {
   look(prof, att.head);
   const s = say('a4', { anim: 'talk0' });
   await wait(1.5);
-  { const c = screenCam(0.67, 0.9); cut({ p0: c.p, l0: c.l, fov: 30, focus: c.l, aperture: 0.0008, handheld: 0.002 }); }
+  { const c = screenCam(0.76, 0.92); cut({ p0: c.p, l0: c.l, fov: 30, focus: c.l, aperture: 0.0008, handheld: 0.002 }); }
   await wait(5.0);
   cut({ p0: rel(prof, 0.38, 1.66, -0.62), l0: headOf(att, -0.06), fov: 25, focus: headOf(att), aperture: 0.0028 });
   await s;
@@ -548,6 +548,7 @@ async function scene5() {
 
 async function scene6() {
   grade.uniforms.uFade.value = 0;
+  $('realcase').innerHTML = `Voo real: ${CFG.flight.airline} ${CFG.flight.code}, ${CFG.flight.origin} → ${CFG.flight.dest}, ${CFG.flight.date}<br>Previsão 1 h antes: ${Math.round(CFG.result.p * 100)}% · ${CFG.result.actual}`;
   $('endcard').classList.add('on');
   await wait(6);
 }

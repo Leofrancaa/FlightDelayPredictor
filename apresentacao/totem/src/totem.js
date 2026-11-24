@@ -158,33 +158,42 @@ export function createTotem(cfg) {
     },
     result() {
       bg();
-      const f = ui.f;
+      const f = ui.f, R = cfg.result;
       g.fillStyle = C.dim; g.font = `36px ${FONT}`; g.fillText(`${f.code} · ${f.origin} → ${f.dest} · ${f.when}`, 60, 205);
-      g.fillStyle = C.text; g.font = `700 70px ${FONT}`; g.fillText('Previsão de atraso', 60, 290);
-      const best = cfg.probs.reduce((a, b) => (b.p > a.p ? b : a));
-      cfg.probs.forEach((pr, i) => {
-        const y = 370 + i * 230, k = ease((ui.t - 0.2 - i * 0.25) / 1.1);
-        const isBest = pr === best;
-        rr(g, 60, y, W - 120, 200, 24); g.fillStyle = isBest ? '#1a2f5c' : C.card; g.fill();
-        g.lineWidth = isBest ? 5 : 2; g.strokeStyle = isBest ? pr.color : C.line; g.stroke();
-        g.fillStyle = C.text; g.font = `700 50px ${FONT}`; g.fillText(pr.label, 100, y + 70);
-        g.fillStyle = C.dim; g.font = `36px ${FONT}`; g.fillText(pr.sub, 100, y + 120);
-        g.fillStyle = pr.color; g.font = `800 90px ${FONT}`; g.textAlign = 'right'; g.fillText(`${Math.round(pr.p * 100 * k)}%`, W - 100, y + 100); g.textAlign = 'left';
-        rr(g, 100, y + 150, W - 200, 22, 11); g.fillStyle = '#0c1b38'; g.fill();
-        rr(g, 100, y + 150, Math.max(22, (W - 200) * pr.p * k), 22, 11); g.fillStyle = pr.color; g.fill();
-        if (isBest && k > 0.95) { rr(g, W - 430, y - 22, 300, 52, 26); g.fillStyle = pr.color; g.fill(); g.fillStyle = '#1a0c00'; g.font = `700 30px ${FONT}`; g.textAlign = 'center'; g.fillText('MAIS PROVÁVEL', W - 280, y + 5); g.textAlign = 'left'; }
+      g.fillStyle = C.text; g.font = `700 66px ${FONT}`; g.fillText('Previsão para o seu voo', 60, 285);
+      // big probability card
+      const k0 = ease((ui.t - 0.1) / 1.3), alert = R.p >= R.threshold, col = alert ? C.red : C.green;
+      rr(g, 60, 330, W - 120, 330, 28); g.fillStyle = '#1a2f5c'; g.fill(); g.lineWidth = 5; g.strokeStyle = col; g.stroke();
+      g.fillStyle = col; g.font = `800 190px ${FONT}`; g.fillText(`${Math.round(R.p * 100 * k0)}%`, 100, 525);
+      g.fillStyle = C.text; g.font = `600 42px ${FONT}`; g.fillText('de chance de atrasar', 100, 615); const w0 = g.measureText('de chance de atrasar ').width;
+      g.fillStyle = col; g.fillText('mais de 30 minutos', 100 + w0, 615);
+      if (k0 > 0.97) { rr(g, W - 420, 360, 330, 64, 32); g.fillStyle = col; g.fill(); g.fillStyle = '#1a0c00'; g.font = `800 32px ${FONT}`; g.textAlign = 'center'; g.fillText(alert ? 'ALERTA DE ATRASO' : 'SEM ALERTA', W - 255, 393); g.textAlign = 'left'; }
+      // how the forecast evolved
+      g.fillStyle = C.text; g.font = `700 46px ${FONT}`; g.fillText('Como a previsão mudou', 60, 745);
+      const bx = 330, bw = W - 120 - bx - 130;
+      R.horizons.forEach((h, i) => {
+        const y = 790 + i * 105, k = ease((ui.t - 1.3 - i * 0.35) / 0.9);
+        g.fillStyle = C.dim; g.font = `600 38px ${FONT}`; g.fillText(h.label, 70, y + 42);
+        rr(g, bx, y + 16, bw, 34, 17); g.fillStyle = '#0c1b38'; g.fill();
+        const hc = h.p >= h.t ? C.red : C.green;
+        rr(g, bx, y + 16, Math.max(34, bw * h.p * k), 34, 17); g.fillStyle = hc; g.fill();
+        g.fillStyle = hc; g.font = `800 44px ${FONT}`; g.textAlign = 'right'; g.fillText(`${Math.round(h.p * 100 * k)}%`, W - 60, y + 48); g.textAlign = 'left';
       });
-      const k2 = ease((ui.t - 1.6) / 0.8);
+      // each horizon's own alert threshold
+      R.horizons.forEach((h, i) => { const y = 790 + i * 105, tx = bx + bw * h.t; g.fillStyle = 'rgba(255,255,255,0.8)'; g.fillRect(tx - 2, y + 6, 4, 54); });
+      g.fillStyle = C.dim; g.font = `28px ${FONT}`; g.fillText('│ = limiar de alerta de cada horizonte', bx, 1135);
+      // reasons
+      const k2 = ease((ui.t - 2.6) / 0.8);
       if (k2 > 0) {
         g.save(); g.globalAlpha = k2;
-        g.fillStyle = C.text; g.font = `700 50px ${FONT}`; g.fillText('Principais fatores', 60, 1110);
-        const maxw = Math.max(...cfg.reasons.map((r) => r.w));
+        g.fillStyle = C.text; g.font = `700 46px ${FONT}`; g.fillText('Por que o alerta', 60, 1235);
         cfg.reasons.forEach((r, i) => {
-          const y = 1160 + i * 150;
-          rr(g, 60, y, W - 120, 130, 20); g.fillStyle = C.card; g.fill();
-          g.fillStyle = C.text; g.font = `600 40px ${FONT}`; g.fillText(r.label, 95, y + 55);
-          rr(g, 95, y + 82, (W - 400) * (r.w / maxw) * ease((ui.t - 1.8 - i * 0.2) / 0.8), 18, 9); g.fillStyle = C.red; g.fill();
-          g.fillStyle = C.red; g.font = `700 38px ${FONT}`; g.textAlign = 'right'; g.fillText(`+${Math.round(r.w * 100)} pts`, W - 95, y + 100); g.textAlign = 'left';
+          const y = 1270 + i * 128, kk = ease((ui.t - 2.8 - i * 0.25) / 0.6);
+          g.save(); g.globalAlpha = k2 * kk;
+          rr(g, 60, y, W - 120, 108, 20); g.fillStyle = C.card; g.fill();
+          g.beginPath(); g.arc(112, y + 54, 14, 0, 7); g.fillStyle = C.red; g.fill();
+          g.fillStyle = C.text; g.font = `600 38px ${FONT}`; g.fillText(r, 150, y + 67);
+          g.restore();
         });
         g.restore();
       }
