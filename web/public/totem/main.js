@@ -51848,8 +51848,8 @@ function thunder(delay = 0.6) {
   lp.frequency.value = 220;
   const g = audioCtx.createGain();
   g.gain.setValueAtTime(0, t0);
-  g.gain.linearRampToValueAtTime(1.4, t0 + 0.08);
-  g.gain.exponentialRampToValueAtTime(0.4, t0 + 1.2);
+  g.gain.linearRampToValueAtTime(0.22, t0 + 0.12);
+  g.gain.exponentialRampToValueAtTime(0.07, t0 + 1.4);
   g.gain.exponentialRampToValueAtTime(1e-3, t0 + 4.8);
   s.connect(lp).connect(g).connect(master);
   s.start(t0);
@@ -52292,12 +52292,13 @@ function placeAtKiosk() {
   look(prof, att.head);
   look(att, prof.head);
 }
+var screenCam = (v4, dist = 1.1, dx = -0.18) => ({ p: () => screenPt(0.5, v4).add(V(dx, 0.13 * dist, 0.99 * dist)), l: () => screenPt(0.5, v4) });
 var screenPt = (u, v4) => totem.screen.localToWorld(V((u - 0.5) * 0.54, (0.5 - v4) * 0.96, 0.03));
 async function scene1() {
-  cut({ p0: V(9.5, 3.6, 15.5), p1: V(6.5, 2.4, 12.5), l0: V(-1, 2.2, 0), l1: () => prof.headPos().add(V(-1.2, -0.3, -1)), dur: 9, fov: 34, focus: headOf(prof), aperture: 8e-4 });
-  const walking = walkTo(prof, [V(5.5, 0, 7.2), V(1.5, 0, 5.6), BOARD_SPOT]);
+  cut({ p0: V(-3.5, 3.4, 14.5), p1: V(-1.8, 2.3, 12.5), l0: V(3, 1.6, 6), l1: () => prof.headPos().add(V(-1.2, -0.3, -1)), dur: 9, fov: 34, focus: headOf(prof), aperture: 8e-4 });
+  const walking = walkTo(prof, [V(5.5, 0, 7.9), V(0.6, 0, 7.3), V(-1.6, 0, 5.6), BOARD_SPOT]);
   await wait(4.6);
-  cut({ p0: rel(prof, -1, 1.25, 3.2), p1: rel(prof, -0.8, 1.3, 2.4), l0: headOf(prof, -0.15), dur: 6, fov: 30, focus: headOf(prof), smoothPos: true });
+  cut({ p0: rel(prof, -1, 1.55, 3.4), p1: rel(prof, -0.8, 1.55, 2.6), l0: headOf(prof, -0.3), dur: 6, fov: 30, focus: headOf(prof), smoothPos: true });
   await walking;
   turnTo(prof, -2.6);
   look(prof, M_BOARD);
@@ -52341,7 +52342,10 @@ async function scene3() {
   setTotem("form");
   look(att, M_SCREEN);
   look(prof, M_SCREEN);
-  cut({ p0: V(-0.12, 1.66, 0.98), p1: V(-0.06, 1.6, 0.8), l0: () => totem.screenWorld(), dur: 5, fov: 30, focus: () => totem.screenWorld(), aperture: 12e-4, handheld: 3e-3 });
+  {
+    const c0 = screenCam(0.36, 1.25), c1 = screenCam(0.42, 1.1);
+    cut({ p0: c0.p, p1: c1.p, l0: c0.l, l1: c1.l, dur: 5, fov: 30, focus: c1.l, aperture: 8e-4, handheld: 3e-3 });
+  }
   for (let i2 = 0; i2 < 4; i2++) {
     att.ikR.set(screenPt(0.6, 0.27 + i2 * 0.1), 1);
     await wait(0.45);
@@ -52359,7 +52363,10 @@ async function scene3() {
   await wait(1.2);
   look(att, prof.head);
   await sp;
-  cut({ p0: V(-0.05, 1.6, 0.9), l0: () => totem.screenWorld(), fov: 30, focus: () => totem.screenWorld(), aperture: 1e-3, handheld: 3e-3 });
+  {
+    const c = screenCam(0.5, 1.2);
+    cut({ p0: c.p, l0: c.l, fov: 30, focus: c.l, aperture: 8e-4, handheld: 3e-3 });
+  }
   await wait(1.6);
 }
 async function scene4() {
@@ -52367,7 +52374,10 @@ async function scene4() {
   await wait(0.5);
   att.ikR.release();
   setTotem("analyzing");
-  cut({ p0: () => totem.screenWorld().add(V(0.05, 0.02, 0.9)), p1: () => totem.screenWorld().add(V(0.02, 0, 0.7)), l0: () => totem.screenWorld(), dur: 6, fov: 30, focus: () => totem.screenWorld(), aperture: 1e-3, handheld: 2e-3 });
+  {
+    const c0 = screenCam(0.5, 1.3), c1 = screenCam(0.38, 1.15);
+    cut({ p0: c0.p, p1: c1.p, l0: c0.l, l1: c1.l, dur: 6, fov: 30, focus: c1.l, aperture: 8e-4, handheld: 2e-3 });
+  }
   await wait(2.8);
   setTotem("result");
   await wait(2.6);
@@ -52383,22 +52393,24 @@ async function scene4() {
   look(prof, att.head);
   const s = say("a4", { anim: "talk0" });
   await wait(1.5);
-  cut({ p0: V(-0.05, 1.5, 0.82), l0: () => totem.screenWorld().add(V(0, -0.2, 0)), fov: 30, focus: () => totem.screenWorld(), aperture: 1e-3, handheld: 2e-3 });
+  {
+    const c = screenCam(0.72, 1.1);
+    cut({ p0: c.p, l0: c.l, fov: 30, focus: c.l, aperture: 8e-4, handheld: 2e-3 });
+  }
   await wait(2.4);
   cut({ p0: rel(prof, 0.38, 1.66, -0.62), l0: headOf(att, -0.06), fov: 25, focus: headOf(att), aperture: 28e-4 });
   await s;
   att.head.setMood("happy");
 }
 async function scene5() {
-  cut({ p0: rel(prof, 0.55, 1.62, 0.8), p1: rel(prof, 0.48, 1.63, 0.7), l0: headOf(prof, -0.06), dur: 10, fov: 26, focus: headOf(prof), aperture: 3e-3 });
+  cut({ p0: rel(prof, 0.5, 1.56, 1.25), p1: rel(prof, 0.42, 1.57, 1.1), l0: headOf(prof, -0.12), dur: 10, fov: 26, focus: headOf(prof), aperture: 3e-3 });
   look(prof, M_BAG);
   await wait(1.6);
   const fwd = () => V(Math.sin(prof.yaw), 0, Math.cos(prof.yaw));
   prof.ikL.set(prof.pos.clone().addScaledVector(fwd(), 0.28).add(V(0, 1.12, 0)), 1);
-  await wait(0.6);
-  await wait(1);
+  await wait(1.6);
   prof.ikL.release();
-  look(prof, M_BAG);
+  look(prof, att.head);
   await say("p4");
   await wait(0.9);
   look(prof, att.head);
