@@ -128,7 +128,7 @@ export function departuresBoard(flights) {
   g.fillStyle = '#0d1a33'; g.fillRect(0, 0, W, 150);
   g.fillStyle = '#ffffff'; g.font = 'bold 90px "Segoe UI", Arial, sans-serif'; g.textBaseline = 'middle';
   g.fillText('✈  DEPARTURES', 50, 78);
-  g.font = '60px "Segoe UI", Arial, sans-serif'; g.fillStyle = '#9fb3d9'; g.textAlign = 'right'; g.fillText('MON  18:57', W - 50, 78); g.textAlign = 'left';
+  g.font = '60px "Segoe UI", Arial, sans-serif'; g.fillStyle = '#9fb3d9'; g.textAlign = 'right'; g.fillText('SAT  12:05', W - 50, 78); g.textAlign = 'left';
   const cols = [50, 330, 640, 1290, 1520];
   g.font = 'bold 44px "Segoe UI", Arial, sans-serif'; g.fillStyle = '#7f8ba3';
   ['TIME', 'FLIGHT', 'DESTINATION', 'GATE', 'STATUS'].forEach((t, i) => g.fillText(t, cols[i], 200));
