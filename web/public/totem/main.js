@@ -52545,7 +52545,7 @@ async function boot() {
   $("loading").textContent = "Carregando anima\xE7\xF5es\u2026";
   await preloadAnims(prof, ["walk", "talk1"]);
   await preloadAnims(att, ["walk", "talk0"]);
-  for (const id of Object.keys(LINES)) audioBuffers[id] = await loadBuffer("./audio/" + LINES[id].audio);
+  for (const id of Object.keys(LINES)) audioBuffers[id] = await loadBuffer("./audio/" + LINES[id].audio) || await loadBuffer("./audio/" + LINES[id].audio.replace(/\.mp3$/, ".wav"));
   const got = Object.keys(LINES).filter((k) => audioBuffers[k]).length;
   $("audiostatus").textContent = got ? `${got}/${Object.keys(LINES).length} falas com \xE1udio gravado` : "Vozes: sintetizadas pelo navegador (placeholder)";
   if (SIM) {
