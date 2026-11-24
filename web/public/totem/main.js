@@ -14715,6 +14715,69 @@ var CapsuleGeometry = class _CapsuleGeometry extends BufferGeometry {
     return new _CapsuleGeometry(data.radius, data.height, data.capSegments, data.radialSegments, data.heightSegments);
   }
 };
+var CircleGeometry = class _CircleGeometry extends BufferGeometry {
+  /**
+   * Constructs a new circle geometry.
+   *
+   * @param {number} [radius=1] - Radius of the circle.
+   * @param {number} [segments=32] - Number of segments (triangles), minimum = `3`.
+   * @param {number} [thetaStart=0] - Start angle for first segment in radians.
+   * @param {number} [thetaLength=Math.PI*2] - The central angle, often called theta,
+   * of the circular sector in radians. The default value results in a complete circle.
+   */
+  constructor(radius = 1, segments = 32, thetaStart = 0, thetaLength = Math.PI * 2) {
+    super();
+    this.type = "CircleGeometry";
+    this.parameters = {
+      radius,
+      segments,
+      thetaStart,
+      thetaLength
+    };
+    segments = Math.max(3, segments);
+    const indices = [];
+    const vertices = [];
+    const normals = [];
+    const uvs = [];
+    const vertex2 = new Vector3();
+    const uv = new Vector2();
+    vertices.push(0, 0, 0);
+    normals.push(0, 0, 1);
+    uvs.push(0.5, 0.5);
+    for (let s = 0, i2 = 3; s <= segments; s++, i2 += 3) {
+      const segment = thetaStart + s / segments * thetaLength;
+      vertex2.x = radius * Math.cos(segment);
+      vertex2.y = radius * Math.sin(segment);
+      vertices.push(vertex2.x, vertex2.y, vertex2.z);
+      normals.push(0, 0, 1);
+      uv.x = (vertices[i2] / radius + 1) / 2;
+      uv.y = (vertices[i2 + 1] / radius + 1) / 2;
+      uvs.push(uv.x, uv.y);
+    }
+    for (let i2 = 1; i2 <= segments; i2++) {
+      indices.push(i2, i2 + 1, 0);
+    }
+    this.setIndex(indices);
+    this.setAttribute("position", new Float32BufferAttribute(vertices, 3));
+    this.setAttribute("normal", new Float32BufferAttribute(normals, 3));
+    this.setAttribute("uv", new Float32BufferAttribute(uvs, 2));
+  }
+  copy(source) {
+    super.copy(source);
+    this.parameters = Object.assign({}, source.parameters);
+    return this;
+  }
+  /**
+   * Factory method for creating an instance of this class from the given
+   * JSON object.
+   *
+   * @param {Object} data - A JSON object representing the serialized geometry.
+   * @return {CircleGeometry} A new instance.
+   */
+  static fromJSON(data) {
+    return new _CircleGeometry(data.radius, data.segments, data.thetaStart, data.thetaLength);
+  }
+};
 var CylinderGeometry = class _CylinderGeometry extends BufferGeometry {
   /**
    * Constructs a new cylinder geometry.
@@ -15766,6 +15829,84 @@ var PlaneGeometry = class _PlaneGeometry extends BufferGeometry {
    */
   static fromJSON(data) {
     return new _PlaneGeometry(data.width, data.height, data.widthSegments, data.heightSegments);
+  }
+};
+var RingGeometry = class _RingGeometry extends BufferGeometry {
+  /**
+   * Constructs a new ring geometry.
+   *
+   * @param {number} [innerRadius=0.5] - The inner radius of the ring.
+   * @param {number} [outerRadius=1] - The outer radius of the ring.
+   * @param {number} [thetaSegments=32] - Number of segments. A higher number means the ring will be more round. Minimum is `3`.
+   * @param {number} [phiSegments=1] - Number of segments per ring segment. Minimum is `1`.
+   * @param {number} [thetaStart=0] - Starting angle in radians.
+   * @param {number} [thetaLength=Math.PI*2] - Central angle in radians.
+   */
+  constructor(innerRadius = 0.5, outerRadius = 1, thetaSegments = 32, phiSegments = 1, thetaStart = 0, thetaLength = Math.PI * 2) {
+    super();
+    this.type = "RingGeometry";
+    this.parameters = {
+      innerRadius,
+      outerRadius,
+      thetaSegments,
+      phiSegments,
+      thetaStart,
+      thetaLength
+    };
+    thetaSegments = Math.max(3, thetaSegments);
+    phiSegments = Math.max(1, phiSegments);
+    const indices = [];
+    const vertices = [];
+    const normals = [];
+    const uvs = [];
+    let radius = innerRadius;
+    const radiusStep = (outerRadius - innerRadius) / phiSegments;
+    const vertex2 = new Vector3();
+    const uv = new Vector2();
+    for (let j = 0; j <= phiSegments; j++) {
+      for (let i2 = 0; i2 <= thetaSegments; i2++) {
+        const segment = thetaStart + i2 / thetaSegments * thetaLength;
+        vertex2.x = radius * Math.cos(segment);
+        vertex2.y = radius * Math.sin(segment);
+        vertices.push(vertex2.x, vertex2.y, vertex2.z);
+        normals.push(0, 0, 1);
+        uv.x = (vertex2.x / outerRadius + 1) / 2;
+        uv.y = (vertex2.y / outerRadius + 1) / 2;
+        uvs.push(uv.x, uv.y);
+      }
+      radius += radiusStep;
+    }
+    for (let j = 0; j < phiSegments; j++) {
+      const thetaSegmentLevel = j * (thetaSegments + 1);
+      for (let i2 = 0; i2 < thetaSegments; i2++) {
+        const segment = i2 + thetaSegmentLevel;
+        const a = segment;
+        const b = segment + thetaSegments + 1;
+        const c = segment + thetaSegments + 2;
+        const d = segment + 1;
+        indices.push(a, b, d);
+        indices.push(b, c, d);
+      }
+    }
+    this.setIndex(indices);
+    this.setAttribute("position", new Float32BufferAttribute(vertices, 3));
+    this.setAttribute("normal", new Float32BufferAttribute(normals, 3));
+    this.setAttribute("uv", new Float32BufferAttribute(uvs, 2));
+  }
+  copy(source) {
+    super.copy(source);
+    this.parameters = Object.assign({}, source.parameters);
+    return this;
+  }
+  /**
+   * Factory method for creating an instance of this class from the given
+   * JSON object.
+   *
+   * @param {Object} data - A JSON object representing the serialized geometry.
+   * @return {RingGeometry} A new instance.
+   */
+  static fromJSON(data) {
+    return new _RingGeometry(data.innerRadius, data.outerRadius, data.thetaSegments, data.phiSegments, data.thetaStart, data.thetaLength);
   }
 };
 var SphereGeometry = class _SphereGeometry extends BufferGeometry {
@@ -16924,11 +17065,11 @@ var Interpolant = class {
           break validate_interval;
         }
         while (i1 < right) {
-          const mid = i1 + right >>> 1;
-          if (t < pp[mid]) {
-            right = mid;
+          const mid2 = i1 + right >>> 1;
+          if (t < pp[mid2]) {
+            right = mid2;
           } else {
-            i1 = mid + 1;
+            i1 = mid2 + 1;
           }
         }
         t1 = pp[i1];
@@ -19618,7 +19759,7 @@ var CubeCamera = class extends Object3D {
    * @param {(Renderer|WebGLRenderer)} renderer - The renderer.
    * @param {Scene} scene - The scene to render.
    */
-  update(renderer2, scene7) {
+  update(renderer2, scene13) {
     if (this.parent === null) this.updateMatrixWorld();
     const { renderTarget, activeMipmapLevel } = this;
     if (this.coordinateSystem !== renderer2.coordinateSystem) {
@@ -19641,23 +19782,23 @@ var CubeCamera = class extends Object3D {
     }
     renderer2.setRenderTarget(renderTarget, 0, activeMipmapLevel);
     if (reversedDepthBuffer && renderer2.autoClear === false) renderer2.clearDepth();
-    renderer2.render(scene7, cameraPX);
+    renderer2.render(scene13, cameraPX);
     renderer2.setRenderTarget(renderTarget, 1, activeMipmapLevel);
     if (reversedDepthBuffer && renderer2.autoClear === false) renderer2.clearDepth();
-    renderer2.render(scene7, cameraNX);
+    renderer2.render(scene13, cameraNX);
     renderer2.setRenderTarget(renderTarget, 2, activeMipmapLevel);
     if (reversedDepthBuffer && renderer2.autoClear === false) renderer2.clearDepth();
-    renderer2.render(scene7, cameraPY);
+    renderer2.render(scene13, cameraPY);
     renderer2.setRenderTarget(renderTarget, 3, activeMipmapLevel);
     if (reversedDepthBuffer && renderer2.autoClear === false) renderer2.clearDepth();
-    renderer2.render(scene7, cameraNY);
+    renderer2.render(scene13, cameraNY);
     renderer2.setRenderTarget(renderTarget, 4, activeMipmapLevel);
     if (reversedDepthBuffer && renderer2.autoClear === false) renderer2.clearDepth();
-    renderer2.render(scene7, cameraPZ);
+    renderer2.render(scene13, cameraPZ);
     renderTarget.texture.generateMipmaps = generateMipmaps;
     renderer2.setRenderTarget(renderTarget, 5, activeMipmapLevel);
     if (reversedDepthBuffer && renderer2.autoClear === false) renderer2.clearDepth();
-    renderer2.render(scene7, cameraNZ);
+    renderer2.render(scene13, cameraNZ);
     renderer2.setRenderTarget(currentRenderTarget, currentActiveCubeFace, currentActiveMipmapLevel);
     renderer2.xr.enabled = currentXrEnabled;
     renderTarget.texture.needsPMREMUpdate = true;
@@ -22872,17 +23013,17 @@ function WebGLBackground(renderer2, environments, state2, objects, alpha, premul
   let currentBackground = null;
   let currentBackgroundVersion = 0;
   let currentTonemapping = null;
-  function getBackground(scene7) {
-    let background = scene7.isScene === true ? scene7.background : null;
+  function getBackground(scene13) {
+    let background = scene13.isScene === true ? scene13.background : null;
     if (background && background.isTexture) {
-      const usePMREM = scene7.backgroundBlurriness > 0;
+      const usePMREM = scene13.backgroundBlurriness > 0;
       background = environments.get(background, usePMREM);
     }
     return background;
   }
-  function render2(scene7) {
+  function render2(scene13) {
     let forceClear = false;
-    const background = getBackground(scene7);
+    const background = getBackground(scene13);
     if (background === null) {
       setClear(clearColor, clearAlpha);
     } else if (background && background.isColor) {
@@ -22902,8 +23043,8 @@ function WebGLBackground(renderer2, environments, state2, objects, alpha, premul
       renderer2.clear(renderer2.autoClearColor, renderer2.autoClearDepth, renderer2.autoClearStencil);
     }
   }
-  function addToRenderList(renderList, scene7) {
-    const background = getBackground(scene7);
+  function addToRenderList(renderList, scene13) {
+    const background = getBackground(scene13);
     if (background && (background.isCubeTexture || background.mapping === CubeUVReflectionMapping)) {
       if (boxMesh === void 0) {
         boxMesh = new Mesh(
@@ -22922,7 +23063,7 @@ function WebGLBackground(renderer2, environments, state2, objects, alpha, premul
         );
         boxMesh.geometry.deleteAttribute("normal");
         boxMesh.geometry.deleteAttribute("uv");
-        boxMesh.onBeforeRender = function(renderer3, scene8, camera2) {
+        boxMesh.onBeforeRender = function(renderer3, scene14, camera2) {
           this.matrixWorld.copyPosition(camera2.matrixWorld);
         };
         Object.defineProperty(boxMesh.material, "envMap", {
@@ -22933,9 +23074,9 @@ function WebGLBackground(renderer2, environments, state2, objects, alpha, premul
         objects.update(boxMesh);
       }
       boxMesh.material.uniforms.envMap.value = background;
-      boxMesh.material.uniforms.backgroundBlurriness.value = scene7.backgroundBlurriness;
-      boxMesh.material.uniforms.backgroundIntensity.value = scene7.backgroundIntensity;
-      boxMesh.material.uniforms.backgroundRotation.value.setFromMatrix4(_m1$12.makeRotationFromEuler(scene7.backgroundRotation)).transpose();
+      boxMesh.material.uniforms.backgroundBlurriness.value = scene13.backgroundBlurriness;
+      boxMesh.material.uniforms.backgroundIntensity.value = scene13.backgroundIntensity;
+      boxMesh.material.uniforms.backgroundRotation.value.setFromMatrix4(_m1$12.makeRotationFromEuler(scene13.backgroundRotation)).transpose();
       if (background.isCubeTexture && background.isRenderTargetTexture === false) {
         boxMesh.material.uniforms.backgroundRotation.value.premultiply(_m$1);
       }
@@ -22973,7 +23114,7 @@ function WebGLBackground(renderer2, environments, state2, objects, alpha, premul
         objects.update(planeMesh);
       }
       planeMesh.material.uniforms.t2D.value = background;
-      planeMesh.material.uniforms.backgroundIntensity.value = scene7.backgroundIntensity;
+      planeMesh.material.uniforms.backgroundIntensity.value = scene13.backgroundIntensity;
       planeMesh.material.toneMapped = ColorManagement.getTransfer(background.colorSpace) !== SRGBTransfer;
       if (background.matrixAutoUpdate === true) {
         background.updateMatrix();
@@ -23627,7 +23768,7 @@ var PMREMGenerator = class {
    * @param {Vector3} [options.position=origin] - The position of the internal cube camera that renders the scene.
    * @return {WebGLRenderTarget} The resulting PMREM.
    */
-  fromScene(scene7, sigma = 0, near = 0.1, far = 100, options = {}) {
+  fromScene(scene13, sigma = 0, near = 0.1, far = 100, options = {}) {
     const {
       size = 256,
       position = _origin
@@ -23640,7 +23781,7 @@ var PMREMGenerator = class {
     this._setSize(size);
     const cubeUVRenderTarget = this._allocateTargets();
     cubeUVRenderTarget.depthBuffer = true;
-    this._sceneToCubeUV(scene7, near, far, cubeUVRenderTarget, position);
+    this._sceneToCubeUV(scene13, near, far, cubeUVRenderTarget, position);
     if (sigma > 0) {
       this._blur(cubeUVRenderTarget, 0, 0, sigma);
     }
@@ -23773,7 +23914,7 @@ var PMREMGenerator = class {
     const mesh = new Mesh(new BufferGeometry(), material);
     this._renderer.compile(mesh, _flatCamera);
   }
-  _sceneToCubeUV(scene7, near, far, cubeUVRenderTarget, position) {
+  _sceneToCubeUV(scene13, near, far, cubeUVRenderTarget, position) {
     const fov2 = 90;
     const aspect2 = 1;
     const cubeCamera = new PerspectiveCamera(fov2, aspect2, near, far);
@@ -23805,11 +23946,11 @@ var PMREMGenerator = class {
     const backgroundBox = this._backgroundBox;
     const backgroundMaterial = backgroundBox.material;
     let useSolidColor = false;
-    const background = scene7.background;
+    const background = scene13.background;
     if (background) {
       if (background.isColor) {
         backgroundMaterial.color.copy(background);
-        scene7.background = null;
+        scene13.background = null;
         useSolidColor = true;
       }
     } else {
@@ -23837,11 +23978,11 @@ var PMREMGenerator = class {
       if (useSolidColor) {
         renderer2.render(backgroundBox, cubeCamera);
       }
-      renderer2.render(scene7, cubeCamera);
+      renderer2.render(scene13, cubeCamera);
     }
     renderer2.toneMapping = toneMapping;
     renderer2.autoClear = originalAutoClear;
-    scene7.background = background;
+    scene13.background = background;
   }
   _textureToCubeUV(texture, cubeUVRenderTarget) {
     const renderer2 = this._renderer;
@@ -26467,10 +26608,10 @@ function WebGLPrograms(renderer2, environments, extensions, capabilities, bindin
     if (value === 0) return "uv";
     return `uv${value}`;
   }
-  function getParameters(material, lights, shadows, scene7, object, lightProbeGrids) {
-    const fog = scene7.fog;
+  function getParameters(material, lights, shadows, scene13, object, lightProbeGrids) {
+    const fog = scene13.fog;
     const geometry = object.geometry;
-    const environment = material.isMeshStandardMaterial || material.isMeshLambertMaterial || material.isMeshPhongMaterial ? scene7.environment : null;
+    const environment = material.isMeshStandardMaterial || material.isMeshLambertMaterial || material.isMeshPhongMaterial ? scene13.environment : null;
     const usePMREM = material.isMeshStandardMaterial || material.isMeshLambertMaterial && !material.envMap || material.isMeshPhongMaterial && !material.envMap;
     const envMap = environments.get(material.envMap || environment, usePMREM);
     const envMapCubeUVHeight = !!envMap && envMap.mapping === CubeUVReflectionMapping ? envMap.image.height : null;
@@ -27072,12 +27213,12 @@ function WebGLRenderList() {
 }
 function WebGLRenderLists() {
   let lists = /* @__PURE__ */ new WeakMap();
-  function get(scene7, renderCallDepth) {
-    const listArray = lists.get(scene7);
+  function get(scene13, renderCallDepth) {
+    const listArray = lists.get(scene13);
     let list;
     if (listArray === void 0) {
       list = new WebGLRenderList();
-      lists.set(scene7, [list]);
+      lists.set(scene13, [list]);
     } else {
       if (renderCallDepth >= listArray.length) {
         list = new WebGLRenderList();
@@ -27559,12 +27700,12 @@ function WebGLRenderState(extensions) {
 }
 function WebGLRenderStates(extensions) {
   let renderStates = /* @__PURE__ */ new WeakMap();
-  function get(scene7, renderCallDepth = 0) {
-    const renderStateArray = renderStates.get(scene7);
+  function get(scene13, renderCallDepth = 0) {
+    const renderStateArray = renderStates.get(scene13);
     let renderState;
     if (renderStateArray === void 0) {
       renderState = new WebGLRenderState(extensions);
-      renderStates.set(scene7, [renderState]);
+      renderStates.set(scene13, [renderState]);
     } else {
       if (renderCallDepth >= renderStateArray.length) {
         renderState = new WebGLRenderState(extensions);
@@ -27637,7 +27778,7 @@ function WebGLShadowMap(renderer2, objects, capabilities) {
   this.needsUpdate = false;
   this.type = PCFShadowMap;
   let _previousType = this.type;
-  this.render = function(lights, scene7, camera2) {
+  this.render = function(lights, scene13, camera2) {
     if (scope.enabled === false) return;
     if (scope.autoUpdate === false && scope.needsUpdate === false) return;
     if (lights.length === 0) return;
@@ -27659,7 +27800,7 @@ function WebGLShadowMap(renderer2, objects, capabilities) {
     _state.setScissorTest(false);
     const typeChanged = _previousType !== this.type;
     if (typeChanged) {
-      scene7.traverse(function(object) {
+      scene13.traverse(function(object) {
         if (object.material) {
           if (Array.isArray(object.material)) {
             object.material.forEach((mat) => mat.needsUpdate = true);
@@ -27788,7 +27929,7 @@ function WebGLShadowMap(renderer2, objects, capabilities) {
           _state.viewport(_viewport);
         }
         _frustum = shadow.getFrustum(face);
-        renderObject(scene7, camera2, shadowCamera, light, this.type);
+        renderObject(scene13, camera2, shadowCamera, light, this.type);
       }
       if (shadow.isPointLightShadow !== true && this.type === VSMShadowMap) {
         VSMPass(shadow, camera2);
@@ -32240,10 +32381,10 @@ var WebGLRenderer = class {
         }
       }
     }
-    this.renderBufferDirect = function(camera2, scene7, geometry, material, object, group) {
-      if (scene7 === null) scene7 = _emptyScene;
+    this.renderBufferDirect = function(camera2, scene13, geometry, material, object, group) {
+      if (scene13 === null) scene13 = _emptyScene;
       const frontFaceCW = object.isMesh && object.matrixWorld.determinantAffine() < 0;
-      const program = setProgram(camera2, scene7, geometry, material, object);
+      const program = setProgram(camera2, scene13, geometry, material, object);
       state2.setMaterial(material, frontFaceCW);
       let index = geometry.index;
       let rangeFactor = 1;
@@ -32324,24 +32465,24 @@ var WebGLRenderer = class {
         renderer2.render(drawStart, drawCount);
       }
     };
-    function prepareMaterial(material, scene7, camera2, object) {
+    function prepareMaterial(material, scene13, camera2, object) {
       if (_nodesHandler !== null && material.isNodeMaterial) _nodesHandler.setObject(object, material);
       if (_clippingEnabled === true) clipping.setState(material, camera2, false);
       if (material.transparent === true && material.side === DoubleSide && material.forceSinglePass === false) {
         material.side = BackSide;
         material.needsUpdate = true;
-        getProgram(material, scene7, object);
+        getProgram(material, scene13, object);
         material.side = FrontSide;
         material.needsUpdate = true;
-        getProgram(material, scene7, object);
+        getProgram(material, scene13, object);
         material.side = DoubleSide;
       } else {
-        getProgram(material, scene7, object);
+        getProgram(material, scene13, object);
       }
     }
-    this.compile = function(scene7, camera2, targetScene = null) {
-      if (targetScene === null) targetScene = scene7;
-      if (_nodesHandler !== null) _nodesHandler.renderStart(scene7, camera2, targetScene);
+    this.compile = function(scene13, camera2, targetScene = null) {
+      if (targetScene === null) targetScene = scene13;
+      if (_nodesHandler !== null) _nodesHandler.renderStart(scene13, camera2, targetScene);
       currentRenderState = renderStates.get(targetScene);
       currentRenderState.init(camera2);
       renderStateStack.push(currentRenderState);
@@ -32353,8 +32494,8 @@ var WebGLRenderer = class {
           }
         }
       });
-      if (scene7 !== targetScene) {
-        scene7.traverseVisible(function(object) {
+      if (scene13 !== targetScene) {
+        scene13.traverseVisible(function(object) {
           if (object.isLight && object.layers.test(camera2.layers)) {
             currentRenderState.pushLight(object);
             if (object.castShadow) {
@@ -32370,7 +32511,7 @@ var WebGLRenderer = class {
       if (_clippingEnabled === true) clipping.setGlobalState(this.clippingPlanes, camera2);
       if (_nodesHandler !== null) shadowMap.render(currentRenderState.state.shadowsArray, targetScene, camera2);
       const materials2 = /* @__PURE__ */ new Set();
-      scene7.traverse(function(object) {
+      scene13.traverse(function(object) {
         if (!(object.isMesh || object.isPoints || object.isLine || object.isSprite)) {
           return;
         }
@@ -32392,8 +32533,8 @@ var WebGLRenderer = class {
       if (_nodesHandler !== null) _nodesHandler.renderEnd();
       return materials2;
     };
-    this.compileAsync = function(scene7, camera2, targetScene = null) {
-      const materials2 = this.compile(scene7, camera2, targetScene);
+    this.compileAsync = function(scene13, camera2, targetScene = null) {
+      const materials2 = this.compile(scene13, camera2, targetScene);
       return new Promise((resolve) => {
         function checkMaterialsReady() {
           materials2.forEach(function(material) {
@@ -32404,7 +32545,7 @@ var WebGLRenderer = class {
             }
           });
           if (materials2.size === 0) {
-            resolve(scene7);
+            resolve(scene13);
             return;
           }
           setTimeout(checkMaterialsReady, 10);
@@ -32436,25 +32577,25 @@ var WebGLRenderer = class {
     };
     xr.addEventListener("sessionstart", onXRSessionStart);
     xr.addEventListener("sessionend", onXRSessionEnd);
-    this.render = function(scene7, camera2) {
+    this.render = function(scene13, camera2) {
       if (camera2 !== void 0 && camera2.isCamera !== true) {
         error("WebGLRenderer.render: camera is not an instance of THREE.Camera.");
         return;
       }
       if (_isContextLost === true) return;
       if (_nodesHandler !== null) {
-        _nodesHandler.renderStart(scene7, camera2);
+        _nodesHandler.renderStart(scene13, camera2);
       }
       const isXRPresenting = xr.enabled === true && xr.isPresenting === true;
       const useOutput = output !== null && (_currentRenderTarget === null || isXRPresenting) && output.begin(_this, _currentRenderTarget);
-      if (scene7.matrixWorldAutoUpdate === true) scene7.updateMatrixWorld();
+      if (scene13.matrixWorldAutoUpdate === true) scene13.updateMatrixWorld();
       if (camera2.parent === null && camera2.matrixWorldAutoUpdate === true) camera2.updateMatrixWorld();
       if (xr.enabled === true && xr.isPresenting === true && (output === null || output.isCompositing() === false)) {
         if (xr.cameraAutoUpdate === true) xr.updateCamera(camera2);
         camera2 = xr.getCamera();
       }
-      if (scene7.isScene === true) scene7.onBeforeRender(_this, scene7, camera2, _currentRenderTarget);
-      currentRenderState = renderStates.get(scene7, renderStateStack.length);
+      if (scene13.isScene === true) scene13.onBeforeRender(_this, scene13, camera2, _currentRenderTarget);
+      currentRenderState = renderStates.get(scene13, renderStateStack.length);
       currentRenderState.init(camera2);
       currentRenderState.state.textureUnits = textures.getTextureUnits();
       renderStateStack.push(currentRenderState);
@@ -32462,7 +32603,7 @@ var WebGLRenderer = class {
       _frustum.setFromProjectionMatrix(_projScreenMatrix3, WebGLCoordinateSystem, camera2.reversedDepth);
       _localClippingEnabled = this.localClippingEnabled;
       _clippingEnabled = clipping.init(this.clippingPlanes, _localClippingEnabled);
-      currentRenderList = renderLists.get(scene7, renderListStack.length);
+      currentRenderList = renderLists.get(scene13, renderListStack.length);
       currentRenderList.init();
       renderListStack.push(currentRenderList);
       if (xr.enabled === true && xr.isPresenting === true) {
@@ -32471,7 +32612,7 @@ var WebGLRenderer = class {
           projectObject(depthSensingMesh, camera2, -Infinity, _this.sortObjects);
         }
       }
-      projectObject(scene7, camera2, 0, _this.sortObjects);
+      projectObject(scene13, camera2, 0, _this.sortObjects);
       currentRenderList.finish();
       if (_nodesHandler !== null) _nodesHandler.updateLights(currentRenderState.state.lightsArray);
       if (_this.sortObjects === true) {
@@ -32479,13 +32620,13 @@ var WebGLRenderer = class {
       }
       _renderBackground = xr.enabled === false || xr.isPresenting === false || xr.hasDepthSensing() === false;
       if (_renderBackground) {
-        background.addToRenderList(currentRenderList, scene7);
+        background.addToRenderList(currentRenderList, scene13);
       }
       this.info.render.frame++;
       if (this.info.autoReset === true) this.info.reset();
       if (_clippingEnabled === true) clipping.beginShadows();
       const shadowsArray = currentRenderState.state.shadowsArray;
-      shadowMap.render(shadowsArray, scene7, camera2);
+      shadowMap.render(shadowsArray, scene13, camera2);
       if (_clippingEnabled === true) clipping.endShadows();
       const skipSceneRender = useOutput && output.hasRenderPass();
       if (skipSceneRender === false) {
@@ -32497,18 +32638,18 @@ var WebGLRenderer = class {
           if (transmissiveObjects.length > 0) {
             for (let i2 = 0, l = cameras.length; i2 < l; i2++) {
               const camera22 = cameras[i2];
-              renderTransmissionPass(opaqueObjects, transmissiveObjects, scene7, camera22);
+              renderTransmissionPass(opaqueObjects, transmissiveObjects, scene13, camera22);
             }
           }
-          if (_renderBackground) background.render(scene7);
+          if (_renderBackground) background.render(scene13);
           for (let i2 = 0, l = cameras.length; i2 < l; i2++) {
             const camera22 = cameras[i2];
-            renderScene(currentRenderList, scene7, camera22, camera22.viewport);
+            renderScene(currentRenderList, scene13, camera22, camera22.viewport);
           }
         } else {
-          if (transmissiveObjects.length > 0) renderTransmissionPass(opaqueObjects, transmissiveObjects, scene7, camera2);
-          if (_renderBackground) background.render(scene7);
-          renderScene(currentRenderList, scene7, camera2);
+          if (transmissiveObjects.length > 0) renderTransmissionPass(opaqueObjects, transmissiveObjects, scene13, camera2);
+          if (_renderBackground) background.render(scene13);
+          renderScene(currentRenderList, scene13, camera2);
         }
       }
       if (_currentRenderTarget !== null && _currentActiveMipmapLevel === 0) {
@@ -32518,7 +32659,7 @@ var WebGLRenderer = class {
       if (useOutput) {
         output.end(_this);
       }
-      if (scene7.isScene === true) scene7.onAfterRender(_this, scene7, camera2);
+      if (scene13.isScene === true) scene13.onAfterRender(_this, scene13, camera2);
       bindingStates.resetDefaultState();
       _currentMaterialId = -1;
       _currentCamera = null;
@@ -32600,21 +32741,21 @@ var WebGLRenderer = class {
         projectObject(children[i2], camera2, groupOrder, sortObjects);
       }
     }
-    function renderScene(currentRenderList2, scene7, camera2, viewport) {
+    function renderScene(currentRenderList2, scene13, camera2, viewport) {
       const { opaque: opaqueObjects, transmissive: transmissiveObjects, transparent: transparentObjects } = currentRenderList2;
       currentRenderState.setupLightsView(camera2);
       if (_clippingEnabled === true) clipping.setGlobalState(_this.clippingPlanes, camera2);
       if (viewport) state2.viewport(_currentViewport.copy(viewport));
-      if (opaqueObjects.length > 0) renderObjects(opaqueObjects, scene7, camera2);
-      if (transmissiveObjects.length > 0) renderObjects(transmissiveObjects, scene7, camera2);
-      if (transparentObjects.length > 0) renderObjects(transparentObjects, scene7, camera2);
+      if (opaqueObjects.length > 0) renderObjects(opaqueObjects, scene13, camera2);
+      if (transmissiveObjects.length > 0) renderObjects(transmissiveObjects, scene13, camera2);
+      if (transparentObjects.length > 0) renderObjects(transparentObjects, scene13, camera2);
       state2.buffers.depth.setTest(true);
       state2.buffers.depth.setMask(true);
       state2.buffers.color.setMask(true);
       state2.setPolygonOffset(false);
     }
-    function renderTransmissionPass(opaqueObjects, transmissiveObjects, scene7, camera2) {
-      const overrideMaterial = scene7.isScene === true ? scene7.overrideMaterial : null;
+    function renderTransmissionPass(opaqueObjects, transmissiveObjects, scene13, camera2) {
+      const overrideMaterial = scene13.isScene === true ? scene13.overrideMaterial : null;
       if (overrideMaterial !== null) {
         return;
       }
@@ -32645,14 +32786,14 @@ var WebGLRenderer = class {
       _currentClearAlpha = _this.getClearAlpha();
       if (_currentClearAlpha < 1) _this.setClearColor(16777215, 0.5);
       _this.clear();
-      if (_renderBackground) background.render(scene7);
+      if (_renderBackground) background.render(scene13);
       const currentToneMapping = _this.toneMapping;
       _this.toneMapping = NoToneMapping;
       const currentCameraViewport = camera2.viewport;
       if (camera2.viewport !== void 0) camera2.viewport = void 0;
       currentRenderState.setupLightsView(camera2);
       if (_clippingEnabled === true) clipping.setGlobalState(_this.clippingPlanes, camera2);
-      renderObjects(opaqueObjects, scene7, camera2);
+      renderObjects(opaqueObjects, scene13, camera2);
       textures.updateMultisampleRenderTarget(transmissionRenderTarget);
       textures.updateRenderTargetMipmap(transmissionRenderTarget);
       if (extensions.has("WEBGL_multisampled_render_to_texture") === false) {
@@ -32664,7 +32805,7 @@ var WebGLRenderer = class {
             const currentSide = material.side;
             material.side = BackSide;
             material.needsUpdate = true;
-            renderObject(object, scene7, camera2, geometry, material, group);
+            renderObject(object, scene13, camera2, geometry, material, group);
             material.side = currentSide;
             material.needsUpdate = true;
             renderTargetNeedsUpdate = true;
@@ -32680,8 +32821,8 @@ var WebGLRenderer = class {
       if (currentCameraViewport !== void 0) camera2.viewport = currentCameraViewport;
       _this.toneMapping = currentToneMapping;
     }
-    function renderObjects(renderList, scene7, camera2) {
-      const overrideMaterial = scene7.isScene === true ? scene7.overrideMaterial : null;
+    function renderObjects(renderList, scene13, camera2) {
+      const overrideMaterial = scene13.isScene === true ? scene13.overrideMaterial : null;
       for (let i2 = 0, l = renderList.length; i2 < l; i2++) {
         const renderItem = renderList[i2];
         const { object, geometry, group } = renderItem;
@@ -32690,43 +32831,43 @@ var WebGLRenderer = class {
           material = overrideMaterial;
         }
         if (object.layers.test(camera2.layers)) {
-          renderObject(object, scene7, camera2, geometry, material, group);
+          renderObject(object, scene13, camera2, geometry, material, group);
         }
       }
     }
-    function renderObject(object, scene7, camera2, geometry, material, group) {
+    function renderObject(object, scene13, camera2, geometry, material, group) {
       if (_nodesHandler !== null && material.isNodeMaterial) _nodesHandler.setObject(object, material);
-      object.onBeforeRender(_this, scene7, camera2, geometry, material, group);
+      object.onBeforeRender(_this, scene13, camera2, geometry, material, group);
       object.modelViewMatrix.multiplyMatrices(camera2.matrixWorldInverse, object.matrixWorld);
       object.normalMatrix.getNormalMatrix(object.modelViewMatrix);
-      material.onBeforeRender(_this, scene7, camera2, geometry, object, group);
+      material.onBeforeRender(_this, scene13, camera2, geometry, object, group);
       if (material.transparent === true && material.side === DoubleSide && material.forceSinglePass === false) {
         material.side = BackSide;
         material.needsUpdate = true;
-        _this.renderBufferDirect(camera2, scene7, geometry, material, object, group);
+        _this.renderBufferDirect(camera2, scene13, geometry, material, object, group);
         material.side = FrontSide;
         material.needsUpdate = true;
-        _this.renderBufferDirect(camera2, scene7, geometry, material, object, group);
+        _this.renderBufferDirect(camera2, scene13, geometry, material, object, group);
         material.side = DoubleSide;
       } else {
-        _this.renderBufferDirect(camera2, scene7, geometry, material, object, group);
+        _this.renderBufferDirect(camera2, scene13, geometry, material, object, group);
       }
-      object.onAfterRender(_this, scene7, camera2, geometry, material, group);
+      object.onAfterRender(_this, scene13, camera2, geometry, material, group);
     }
-    function getProgram(material, scene7, object) {
-      if (scene7.isScene !== true) scene7 = _emptyScene;
+    function getProgram(material, scene13, object) {
+      if (scene13.isScene !== true) scene13 = _emptyScene;
       const materialProperties = properties.get(material);
       const lights = currentRenderState.state.lights;
       const shadowsArray = currentRenderState.state.shadowsArray;
       const lightsStateVersion = lights.state.version;
-      const parameters2 = programCache.getParameters(material, lights.state, shadowsArray, scene7, object, currentRenderState.state.lightProbeGridArray);
+      const parameters2 = programCache.getParameters(material, lights.state, shadowsArray, scene13, object, currentRenderState.state.lightProbeGridArray);
       const programCacheKey = programCache.getProgramCacheKey(parameters2);
       let programs = materialProperties.programs;
-      materialProperties.environment = material.isMeshStandardMaterial || material.isMeshLambertMaterial || material.isMeshPhongMaterial ? scene7.environment : null;
-      materialProperties.fog = scene7.fog;
+      materialProperties.environment = material.isMeshStandardMaterial || material.isMeshLambertMaterial || material.isMeshPhongMaterial ? scene13.environment : null;
+      materialProperties.fog = scene13.fog;
       const usePMREM = material.isMeshStandardMaterial || material.isMeshLambertMaterial && !material.envMap || material.isMeshPhongMaterial && !material.envMap;
       materialProperties.envMap = environments.get(material.envMap || materialProperties.environment, usePMREM);
-      materialProperties.envMapRotation = materialProperties.environment !== null && material.envMap === null ? scene7.environmentRotation : material.envMapRotation;
+      materialProperties.envMapRotation = materialProperties.environment !== null && material.envMap === null ? scene13.environmentRotation : material.envMapRotation;
       if (programs === void 0) {
         material.addEventListener("dispose", onMaterialDispose);
         programs = /* @__PURE__ */ new Map();
@@ -32820,11 +32961,11 @@ var WebGLRenderer = class {
       }
       return null;
     }
-    function setProgram(camera2, scene7, geometry, material, object) {
-      if (scene7.isScene !== true) scene7 = _emptyScene;
+    function setProgram(camera2, scene13, geometry, material, object) {
+      if (scene13.isScene !== true) scene13 = _emptyScene;
       textures.resetTextureUnits();
-      const fog = scene7.fog;
-      const environment = material.isMeshStandardMaterial || material.isMeshLambertMaterial || material.isMeshPhongMaterial ? scene7.environment : null;
+      const fog = scene13.fog;
+      const environment = material.isMeshStandardMaterial || material.isMeshLambertMaterial || material.isMeshPhongMaterial ? scene13.environment : null;
       const colorSpace = _currentRenderTarget === null ? _this.outputColorSpace : _currentRenderTarget.isXRRenderTarget === true ? _currentRenderTarget.texture.colorSpace : ColorManagement.workingColorSpace;
       const usePMREM = material.isMeshStandardMaterial || material.isMeshLambertMaterial && !material.envMap || material.isMeshPhongMaterial && !material.envMap;
       const envMap = environments.get(material.envMap || environment, usePMREM);
@@ -32908,7 +33049,7 @@ var WebGLRenderer = class {
       }
       let program = materialProperties.currentProgram;
       if (needsProgramChange === true) {
-        program = getProgram(material, scene7, object);
+        program = getProgram(material, scene13, object);
         if (_nodesHandler && material.isNodeMaterial) {
           _nodesHandler.onUpdateProgram(material, program, materialProperties);
         }
@@ -33002,8 +33143,8 @@ var WebGLRenderer = class {
         materialProperties.receiveShadow = object.receiveShadow;
         p_uniforms.setValue(_gl, "receiveShadow", object.receiveShadow);
       }
-      if ((material.isMeshStandardMaterial || material.isMeshLambertMaterial || material.isMeshPhongMaterial) && material.envMap === null && scene7.environment !== null) {
-        m_uniforms.envMapIntensity.value = scene7.environmentIntensity;
+      if ((material.isMeshStandardMaterial || material.isMeshLambertMaterial || material.isMeshPhongMaterial) && material.envMap === null && scene13.environment !== null) {
+        m_uniforms.envMapIntensity.value = scene13.environmentIntensity;
       }
       if (m_uniforms.dfgLUT !== void 0) {
         m_uniforms.dfgLUT.value = getDFGLUT();
@@ -33767,9 +33908,9 @@ var MaskPass = class extends Pass {
    * @param {Scene} scene - The 3D objects in this scene will define the mask.
    * @param {Camera} camera - The camera.
    */
-  constructor(scene7, camera2) {
+  constructor(scene13, camera2) {
     super();
-    this.scene = scene7;
+    this.scene = scene13;
     this.camera = camera2;
     this.clear = true;
     this.needsSwap = false;
@@ -34044,9 +34185,9 @@ var RenderPass = class extends Pass {
    * @param {?(number|Color|string)} [clearColor=null] - The clear color of the render pass.
    * @param {?number} [clearAlpha=null] - The clear alpha of the render pass.
    */
-  constructor(scene7, camera2, overrideMaterial = null, clearColor = null, clearAlpha = null) {
+  constructor(scene13, camera2, overrideMaterial = null, clearColor = null, clearAlpha = null) {
     super();
-    this.scene = scene7;
+    this.scene = scene13;
     this.camera = camera2;
     this.overrideMaterial = overrideMaterial;
     this.clearColor = clearColor;
@@ -35121,13 +35262,13 @@ var GTAOPass = class _GTAOPass extends Pass {
    * @param {Object} [aoParameters] - The AO parameters.
    * @param {Object} [pdParameters] - The denoise parameters.
    */
-  constructor(scene7, camera2, width = 512, height = 512, parameters, aoParameters, pdParameters) {
+  constructor(scene13, camera2, width = 512, height = 512, parameters, aoParameters, pdParameters) {
     super();
     this.width = width;
     this.height = height;
     this.clear = true;
     this.camera = camera2;
-    this.scene = scene7;
+    this.scene = scene13;
     this.output = 0;
     this._renderGBuffer = true;
     this._visibilityCache = [];
@@ -35488,9 +35629,9 @@ var GTAOPass = class _GTAOPass extends Pass {
     renderer2.setClearAlpha(originalClearAlpha);
   }
   _overrideVisibility() {
-    const scene7 = this.scene;
+    const scene13 = this.scene;
     const cache = this._visibilityCache;
-    scene7.traverse(function(object) {
+    scene13.traverse(function(object) {
       if ((object.isPoints || object.isLine || object.isLine2) && object.visible) {
         object.visible = false;
         cache.push(object);
@@ -36072,9 +36213,9 @@ var BokehPass = class extends Pass {
    * @param {Camera} camera - The camera.
    * @param {BokehPass~Options} params - The pass options.
    */
-  constructor(scene7, camera2, params) {
+  constructor(scene13, camera2, params) {
     super();
-    this.scene = scene7;
+    this.scene = scene13;
     this.camera = camera2;
     const focus = params.focus !== void 0 ? params.focus : 1;
     const aperture = params.aperture !== void 0 ? params.aperture : 0.025;
@@ -38688,8 +38829,8 @@ var GLTFParser = class {
       return Promise.all(parser._invokeAll(function(ext) {
         return ext.afterRoot && ext.afterRoot(result);
       })).then(function() {
-        for (const scene7 of result.scenes) {
-          scene7.updateMatrixWorld();
+        for (const scene13 of result.scenes) {
+          scene13.updateMatrixWorld();
         }
         onLoad(result);
       });
@@ -39695,10 +39836,10 @@ var GLTFParser = class {
     const extensions = this.extensions;
     const sceneDef = this.json.scenes[sceneIndex];
     const parser = this;
-    const scene7 = new Group();
-    if (sceneDef.name) scene7.name = parser.createUniqueName(sceneDef.name);
-    assignExtrasToUserData(scene7, sceneDef);
-    if (sceneDef.extensions) addUnknownExtensionsToUserData(extensions, scene7, sceneDef);
+    const scene13 = new Group();
+    if (sceneDef.name) scene13.name = parser.createUniqueName(sceneDef.name);
+    assignExtrasToUserData(scene13, sceneDef);
+    if (sceneDef.extensions) addUnknownExtensionsToUserData(extensions, scene13, sceneDef);
     const nodeIds = sceneDef.nodes || [];
     const pending = [];
     for (let i2 = 0, il = nodeIds.length; i2 < il; i2++) {
@@ -39708,9 +39849,9 @@ var GLTFParser = class {
       for (let i2 = 0, il = nodes.length; i2 < il; i2++) {
         const node = nodes[i2];
         if (node.parent !== null) {
-          scene7.add(clone(node));
+          scene13.add(clone(node));
         } else {
-          scene7.add(node);
+          scene13.add(node);
         }
       }
       const reduceAssociations = (node) => {
@@ -39728,8 +39869,8 @@ var GLTFParser = class {
         });
         return reducedAssociations;
       };
-      parser.associations = reduceAssociations(scene7);
-      return scene7;
+      parser.associations = reduceAssociations(scene13);
+      return scene13;
     });
   }
   _createAnimationTracks(node, inputAccessor, outputAccessor, sampler, target) {
@@ -40896,10 +41037,10 @@ var inflt = function(dat, st, buf, dict) {
         lpos = pos, lm = null;
         break;
       } else {
-        var add2 = sym - 254;
+        var add3 = sym - 254;
         if (sym > 264) {
           var i2 = sym - 257, b = fleb[i2];
-          add2 = bits(dat, pos, (1 << b) - 1) + fl[i2];
+          add3 = bits(dat, pos, (1 << b) - 1) + fl[i2];
           pos += b;
         }
         var d = dm[bits16(dat, pos) & dms], dsym = d >> 4;
@@ -40918,7 +41059,7 @@ var inflt = function(dat, st, buf, dict) {
         }
         if (resize)
           cbuf(bt + 131072);
-        var end = bt + add2;
+        var end = bt + add3;
         if (bt < dt) {
           var shift = dl - dt, dend = Math.min(dt, end);
           if (shift + bt < 0)
@@ -40966,16 +41107,16 @@ function findSpan(p2, u, U) {
   }
   let low = p2;
   let high = n;
-  let mid = Math.floor((low + high) / 2);
-  while (u < U[mid] || u >= U[mid + 1]) {
-    if (u < U[mid]) {
-      high = mid;
+  let mid2 = Math.floor((low + high) / 2);
+  while (u < U[mid2] || u >= U[mid2 + 1]) {
+    if (u < U[mid2]) {
+      high = mid2;
     } else {
-      low = mid;
+      low = mid2;
     }
-    mid = Math.floor((low + high) / 2);
+    mid2 = Math.floor((low + high) / 2);
   }
-  return mid;
+  return mid2;
 }
 function calcBasisFunctions(span, u, p2, U) {
   const N = [];
@@ -44494,7 +44635,7 @@ var DynamicBones = class {
   * @param {Object3D} armature Armature object
   * @param {Object[]} config Array of configuration objects
   */
-  setup(scene7, armature, config) {
+  setup(scene13, armature, config) {
     this.dispose();
     const check = (test, error2) => {
       if (!test) {
@@ -44502,8 +44643,8 @@ var DynamicBones = class {
         throw new Error(error2);
       }
     };
-    check(scene7?.isScene, "First parameter must be Scene.");
-    this.scene = scene7;
+    check(scene13?.isScene, "First parameter must be Scene.");
+    this.scene = scene13;
     check(armature?.isObject3D, "Second parameter must be the armature Object3D.");
     this.armature = armature;
     check(Array.isArray(config), "Third parameter must be an array of bone configs.");
@@ -50101,7 +50242,7 @@ var Reflector = class _Reflector extends Mesh {
     material.uniforms["color"].value = color;
     material.uniforms["textureMatrix"].value = textureMatrix;
     this.material = material;
-    this.onBeforeRender = function(renderer2, scene7, camera2) {
+    this.onBeforeRender = function(renderer2, scene13, camera2) {
       const reflectionCamera = this.getReflectionCamera(camera2);
       reflectorWorldPosition.setFromMatrixPosition(scope.matrixWorld);
       cameraWorldPosition.setFromMatrixPosition(camera2.matrixWorld);
@@ -50183,7 +50324,7 @@ var Reflector = class _Reflector extends Mesh {
       renderer2.setRenderTarget(renderTarget);
       renderer2.state.buffers.depth.setMask(true);
       if (renderer2.autoClear === false) renderer2.clear();
-      renderer2.render(scene7, reflectionCamera);
+      renderer2.render(scene13, reflectionCamera);
       renderer2.xr.enabled = currentXrEnabled;
       renderer2.shadowMap.autoUpdate = currentShadowAutoUpdate;
       renderer2.setRenderTarget(currentRenderTarget);
@@ -50470,7 +50611,7 @@ function signTex(lines, { w: w4 = 1024, h = 256, bg = "#111", fg = "#ffd200", fo
   t.wrapS = t.wrapT = ClampToEdgeWrapping;
   return t;
 }
-function departuresBoard(flights) {
+function departuresBoard(flights, clock2 = "SAT  12:05") {
   const W2 = 2048, H2 = 1152, c = canvas(W2, H2), g = c.getContext("2d");
   g.fillStyle = "#050608";
   g.fillRect(0, 0, W2, H2);
@@ -50483,7 +50624,7 @@ function departuresBoard(flights) {
   g.font = '60px "Segoe UI", Arial, sans-serif';
   g.fillStyle = "#9fb3d9";
   g.textAlign = "right";
-  g.fillText("SAT  12:05", W2 - 50, 78);
+  g.fillText(clock2, W2 - 50, 78);
   g.textAlign = "left";
   const cols = [50, 330, 640, 1290, 1520];
   g.font = 'bold 44px "Segoe UI", Arial, sans-serif';
@@ -50514,7 +50655,7 @@ function departuresBoard(flights) {
     cell(f[2].toUpperCase(), cols[2], "#ffffff", 16);
     cell(f[3], cols[3], "#f5d76e", 3);
     const st = f[4], color = st.startsWith("DELAY") ? "#ffb020" : st.startsWith("CANC") ? "#ff4d4d" : st.startsWith("BOARD") ? "#5cd6ff" : "#3ee07a";
-    cell(st, cols[4], color, 12);
+    cell(st, cols[4], color, 13);
   });
   const t = tex(c);
   t.wrapS = t.wrapT = ClampToEdgeWrapping;
@@ -50536,9 +50677,10 @@ function add(parent, geo, mat, x2 = 0, y = 0, z = 0, opts = {}) {
   return m3;
 }
 var HALL = { x0: -34, x1: 34, z0: -22, z1: 16, h: 9.5 };
-function buildAirport(scene7, { quality = "high", flights }) {
+var ENT = { x0: 4.5, x1: 11.5, h: 4.2 };
+function buildAirport(scene13, { quality = "high", flights }) {
   const root = new Group();
-  scene7.add(root);
+  scene13.add(root);
   const out = { root, lightning: { level: 0 }, update: () => {
   } };
   const W2 = HALL.x1 - HALL.x0, D = HALL.z1 - HALL.z0;
@@ -50586,7 +50728,10 @@ function buildAirport(scene7, { quality = "high", flights }) {
   }
   add(root, new PlaneGeometry(D, HALL.h), wallMat, HALL.x0, HALL.h / 2, cz, { ry: Math.PI / 2, cast: false });
   add(root, new PlaneGeometry(D, HALL.h), wallMat, HALL.x1, HALL.h / 2, cz, { ry: -Math.PI / 2, cast: false });
-  add(root, new PlaneGeometry(W2, HALL.h), wallMat, cx, HALL.h / 2, HALL.z1, { ry: Math.PI, cast: false });
+  const wl = ENT.x0 - HALL.x0, wr = HALL.x1 - ENT.x1;
+  add(root, new PlaneGeometry(wl, HALL.h), wallMat, HALL.x0 + wl / 2, HALL.h / 2, HALL.z1, { ry: Math.PI, cast: false });
+  add(root, new PlaneGeometry(wr, HALL.h), wallMat, ENT.x1 + wr / 2, HALL.h / 2, HALL.z1, { ry: Math.PI, cast: false });
+  add(root, new PlaneGeometry(ENT.x1 - ENT.x0, HALL.h - ENT.h), wallMat, (ENT.x0 + ENT.x1) / 2, ENT.h + (HALL.h - ENT.h) / 2, HALL.z1, { ry: Math.PI, cast: false });
   const dm = new Object3D();
   const sc = document.createElement("canvas");
   sc.width = 512;
@@ -50607,7 +50752,7 @@ function buildAirport(scene7, { quality = "high", flights }) {
   st.wrapS = st.wrapT = RepeatWrapping;
   st.repeat.set(W2 / 2.56, 1);
   st.anisotropy = 8;
-  add(root, new PlaneGeometry(W2, HALL.h - 3), M({ map: st, roughness: 0.65 }), cx, 3 + (HALL.h - 3) / 2, HALL.z1 - 0.05, { ry: Math.PI, cast: false });
+  add(root, new PlaneGeometry(W2, HALL.h - ENT.h - 0.3), M({ map: st, roughness: 0.65 }), cx, ENT.h + 0.3 + (HALL.h - ENT.h - 0.3) / 2, HALL.z1 - 0.05, { ry: Math.PI, cast: false });
   const glass = P({ color: 10466500, metalness: 0, roughness: 0.04, transparent: true, opacity: 0.12, envMapIntensity: 1.2, side: DoubleSide, depthWrite: false });
   add(root, new PlaneGeometry(W2, HALL.h), glass, cx, HALL.h / 2, HALL.z0, { cast: false, receive: false });
   const mull = new BoxGeometry(0.12, HALL.h, 0.25);
@@ -50670,7 +50815,12 @@ function buildAirport(scene7, { quality = "high", flights }) {
     }
   }
   const boardTex = departuresBoard(flights);
+  const boardTexLate = departuresBoard(flights.map((f) => f[1] === "AA 1455" ? [f[0], f[1], f[2], f[3], "DELAYED 13:43"] : f), "SAT  12:18");
   const boardMat = new MeshBasicMaterial({ map: boardTex, toneMapped: true });
+  out.setDelayed = (on) => {
+    boardMat.map = on ? boardTexLate : boardTex;
+    boardMat.needsUpdate = true;
+  };
   boardMat.color.setScalar(1.6);
   const mkBoard = (x2, z, ry) => {
     const g = new Group();
@@ -50684,6 +50834,7 @@ function buildAirport(scene7, { quality = "high", flights }) {
   };
   out.board = mkBoard(-7.5, -4.5, 0.25);
   mkBoard(13, -10, -0.2);
+  out.board2 = mkBoard(14.2, 7.6, -0.5);
   const sign2 = (lines, x2, y, z, w4, ry = 0, arrow = "right") => {
     const t = signTex(lines, { arrow, w: 1536, h: 256, bg: "#1d1f22", fg: "#ffd21f", font: 'bold 120px "Segoe UI", Arial, sans-serif' });
     const g = new Group();
@@ -50698,9 +50849,12 @@ function buildAirport(scene7, { quality = "high", flights }) {
   };
   sign2(["Gates A1 \u2013 A18"], 4.5, 5.6, 1.5, 4.2, 0, "right");
   sign2(["Baggage Claim"], -14, 5.6, 2.5, 3.6, 0.15, "left");
-  scene7.add(new HemisphereLight(14673648, 5918792, 0.35));
+  scene13.add(new HemisphereLight(14673648, 5918792, 0.35));
+  const spots = [];
   const mkSpot = (x2, z, tx, tz2, I, shadow) => {
     const s = new SpotLight(16773597, I, 30, 0.62, 0.65, 1.6);
+    s.userData.base = I;
+    spots.push(s);
     s.position.set(x2, HALL.h - 0.2, z);
     s.target.position.set(tx, 0, tz2);
     if (shadow) {
@@ -50722,6 +50876,12 @@ function buildAirport(scene7, { quality = "high", flights }) {
   mkSpot(12, -8, 12, -8, 100, false);
   mkSpot(0, -10, 0, -10, 100, false);
   mkSpot(0, 11, 0, 11, 90, false);
+  out.entranceKey = mkSpot(9, 11.5, 8, 12, 110, quality === "high");
+  mkSpot(3.5, 10, 3, 11.5, 90, false);
+  let flick = 0;
+  out.flicker = () => {
+    flick = 0.9;
+  };
   let nextStrike = 9, strike = 0, strikeT = 0;
   out.strikeNow = () => {
     nextStrike = 0;
@@ -50751,6 +50911,16 @@ function buildAirport(scene7, { quality = "high", flights }) {
       if (strikeT > 0.8) strike = 0;
     }
     out.lightning.level = L;
+    if (flick > 0) {
+      flick -= dt;
+      const k = flick > 0.75 ? 0.15 : flick > 0.6 ? 1 : flick > 0.5 ? 0.3 : flick > 0 ? 0.3 + (0.5 - flick) * 1.4 : 1;
+      spots.forEach((s) => s.intensity = s.userData.base * Math.min(1, k));
+      lightStrip.color.setRGB(3 * k, 2.91 * k, 2.7 * k);
+    } else if (flick > -1) {
+      flick = -2;
+      spots.forEach((s) => s.intensity = s.userData.base);
+      lightStrip.color.setRGB(3, 2.91, 2.7);
+    }
     flash.intensity = L * 1.6;
     skyMat.color.copy(skyColorBase).multiplyScalar(1 + L * 6);
     rainMat.opacity = 0.3 + L * 0.5;
@@ -50908,6 +51078,387 @@ function buildSeating(root, steel, darkSteel) {
       }
     }
   }
+}
+
+// src/landside.js
+var M2 = (o) => new MeshStandardMaterial(o);
+function add2(parent, geo, mat, x2 = 0, y = 0, z = 0, o = {}) {
+  const m3 = new Mesh(geo, mat);
+  m3.position.set(x2, y, z);
+  if (o.rx) m3.rotation.x = o.rx;
+  if (o.ry) m3.rotation.y = o.ry;
+  if (o.rz) m3.rotation.z = o.rz;
+  m3.castShadow = o.cast ?? true;
+  m3.receiveShadow = o.receive ?? true;
+  parent.add(m3);
+  return m3;
+}
+function canvasTex(w4, h, draw) {
+  const c = document.createElement("canvas");
+  c.width = w4;
+  c.height = h;
+  draw(c.getContext("2d"), w4, h);
+  const t = new CanvasTexture(c);
+  t.colorSpace = SRGBColorSpace;
+  t.anisotropy = 8;
+  return t;
+}
+var CURB = { z: 21.6, taxi: new Vector3(8.6, 0, 22.95), canopyEdge: 27.2 };
+var DESK = new Vector3(2.9, 0, 11.6);
+function buildLandside(scene13, { quality = "high" } = {}) {
+  const root = new Group();
+  scene13.add(root);
+  const out = { root, update: () => {
+  } };
+  const zf = HALL.z1, cxE = (ENT.x0 + ENT.x1) / 2;
+  const frame = M2({ color: 2764082, metalness: 0.8, roughness: 0.4 });
+  const glass = new MeshPhysicalMaterial({ color: 11123915, roughness: 0.05, transparent: true, opacity: 0.16, side: DoubleSide, depthWrite: false, envMapIntensity: 1.2 });
+  const wet = new MeshPhysicalMaterial({ color: 11123915, roughness: 0.15, transparent: true, opacity: 0.22, side: DoubleSide, depthWrite: false });
+  const dW = 1.25, dH = 2.6;
+  add2(root, new BoxGeometry(ENT.x1 - ENT.x0, 0.14, 0.2), frame, cxE, ENT.h - 0.07, zf, { receive: false });
+  add2(root, new BoxGeometry(ENT.x1 - ENT.x0, 0.16, 0.22), frame, cxE, dH + 0.08, zf, { receive: false });
+  for (const x2 of [ENT.x0, cxE - dW - 0.05, cxE + dW + 0.05, ENT.x1]) add2(root, new BoxGeometry(0.1, ENT.h, 0.2), frame, x2, ENT.h / 2, zf, { receive: false });
+  const fixedW = cxE - dW - 0.05 - ENT.x0;
+  for (const x2 of [ENT.x0 + fixedW / 2, ENT.x1 - fixedW / 2]) add2(root, new PlaneGeometry(fixedW, ENT.h), wet, x2, ENT.h / 2, zf + 0.03, { cast: false, receive: false });
+  add2(root, new PlaneGeometry(2 * dW + 0.1, ENT.h - dH - 0.16), glass, cxE, dH + 0.16 + (ENT.h - dH - 0.16) / 2, zf, { cast: false, receive: false });
+  const leaves = [-1, 1].map((s) => {
+    const g = new Group();
+    g.position.set(cxE + s * dW / 2, 0, zf - 0.06);
+    root.add(g);
+    add2(g, new PlaneGeometry(dW - 0.06, dH), wet, 0, dH / 2, 0, { cast: false, receive: false });
+    for (const sx of [-1, 1]) add2(g, new BoxGeometry(0.05, dH, 0.05), frame, sx * (dW / 2 - 0.03), dH / 2, 0, { receive: false });
+    add2(g, new BoxGeometry(dW, 0.05, 0.05), frame, 0, 0.03, 0, { receive: false });
+    add2(g, new BoxGeometry(dW, 0.05, 0.05), frame, 0, dH - 0.03, 0, { receive: false });
+    return { g, s, x0: cxE + s * dW / 2 };
+  });
+  let doorOpen = 0, doorGoal = 0;
+  out.doors = (open) => {
+    doorGoal = open ? 1 : 0;
+  };
+  add2(root, new PlaneGeometry(3.2, 2.2), M2({ color: 2303271, roughness: 0.95 }), cxE, 4e-3, zf - 1.3, { rx: -Math.PI / 2, cast: false });
+  const depTex = signTex(["Departures"], { w: 1536, h: 256, bg: "#1d1f22", fg: "#ffffff", font: 'bold 130px "Segoe UI", Arial, sans-serif' });
+  add2(root, new PlaneGeometry(5.2, 0.87), new MeshBasicMaterial({ map: depTex, color: new Color(1.2, 1.2, 1.2) }), cxE, 4.65, zf + 0.12, { cast: false });
+  const conc = canvasTex(512, 512, (g, w4, h) => {
+    g.fillStyle = "#5d5f61";
+    g.fillRect(0, 0, w4, h);
+    for (let i2 = 0; i2 < 9e3; i2++) {
+      const v4 = 70 + Math.random() * 40;
+      g.fillStyle = `rgb(${v4},${v4 + 2},${v4 + 4})`;
+      g.fillRect(Math.random() * w4, Math.random() * h, 2, 2);
+    }
+    g.strokeStyle = "#3b3d40";
+    g.lineWidth = 4;
+    for (let i2 = 0; i2 <= 4; i2++) {
+      g.beginPath();
+      g.moveTo(i2 * w4 / 4, 0);
+      g.lineTo(i2 * w4 / 4, h);
+      g.stroke();
+      g.beginPath();
+      g.moveTo(0, i2 * h / 4);
+      g.lineTo(w4, i2 * h / 4);
+      g.stroke();
+    }
+  });
+  conc.wrapS = conc.wrapT = RepeatWrapping;
+  conc.repeat.set(12, 2.5);
+  add2(root, new PlaneGeometry(48, CURB.z - zf), M2({ map: conc, roughness: 0.35, metalness: 0.05, color: 11579568 }), 8, 0.015, (zf + CURB.z) / 2, { rx: -Math.PI / 2, cast: false });
+  add2(root, new BoxGeometry(48, 0.14, 0.25), M2({ color: 9211016, roughness: 0.6 }), 8, 0.06, CURB.z, { cast: false });
+  const road = canvasTex(1024, 512, (g, w4, h) => {
+    g.fillStyle = "#1c1d1f";
+    g.fillRect(0, 0, w4, h);
+    for (let i2 = 0; i2 < 2e4; i2++) {
+      const v4 = 22 + Math.random() * 26;
+      g.fillStyle = `rgb(${v4},${v4},${v4 + 2})`;
+      g.fillRect(Math.random() * w4, Math.random() * h, 2, 2);
+    }
+    g.fillStyle = "rgba(210,210,200,0.85)";
+    for (let x2 = 0; x2 < w4; x2 += 128) g.fillRect(x2, h * 0.48, 70, 8);
+    for (let i2 = 0; i2 < 26; i2++) {
+      g.fillStyle = "rgba(8,9,11,0.55)";
+      g.beginPath();
+      g.ellipse(Math.random() * w4, Math.random() * h, 30 + Math.random() * 70, 10 + Math.random() * 22, 0, 0, 7);
+      g.fill();
+    }
+  });
+  road.wrapS = road.wrapT = RepeatWrapping;
+  road.repeat.set(3, 1);
+  add2(root, new PlaneGeometry(60, 26), M2({ map: road, roughness: 0.12, metalness: 0.35, color: 10132122 }), 8, 0, CURB.z + 13, { rx: -Math.PI / 2, cast: false });
+  add2(root, new BoxGeometry(48, 0.15, 1.2), M2({ map: conc, roughness: 0.4, color: 11053224 }), 8, 0.075, 26.8, { cast: false });
+  const colM = M2({ color: 14474456, roughness: 0.5 });
+  for (const x2 of [-6, 2, 14.5, 22]) add2(root, new CylinderGeometry(0.28, 0.28, 5.2, 24), colM, x2, 2.6, 26.8);
+  add2(root, new BoxGeometry(34, 0.45, CURB.canopyEdge - zf), M2({ color: 14211284, roughness: 0.6 }), 8, 5.25, (zf + CURB.canopyEdge) / 2, { cast: false });
+  const strip = new MeshBasicMaterial({ color: new Color(1.3, 1.3, 1.25) });
+  for (let z = zf + 1.5; z < CURB.canopyEdge; z += 2.5) add2(root, new BoxGeometry(30, 0.03, 0.18), strip, 8, 5.02, z, { cast: false, receive: false });
+  for (const x2 of [3, 9, 15]) {
+    const p2 = new PointLight(15922431, 3, 12, 1.6);
+    p2.position.set(x2, 4.8, 20);
+    root.add(p2);
+  }
+  const under = new SpotLight(15659775, 28, 16, 0.8, 0.6, 1.5);
+  under.position.set(8.5, 5, 19.5);
+  under.target.position.set(8.5, 0, 22.5);
+  if (quality === "high") {
+    under.castShadow = true;
+    under.shadow.mapSize.set(1024, 1024);
+    under.shadow.bias = -3e-4;
+  }
+  root.add(under, under.target);
+  const garage = canvasTex(1024, 256, (g, w4, h) => {
+    g.fillStyle = "#4a4c50";
+    g.fillRect(0, 0, w4, h);
+    for (let f = 0; f < 4; f++) {
+      g.fillStyle = "#141519";
+      g.fillRect(0, 20 + f * 60, w4, 30);
+      for (let i2 = 0; i2 < 30; i2++) {
+        g.fillStyle = Math.random() < 0.3 ? "rgba(255,230,180,0.9)" : "rgba(40,42,46,1)";
+        g.fillRect(i2 * 36 + 10, 30 + f * 60, 14, 6);
+      }
+    }
+  });
+  add2(root, new PlaneGeometry(80, 16), new MeshBasicMaterial({ map: garage, color: new Color(0.55, 0.57, 0.62), fog: true }), 8, 8, 52, { ry: Math.PI, cast: false, receive: false });
+  const sky = new Mesh(new PlaneGeometry(420, 170), new MeshBasicMaterial({ map: stormSky(), fog: false, color: new Color(0.75, 0.78, 0.85) }));
+  sky.position.set(8, 60, 110);
+  sky.rotation.y = Math.PI;
+  root.add(sky);
+  const r2 = rng(21), N = quality === "low" ? 2e3 : 6e3, ND = 900;
+  const rp = new Float32Array((N + ND) * 6), sp = new Float32Array(N + ND), y0 = new Float32Array(N + ND), y1 = new Float32Array(N + ND);
+  for (let i2 = 0; i2 < N + ND; i2++) {
+    const drip = i2 >= N;
+    const x2 = drip ? -9 + r2() * 34 : -22 + r2() * 60, z = drip ? CURB.canopyEdge + 0.05 + r2() * 0.15 : CURB.canopyEdge + 0.3 + r2() * 30;
+    y0[i2] = drip ? 5 : 26;
+    y1[i2] = 0;
+    const y = r2() * y0[i2];
+    rp.set([x2, y, z, x2 - 0.04, y - (drip ? 0.5 : 0.8), z], i2 * 6);
+    sp[i2] = drip ? 9 + r2() * 4 : 20 + r2() * 9;
+  }
+  const rg = new BufferGeometry();
+  rg.setAttribute("position", new BufferAttribute(rp, 3));
+  const rm = new LineBasicMaterial({ color: 11846872, transparent: true, opacity: 0.4 });
+  const rain = new LineSegments(rg, rm);
+  rain.frustumCulled = false;
+  root.add(rain);
+  const splash = new InstancedMesh(new RingGeometry(0.02, 0.05, 10), new MeshBasicMaterial({ color: 13161696, transparent: true, opacity: 0.35, side: DoubleSide }), 220);
+  const sm = new Object3D(), sl = [];
+  for (let i2 = 0; i2 < 220; i2++) {
+    sl.push({ x: -10 + r2() * 40, z: CURB.canopyEdge + 0.2 + r2() * 12, t: r2() });
+  }
+  root.add(splash);
+  out.taxi = buildTaxi(root, CURB.taxi);
+  const desk = new Group();
+  desk.position.copy(DESK);
+  root.add(desk);
+  const deskM = M2({ color: 15658730, roughness: 0.35 }), topM = M2({ color: 2434601, roughness: 0.25, metalness: 0.15 });
+  add2(desk, new RoundedBoxGeometry(0.75, 1.05, 2.6, 3, 0.04), deskM, 0, 0.525, 0);
+  add2(desk, new BoxGeometry(0.85, 0.04, 2.7), topM, 0, 1.07, 0);
+  add2(desk, new BoxGeometry(0.02, 0.05, 2.5), new MeshBasicMaterial({ color: new Color(0.1, 0.45, 1).multiplyScalar(3) }), 0.385, 0.2, 0, { cast: false });
+  add2(desk, new BoxGeometry(0.05, 0.36, 0.5), M2({ color: 1710878, metalness: 0.6, roughness: 0.4 }), -0.15, 1.3, -1.05);
+  const info = canvasTex(1024, 256, (g, w4, h) => {
+    g.fillStyle = "#0b2a66";
+    g.fillRect(0, 0, w4, h);
+    g.fillStyle = "#fff";
+    g.beginPath();
+    g.arc(120, 128, 70, 0, 7);
+    g.fill();
+    g.fillStyle = "#0b2a66";
+    g.font = "bold 120px Georgia, serif";
+    g.textAlign = "center";
+    g.textBaseline = "middle";
+    g.fillText("i", 120, 134);
+    g.fillStyle = "#fff";
+    g.textAlign = "left";
+    g.font = 'bold 84px "Segoe UI", Arial';
+    g.fillText("Informa\xE7\xF5es", 230, 100);
+    g.font = '58px "Segoe UI", Arial';
+    g.fillStyle = "#b9c8e6";
+    g.fillText("Information", 230, 180);
+  });
+  const sg = new Group();
+  sg.position.set(0.1, 2.75, 0);
+  sg.rotation.y = Math.PI / 2;
+  desk.add(sg);
+  add2(sg, new BoxGeometry(2.1, 0.55, 0.08), M2({ color: 1908514 }), 0, 0, -0.05);
+  add2(sg, new PlaneGeometry(2, 0.5), new MeshBasicMaterial({ map: info, color: new Color(1.3, 1.3, 1.3) }), 0, 0, 0, { cast: false });
+  add2(sg, new CylinderGeometry(0.012, 0.012, HALL.h - 2.75, 6), M2({ color: 10133670, metalness: 0.9, roughness: 0.3 }), 0, (HALL.h - 2.75) / 2, -0.05);
+  out.wetSign = wetFloorSign(root, new Vector3(3.25, 0, 5.15));
+  const fp = canvasTex(64, 128, (g) => {
+    g.fillStyle = "rgba(0,0,0,0.55)";
+    g.beginPath();
+    g.ellipse(32, 40, 18, 30, 0, 0, 7);
+    g.fill();
+    g.beginPath();
+    g.ellipse(32, 100, 14, 18, 0, 0, 7);
+    g.fill();
+  });
+  const fpm = new MeshBasicMaterial({ map: fp, transparent: true, depthWrite: false, opacity: 0.35, color: 2241348 });
+  const steps = [[8.2, 15.2], [8.5, 14.6], [8.8, 14], [9.1, 13.4], [9.45, 12.85], [9.8, 12.35]];
+  steps.forEach(([x2, z], i2) => {
+    const m3 = add2(root, new PlaneGeometry(0.11, 0.26), fpm, x2 + (i2 % 2 ? 0.1 : -0.1), 6e-3, z, { rx: -Math.PI / 2, cast: false, receive: false });
+    m3.rotation.z = -0.5;
+    m3.renderOrder = 2;
+  });
+  out.update = (dt) => {
+    doorOpen += (doorGoal - doorOpen) * Math.min(1, dt * 3.2);
+    leaves.forEach((l) => l.g.position.x = l.x0 + l.s * doorOpen * (dW - 0.05));
+    const p2 = rg.attributes.position.array;
+    for (let i2 = 0; i2 < N + ND; i2++) {
+      const o = i2 * 6;
+      let y = p2[o + 1] - sp[i2] * dt;
+      const len = i2 >= N ? 0.5 : 0.8;
+      if (y < len) y += y0[i2];
+      p2[o + 1] = y;
+      p2[o + 4] = y - len;
+    }
+    rg.attributes.position.needsUpdate = true;
+    sl.forEach((s, i2) => {
+      s.t += dt * 2.5;
+      if (s.t > 1) {
+        s.t = 0;
+        s.x = -10 + r2() * 40;
+        s.z = CURB.canopyEdge + 0.2 + r2() * 12;
+      }
+      const k = 0.3 + s.t * 2.2;
+      sm.position.set(s.x, 0.01, s.z);
+      sm.rotation.set(-Math.PI / 2, 0, 0);
+      sm.scale.setScalar(k);
+      sm.updateMatrix();
+      splash.setMatrixAt(i2, sm.matrix);
+    });
+    splash.instanceMatrix.needsUpdate = true;
+    out.taxi.update(dt);
+  };
+  out.setLightning = (L) => {
+    rm.opacity = 0.35 + L * 0.5;
+    sky.material.color.setRGB(0.75 + L * 3, 0.78 + L * 3, 0.85 + L * 3);
+  };
+  return out;
+}
+function buildTaxi(root, at) {
+  const g = new Group();
+  g.position.copy(at);
+  g.rotation.y = Math.PI;
+  root.add(g);
+  const paint = new MeshPhysicalMaterial({ color: 15774730, roughness: 0.32, metalness: 0.15, clearcoat: 1, clearcoatRoughness: 0.08 });
+  const black = M2({ color: 987154, roughness: 0.6 });
+  const chrome = M2({ color: 13620184, metalness: 1, roughness: 0.2 });
+  const tint = new MeshPhysicalMaterial({ color: 1382686, roughness: 0.05, transparent: true, opacity: 0.3, side: DoubleSide, depthWrite: false });
+  const L = 4.7, Wd = 1.84;
+  add2(g, new RoundedBoxGeometry(L, 0.5, Wd, 4, 0.1), paint, 0, 0.58, 0);
+  for (const sz of [1, -1]) add2(g, new RoundedBoxGeometry(2.5, 0.2, 0.1, 3, 0.04), paint, -0.25, 0.86, sz * (Wd / 2 - 0.05));
+  add2(g, new BoxGeometry(2.4, 0.04, Wd - 0.2), M2({ color: 1316120, roughness: 0.9 }), -0.25, 0.62, 0);
+  add2(g, new RoundedBoxGeometry(1.2, 0.12, Wd - 0.1, 3, 0.05), paint, 1.6, 0.84, 0, { rz: -0.06 });
+  add2(g, new RoundedBoxGeometry(0.9, 0.12, Wd - 0.1, 3, 0.05), paint, -1.95, 0.84, 0, { rz: 0.05 });
+  for (const x2 of [L / 2 - 0.02, -L / 2 + 0.02]) add2(g, new RoundedBoxGeometry(0.12, 0.2, Wd + 0.02, 2, 0.05), black, x2, 0.42, 0);
+  for (const sz of [1, -1]) {
+    const mir = add2(g, new RoundedBoxGeometry(0.12, 0.09, 0.16, 2, 0.03), black, 0.95, 1.05, sz * (Wd / 2 + 0.07));
+  }
+  const seam = M2({ color: 3811845, roughness: 0.5 });
+  for (const sz of [1, -1]) for (const x2 of [0.95, -0.22, -1.35]) add2(g, new BoxGeometry(0.012, 0.45, 0.01), seam, x2, 0.7, sz * (Wd / 2 + 3e-3), { cast: false });
+  const roofY = 1.42;
+  add2(g, new RoundedBoxGeometry(2.2, 0.1, Wd - 0.14, 3, 0.05), paint, -0.25, roofY, 0);
+  for (const [x2, z] of [[0.85, 1], [0.85, -1], [-0.2, 1], [-0.2, -1], [-1.35, 1], [-1.35, -1]]) {
+    const p2 = add2(g, new BoxGeometry(0.09, 0.52, 0.07), paint, x2, 1.17, z * (Wd / 2 - 0.08));
+    if (x2 > 0.5) p2.rotation.z = -0.55;
+    if (x2 < -1.2) p2.rotation.z = 0.45;
+  }
+  const win = (x2, z, w4) => add2(g, new PlaneGeometry(w4, 0.44), tint, x2, 1.19, z, { cast: false, receive: false });
+  win(0.32, -(Wd / 2 - 0.06), 1);
+  win(-0.78, -(Wd / 2 - 0.06), 1.05);
+  const ws = add2(g, new PlaneGeometry(Wd - 0.2, 0.62), tint, 1.06, 1.12, 0, { ry: Math.PI / 2, cast: false, receive: false });
+  ws.rotation.z = 0;
+  ws.rotation.x = 0;
+  ws.rotateX(-0.95);
+  const rw = add2(g, new PlaneGeometry(Wd - 0.2, 0.55), tint, -1.52, 1.13, 0, { ry: -Math.PI / 2, cast: false, receive: false });
+  rw.rotateX(-0.8);
+  const seatM = M2({ color: 1776671, roughness: 0.8 });
+  for (const [x2, z] of [[0.05, 0.42], [0.05, -0.42]]) {
+    add2(g, new BoxGeometry(0.55, 0.12, 0.55), seatM, x2, 0.54, z);
+    add2(g, new BoxGeometry(0.12, 0.65, 0.52), seatM, -0.25, 1, z);
+  }
+  add2(g, new BoxGeometry(1.6 * 0.4, 0.14, 1.55), seatM, -0.95, 0.72, 0);
+  add2(g, new BoxGeometry(0.12, 0.6, 1.55), seatM, -1.25, 1, 0);
+  add2(g, new BoxGeometry(0.35, 0.18, Wd - 0.2), M2({ color: 789775, roughness: 0.8 }), 0.85, 1, 0);
+  const wheel = add2(g, new TorusGeometry(0.17, 0.02, 8, 24), black, 0.55, 1.07, -0.42, { ry: Math.PI / 2 });
+  wheel.rotateX(0.4);
+  for (const [x2, z] of [[1.45, 0.86], [1.45, -0.86], [-1.45, 0.86], [-1.45, -0.86]]) {
+    const w4 = add2(g, new CylinderGeometry(0.34, 0.34, 0.24, 24), black, x2, 0.34, z, { rx: Math.PI / 2 });
+    add2(g, new CylinderGeometry(0.2, 0.2, 0.25, 16), chrome, x2, 0.34, z, { rx: Math.PI / 2 });
+  }
+  add2(g, new BoxGeometry(0.05, 0.12, 0.38), new MeshBasicMaterial({ color: new Color(3, 3, 2.6) }), L / 2, 0.72, 0.62, { cast: false });
+  add2(g, new BoxGeometry(0.05, 0.12, 0.38), new MeshBasicMaterial({ color: new Color(3, 3, 2.6) }), L / 2, 0.72, -0.62, { cast: false });
+  add2(g, new BoxGeometry(0.05, 0.12, 0.32), new MeshBasicMaterial({ color: new Color(2.5, 0.15, 0.1) }), -L / 2, 0.76, 0.65, { cast: false });
+  add2(g, new BoxGeometry(0.05, 0.12, 0.32), new MeshBasicMaterial({ color: new Color(2.5, 0.15, 0.1) }), -L / 2, 0.76, -0.65, { cast: false });
+  const ts = canvasTex(256, 64, (q4) => {
+    q4.fillStyle = "#fff6cc";
+    q4.fillRect(0, 0, 256, 64);
+    q4.fillStyle = "#111";
+    q4.font = "bold 50px Arial";
+    q4.textAlign = "center";
+    q4.textBaseline = "middle";
+    q4.fillText("TAXI", 128, 34);
+  });
+  const sgn = new Group();
+  sgn.position.set(-0.25, roofY + 0.14, 0);
+  g.add(sgn);
+  add2(sgn, new BoxGeometry(0.22, 0.2, 0.7), new MeshBasicMaterial({ map: ts, color: new Color(1.6, 1.6, 1.5) }), 0, 0, 0, { ry: Math.PI / 2 });
+  const ck = canvasTex(512, 32, (q4) => {
+    for (let i2 = 0; i2 < 32; i2++) for (let j = 0; j < 2; j++) {
+      q4.fillStyle = (i2 + j) % 2 ? "#111" : "#f0b40a";
+      q4.fillRect(i2 * 16, j * 16, 16, 16);
+    }
+  });
+  for (const s of [1, -1]) add2(g, new PlaneGeometry(3.6, 0.07), new MeshStandardMaterial({ map: ck, roughness: 0.4 }), -0.1, 0.8, s * (Wd / 2 + 2e-3), { ry: s > 0 ? 0 : Math.PI, cast: false });
+  const hinge = new Group();
+  hinge.position.set(-0.22, 0, Wd / 2);
+  g.add(hinge);
+  const door = add2(hinge, new BoxGeometry(1.05, 0.62, 0.05), paint, -0.53, 0.66, 0);
+  add2(hinge, new PlaneGeometry(1, 0.42), tint, -0.53, 1.15, 0, { cast: false, receive: false });
+  let dOpen = 0, dGoal = 0;
+  const out = { group: g, setDoor: (o) => dGoal = o ? 1 : 0, update: (dt) => {
+    dOpen += (dGoal - dOpen) * Math.min(1, dt * 4);
+    hinge.rotation.y = dOpen * 1.05;
+  } };
+  out.driverSeat = new Vector3(0.05, 0, -0.42).applyMatrix4(g.matrixWorld.compose(g.position, g.quaternion, g.scale));
+  out.rearDoor = new Vector3(-0.75, 0, Wd / 2 + 0.55).applyMatrix4(g.matrixWorld);
+  out.passWindow = new Vector3(0.3, 1.15, Wd / 2).applyMatrix4(g.matrixWorld);
+  return out;
+}
+function wetFloorSign(root, at) {
+  const g = new Group();
+  g.position.copy(at);
+  g.rotation.y = 0.7;
+  root.add(g);
+  const t = canvasTex(256, 512, (q4) => {
+    q4.fillStyle = "#ffd21f";
+    q4.fillRect(0, 0, 256, 512);
+    q4.fillStyle = "#111";
+    q4.beginPath();
+    q4.moveTo(128, 40);
+    q4.lineTo(220, 200);
+    q4.lineTo(36, 200);
+    q4.closePath();
+    q4.fill();
+    q4.fillStyle = "#ffd21f";
+    q4.font = "bold 120px Arial";
+    q4.textAlign = "center";
+    q4.fillText("!", 128, 190);
+    q4.fillStyle = "#111";
+    q4.font = "bold 46px Arial";
+    q4.fillText("CUIDADO", 128, 290);
+    q4.font = "bold 40px Arial";
+    q4.fillText("PISO", 128, 360);
+    q4.fillText("MOLHADO", 128, 410);
+  });
+  const m3 = new MeshStandardMaterial({ map: t, roughness: 0.5, side: DoubleSide });
+  for (const s of [1, -1]) {
+    const geo = new PlaneGeometry(0.32, 0.62);
+    geo.translate(0, -0.31, 0);
+    const p2 = new Mesh(geo, m3);
+    p2.position.set(0, 0.62, 0);
+    p2.rotation.x = s * 0.26;
+    p2.castShadow = true;
+    g.add(p2);
+  }
+  return g;
 }
 
 // src/totem.js
@@ -51651,9 +52202,9 @@ function boardingPass() {
   q4.fillText("BOARDING PASS", 8, 19);
   q4.fillStyle = "#111";
   q4.font = "bold 26px Arial";
-  q4.fillText("ATL \u2192 MCO", 10, 62);
+  q4.fillText("DFW \u2192 LAS", 10, 62);
   q4.font = "14px Arial";
-  q4.fillText("DL 1234 \xB7 18:40 \xB7 A14", 10, 90);
+  q4.fillText("AA 1455 \xB7 13:05 \xB7 C14", 10, 90);
   for (let i2 = 0; i2 < 30; i2++) {
     q4.fillRect(180 + i2 * 2.2, 40, i2 % 3 ? 1 : 2, 50);
   }
@@ -51661,6 +52212,91 @@ function boardingPass() {
   t.colorSpace = SRGBColorSpace;
   const m3 = new Mesh(new PlaneGeometry(0.16, 0.07), new MeshStandardMaterial({ map: t, side: DoubleSide, roughness: 0.6 }));
   return m3;
+}
+function chatPhone() {
+  const g = phone();
+  const c = document.createElement("canvas");
+  c.width = 360;
+  c.height = 760;
+  const q4 = c.getContext("2d");
+  const t = new CanvasTexture(c);
+  t.colorSpace = SRGBColorSpace;
+  g.children[1].material = new MeshBasicMaterial({ map: t });
+  g.setChat = (msgs) => {
+    q4.fillStyle = "#0b141a";
+    q4.fillRect(0, 0, 360, 760);
+    q4.fillStyle = "#1f2c34";
+    q4.fillRect(0, 0, 360, 96);
+    q4.fillStyle = "#e9edef";
+    q4.font = "bold 36px Arial";
+    q4.fillText("Amor \u2764", 28, 62);
+    let y = 150;
+    q4.font = "27px Arial";
+    for (const m3 of msgs) {
+      const words = m3.text.split(" "), lines = [];
+      let cur = "";
+      for (const w4 of words) {
+        if (q4.measureText(cur + " " + w4).width > 250 && cur) {
+          lines.push(cur);
+          cur = w4;
+        } else cur = cur ? cur + " " + w4 : w4;
+      }
+      lines.push(cur);
+      const h = lines.length * 34 + 26, x2 = m3.me ? 70 : 18;
+      q4.fillStyle = m3.me ? "#005c4b" : "#1f2c34";
+      q4.beginPath();
+      q4.roundRect(x2, y, 272, h, 14);
+      q4.fill();
+      q4.fillStyle = "#e9edef";
+      lines.forEach((l, i2) => q4.fillText(l, x2 + 16, y + 40 + i2 * 34));
+      y += h + 18;
+    }
+    q4.fillStyle = "#1f2c34";
+    q4.fillRect(14, 680, 332, 64);
+    t.needsUpdate = true;
+  };
+  g.setChat([]);
+  return g;
+}
+function glasses() {
+  const g = new Group();
+  const m3 = new MeshStandardMaterial({ color: 1118481, roughness: 0.4, metalness: 0.3 });
+  const lens = new MeshPhysicalMaterial({ color: 16777215, roughness: 0.02, transparent: true, opacity: 0.12, depthWrite: false });
+  for (const s of [-1, 1]) {
+    const r2 = new Mesh(new TorusGeometry(0.024, 25e-4, 6, 24), m3);
+    r2.scale.set(1.2, 0.85, 1);
+    r2.position.set(s * 0.032, 0, 0);
+    g.add(r2);
+    const l = new Mesh(new CircleGeometry(0.024, 20), lens);
+    l.scale.set(1.2, 0.85, 1);
+    l.position.set(s * 0.032, 0, 0);
+    g.add(l);
+    const arm = new Mesh(new BoxGeometry(3e-3, 3e-3, 0.1), m3);
+    arm.position.set(s * 0.062, 5e-3, -0.05);
+    g.add(arm);
+  }
+  const br = new Mesh(new BoxGeometry(0.014, 3e-3, 3e-3), m3);
+  br.position.y = 6e-3;
+  g.add(br);
+  return g;
+}
+function badge() {
+  const c = document.createElement("canvas");
+  c.width = 128;
+  c.height = 80;
+  const q4 = c.getContext("2d");
+  q4.fillStyle = "#fff";
+  q4.fillRect(0, 0, 128, 80);
+  q4.fillStyle = "#0b2a66";
+  q4.fillRect(0, 0, 128, 22);
+  q4.fillStyle = "#fff";
+  q4.font = "bold 15px Arial";
+  q4.fillText("DFW STAFF", 10, 16);
+  q4.fillStyle = "#333";
+  q4.fillRect(10, 30, 32, 40);
+  const t = new CanvasTexture(c);
+  t.colorSpace = SRGBColorSpace;
+  return new Mesh(new PlaneGeometry(0.075, 0.047), new MeshStandardMaterial({ map: t, roughness: 0.5 }));
 }
 
 // src/config.js
@@ -51728,8 +52364,26 @@ var LINES = {
   p3: { who: "prof", audio: "p3.mp3", text: "Mas por qu\xEA?" },
   a4: { who: "att", audio: "a4.mp3", text: "Principalmente porque o avi\xE3o que vai fazer o seu voo saiu atrasado da \xFAltima cidade, tem trovoada aqui agora, e o aeroporto inteiro j\xE1 est\xE1 atrasando." },
   p4: { who: "prof", audio: "p4.mp3", text: "Noventa e quatro anos esperando\u2026 meu sogro aguenta mais meia hora. Tranquilo." },
-  p5: { who: "prof", audio: "p5.mp3", text: "A minha esposa \xE9 que n\xE3o." }
+  p5: { who: "prof", audio: "p5.mp3", text: "A minha esposa \xE9 que n\xE3o." },
+  // roteiro v2 (camada C) — áudios provisórios até cada integrante gravar a própria fala
+  m1: { who: "diniz", audio: "m1.mp3", text: "Ch\u2026 chegamos, senhor. \xC9\u2026 dia feio pra voar, n\xE9?" },
+  m2: { who: "diniz", audio: "m2.mp3", text: "Ah\u2026 boa viagem, senhor." },
+  l1: { who: "leo", audio: "l1.mp3", text: "Atrasou de novo? O painel dizia no hor\xE1rio at\xE9 agora h\xE1 pouco!" },
+  mt1: { who: "motti", audio: "mt1.mp3", text: "\xD4, senhor! Vi que o senhor t\xE1 com pressa\u2026" },
+  sa1: { who: "sa", audio: "sa1.mp3", text: "Ent\xE3o d\xE1 uma olhada no totem ali pra saber do seu voo." },
+  p8: { who: "prof", audio: "p8.mp3", text: "Se eu soubesse que existia isso, podia ter visto e sa\xEDdo de casa sem essa pressa toda." },
+  p6: { who: "prof", audio: "p6.mp3", text: "Amor\u2026 o voo vai atrasar uns quarenta minutos. N\xE3o, n\xE3o fui eu, foi o avi\xE3o!" },
+  p7: { who: "prof", audio: "p7.mp3", text: "Mas fala pro seu pai que o presente vai chegar sequinho." },
+  p9: { who: "prof", audio: "p9.mp3", text: "Se eu tivesse alunos bons na minha \xE9poca, esse preditor de atraso de voos daria um bom projeto de inicia\xE7\xE3o cient\xEDfica." }
 };
+var NAMES = { prof: "Soussa", att: "Guis", diniz: "Diniz", leo: "Leo", motti: "Motti", sa: "S\xE1" };
+var CREDITS = [
+  ["Soussa", "ele mesmo"],
+  ["Guis", "atendente do totem"],
+  ["Diniz", "motorista"],
+  ["Leo \u201CRatito\u201D", "passageiro ao telefone"],
+  ["Motti e S\xE1", "portaria"]
+];
 
 // src/main.js
 var Q = new URLSearchParams(location.search);
@@ -51763,6 +52417,7 @@ scene.environmentIntensity = 0.45;
 var camera = new PerspectiveCamera(32, container.clientWidth / container.clientHeight, 0.05, 600);
 camera.position.set(6, 1.7, 9);
 var airport = buildAirport(scene, { quality: QUALITY, flights: CFG.board });
+var land = buildLandside(scene, { quality: QUALITY });
 var totem = createTotem(CFG);
 scene.add(totem.group);
 var composer = new EffectComposer(renderer);
@@ -51873,18 +52528,33 @@ function thunder(delay = 0.6) {
   s.start(t0);
 }
 var EVENTS = window.__events = [];
+function sfx(name, vol = 1) {
+  EVENTS.push({ t: vt, type: "sfx", file: name + ".mp3", vol });
+  const b = audioBuffers["sfx_" + name];
+  if (!b || SIM || audioCtx.state !== "running") return null;
+  const s = audioCtx.createBufferSource();
+  s.buffer = b;
+  const g = audioCtx.createGain();
+  g.gain.value = vol;
+  s.connect(g).connect(master);
+  s.start();
+  return { s, g };
+}
 airport.onStrike = () => {
   const d = 0.5 + Math.random() * 0.8;
   EVENTS.push({ t: vt + d, type: "thunder" });
   thunder(d);
+  airport.flicker?.();
 };
 var bag = giftBag();
 scene.add(bag);
 var suit = suitcase();
 scene.add(suit);
-var phone2 = phone();
+var phone2 = chatPhone();
 phone2.visible = false;
 scene.add(phone2);
+var leoPhone = phone();
+scene.add(leoPhone);
 var pass = boardingPass();
 pass.visible = false;
 scene.add(pass);
@@ -52005,7 +52675,12 @@ async function preloadAnims(a, keys) {
 }
 var prof;
 var att;
+var diniz;
+var leo;
+var motti;
+var sa;
 var actors = [];
+var ACT = {};
 var vt = 0;
 var runId = 0;
 var waiters = [];
@@ -52027,9 +52702,9 @@ function flushWaiters() {
     }
   }
 }
-function walkTo(a, pts, speed = WALK_SPEED) {
+function walkTo(a, pts, speed = WALK_SPEED, rate = 1) {
   return new Promise((res) => {
-    a.walk = { pts: pts.map((p2) => p2.clone()), i: 0, speed, res };
+    a.walk = { pts: pts.map((p2) => p2.clone()), i: 0, speed, res, rate };
     if (!SIM) a.head.playAnimation(ANIM.walk, null, 120);
     else a.head.playAnimation(ANIM.walk, null, 120);
   });
@@ -52037,6 +52712,7 @@ function walkTo(a, pts, speed = WALK_SPEED) {
 function updateWalk(a, dt) {
   const w4 = a.walk;
   if (!w4) return;
+  if (a.head.mixer) a.head.mixer.timeScale = w4.rate;
   const tgt = w4.pts[w4.i];
   const d = tgt.clone().sub(a.pos);
   d.y = 0;
@@ -52046,6 +52722,7 @@ function updateWalk(a, dt) {
     w4.i++;
     if (w4.i >= w4.pts.length) {
       a.walk = null;
+      if (a.head.mixer) a.head.mixer.timeScale = 1;
       a.head.stopAnimation();
       w4.res();
       return;
@@ -52138,11 +52815,11 @@ function showSub(who, text) {
     el.classList.remove("on");
     return;
   }
-  el.innerHTML = `<span class="who">${who === "prof" ? "Soussa" : "Guis"}</span>${text}`;
+  el.innerHTML = `<span class="who">${NAMES[who] || who}</span>${text}`;
   el.classList.add("on");
 }
 async function say(id, { gesture = null, anim = null } = {}) {
-  const L = LINES[id], a = L.who === "prof" ? prof : att;
+  const L = LINES[id], a = ACT[L.who];
   showSub(L.who, L.text);
   const t0 = vt;
   if (anim && !a.walk) a.head.playAnimation(ANIM[anim], null, 30);
@@ -52189,7 +52866,7 @@ async function say(id, { gesture = null, anim = null } = {}) {
       return;
     }
   }
-  EVENTS.push({ t: t0, type: "line", id, who: L.who, text: L.text, dur: durMs / 1e3, file: audioBuffers[id] ? L.audio : null });
+  EVENTS.push({ t: t0, type: "line", id, who: L.who, name: NAMES[L.who], text: L.text, dur: durMs / 1e3, file: audioBuffers[id] ? L.audio : null });
   await wait(durMs / 1e3 + 0.25);
   if (anim) a.head.stopAnimation();
   showSub(null);
@@ -52217,6 +52894,9 @@ function headOf(a, dy = 0) {
     v4.y += dy;
     return v4;
   };
+}
+function mid(f1, f2) {
+  return () => val(f1).clone().add(val(f2)).multiplyScalar(0.5);
 }
 function updateCamera() {
   if (!shot) return;
@@ -52287,13 +52967,27 @@ function updateProps(dt) {
     suit.quaternion.slerp(new Quaternion().setFromEuler(new Euler(0, prof.yaw, 0)), Math.min(1, dt * 3));
     suitWheel.copy(suit.position);
   }
-  phone2.visible = state.phone;
+  phone2.visible = !!state.phone;
   if (state.phone) {
     gripPoint(prof, "Right", hand);
     const face = prof.headPos();
-    phone2.position.copy(hand).add(face.clone().sub(hand).normalize().multiplyScalar(0.035));
-    phone2.lookAt(face);
+    if (state.phone === "ear") {
+      phone2.position.copy(hand).add(V(0, 0.05, 0));
+      phone2.lookAt(face);
+      phone2.rotateX(-0.3);
+    } else {
+      phone2.position.copy(hand).add(face.clone().sub(hand).normalize().multiplyScalar(0.035));
+      phone2.lookAt(face);
+    }
     M_PHONE.position.copy(phone2.position);
+  }
+  leoPhone.visible = !!leo.onPhone;
+  if (leo.onPhone) {
+    curlFingers(leo, "Right", 0.6);
+    gripPoint(leo, "Right", hand);
+    leoPhone.position.copy(hand).add(V(0, 0.05, 0));
+    leoPhone.lookAt(leo.headPos());
+    leoPhone.rotateX(-0.3);
   }
   pass.visible = state.passMode !== "hidden";
   if (state.passOwner) {
@@ -52333,12 +53027,37 @@ function updateActors(dt) {
     a.head.animate(dt * 1e3);
     a.arm.updateMatrixWorld(true);
   }
+  const earPt = (a) => {
+    const r2 = V(-Math.cos(a.yaw), 0, Math.sin(a.yaw)), f = V(Math.sin(a.yaw), 0, Math.cos(a.yaw));
+    return a.headPos().addScaledVector(r2, 0.13).addScaledVector(f, 0).add(V(0, -0.17, 0));
+  };
+  if (state.phone === "ear") prof.ikR.set(earPt(prof), 1);
+  if (state.phone === "hand" && !state.typing) {
+    const f = fwdOf(prof), r2 = V(-Math.cos(prof.yaw), 0, Math.sin(prof.yaw));
+    prof.ikR.set(prof.pos.clone().addScaledVector(f, 0.42).addScaledVector(r2, 0.05).add(V(0, 1.18, 0)), 1);
+  }
+  if (leo.onPhone) leo.ikR.set(earPt(leo), 1);
+  for (const a of actors) {
+    if (a.slip > 0) {
+      a.slip -= dt;
+      const k = Math.max(0, a.slip) / 0.9;
+      a.arm.rotation.z = Math.sin((0.9 - a.slip) * 14) * 0.16 * k;
+      a.arm.rotation.x = -Math.sin((0.9 - a.slip) * 9) * 0.08 * k;
+      const r2 = V(-Math.cos(a.yaw), 0, Math.sin(a.yaw)), f = V(Math.sin(a.yaw), 0, Math.cos(a.yaw));
+      a.ikR.set(a.pos.clone().addScaledVector(r2, 0.55).addScaledVector(f, 0.1).add(V(0, 1.45, 0)), k);
+      if (a.slip <= 0) {
+        a.ikR.release();
+        a.arm.rotation.z = a.arm.rotation.x = 0;
+      }
+    }
+  }
   if (state.typing && prof.ikR) {
     const fwd = V(Math.sin(prof.yaw), 0, Math.cos(prof.yaw)), right = V(-Math.cos(prof.yaw), 0, Math.sin(prof.yaw));
-    const p2 = prof.pos.clone().addScaledVector(fwd, 0.3).addScaledVector(right, 0.04);
-    p2.y = 1.27 + Math.sin(vt * 9) * 4e-3;
+    const p2 = prof.pos.clone().addScaledVector(fwd, 0.42).addScaledVector(right, 0.05);
+    p2.y = 1.18 + Math.sin(vt * 9) * 4e-3;
     prof.ikR.set(p2, 1);
   }
+  if (diniz.head.poseName !== "sitting") diniz.head.playPose("sitting", null, 1e6);
   for (const a of actors) {
     guardArms(a);
     a.look.update(dt);
@@ -52350,25 +53069,57 @@ function updateActors(dt) {
 function setTotem(s) {
   totem.setState(s);
 }
+var yawTo = (from, to) => Math.atan2(to.x - from.x, to.z - from.z);
+var fwdOf = (a) => V(Math.sin(a.yaw), 0, Math.cos(a.yaw));
+var TX = land.taxi;
+var EXT_START = TX.rearDoor.clone();
+var DOOR_OUT = V(8.2, 0, 17.4);
+var DOOR_IN = V(8.4, 0, 13.9);
+var BOARD2 = V(14.2, 4.6, 7.6);
+var BOARD2_SPOT = V(11.5, 0, 12.3);
+var DESK_STOP = V(4.05, 0, 11.75);
+var MOTTI_POS = V(2.15, 0, 11.05);
+var SA_POS = V(2.15, 0, 12.15);
+var LEO_A = V(10.4, 0, 14.4);
+var LEO_B = V(12.9, 0, 14);
+var M_BOARD2 = marker(BOARD2);
+var M_FEET = marker(V(0, 0.1, 0));
+var rainOut = null;
 function resetWorld() {
-  prof.pos.set(8.5, 0, 9.2);
-  prof.yaw = prof.yawGoal = -2.1;
+  prof.pos.copy(EXT_START);
+  prof.yaw = prof.yawGoal = Math.PI;
   prof.walk = null;
   prof.head.stopAnimation();
+  prof.slip = 0;
   att.pos.copy(ATT_POS);
   att.yaw = att.yawGoal = ATT_YAW;
-  state.suitMode = "pull";
+  diniz.pos.copy(TX.driverSeat).add(V(0, 0.47, 0));
+  diniz.yaw = diniz.yawGoal = -Math.PI / 2;
+  leo.pos.copy(LEO_A);
+  leo.yaw = leo.yawGoal = Math.PI / 2;
+  leo.onPhone = true;
+  leo.walk = null;
+  motti.pos.copy(MOTTI_POS);
+  motti.yaw = motti.yawGoal = Math.PI / 2;
+  sa.pos.copy(SA_POS);
+  sa.yaw = sa.yawGoal = Math.PI / 2;
+  state.suitMode = "parked";
   state.phone = false;
   state.typing = false;
   state.passMode = "hidden";
   state.passOwner = null;
-  [prof, att].forEach((a) => {
+  actors.forEach((a) => {
     a.ikL.weight = a.ikL.goal = 0;
     a.ikR.weight = a.ikR.goal = 0;
     a.look.weight = a.look.goal = 0;
     a.look.target = null;
+    a.arm.rotation.x = a.arm.rotation.z = 0;
   });
-  suitWheel.set(9, 0, 10);
+  suit.position.copy(EXT_START).add(V(0.45, 0, 0.1));
+  suit.quaternion.setFromEuler(new Euler(0, Math.PI, 0));
+  airport.setDelayed(false);
+  land.doors(false);
+  TX.setDoor(true);
   setTotem("idle");
   grade.uniforms.uFade.value = 1;
   $("endcard").classList.remove("on");
@@ -52383,38 +53134,162 @@ function placeAtKiosk() {
   suit.quaternion.setFromEuler(new Euler(0, PROF_YAW, 0));
   look(prof, att.head);
   look(att, prof.head);
+  leo.onPhone = false;
+  leo.pos.set(14, 0, 18);
 }
 var screenCam = (v4, dist = 1.1, dx = -0.18) => ({ p: () => screenPt(0.5, v4).add(V(dx, 0.13 * dist, 0.99 * dist)), l: () => screenPt(0.5, v4) });
 var screenPt = (u, v4) => totem.screen.localToWorld(V((u - 0.5) * 0.54, (0.5 - v4) * 0.96, 0.03));
+var until = async (cond, max2 = 20) => {
+  const t = vt;
+  while (!cond() && vt - t < max2) await wait(1 / 30);
+};
 async function scene1() {
-  cut({ p0: V(-3.5, 3.4, 14.5), p1: V(-1.8, 2.3, 12.5), l0: V(3, 1.6, 6), l1: () => prof.headPos().add(V(-1.2, -0.3, -1)), dur: 9, fov: 34, focus: headOf(prof), aperture: 8e-4 });
-  const walking = walkTo(prof, [V(5.5, 0, 7.9), V(0.6, 0, 7.3), V(-1.6, 0, 5.6), BOARD_SPOT]);
-  await wait(4.6);
-  cut({ p0: rel(prof, -1, 1.55, 3.4), p1: rel(prof, -0.8, 1.55, 2.6), l0: headOf(prof, -0.3), dur: 6, fov: 30, focus: headOf(prof), smoothPos: true });
-  await walking;
-  turnTo(prof, -2.6);
-  look(prof, M_BOARD);
-  await wait(0.6);
-  cut({ p0: () => prof.pos.clone().add(V(-1.7, 1.62, 1.3)), l0: headOf(prof, -0.18), p1: () => prof.pos.clone().add(V(-1.4, 1.62, 1.05)), dur: 8, fov: 28, focus: headOf(prof), aperture: 2e-3 });
-  await say("p1", { anim: "talk1" });
-  await wait(0.3);
+  rainOut = sfx("rain_out", 1);
+  look(diniz, prof.head);
+  look(prof, TX.group);
+  cut({ p0: V(7.5, 1.55, 13.4), p1: V(7.7, 1.55, 14.2), l0: V(9, 1.15, 22.2), dur: 6, fov: 30, focus: () => V(9, 1.1, 22), aperture: 12e-4 });
+  await wait(2.2);
+  sfx("carDoor", 0.8);
+  TX.setDoor(false);
+  await wait(1.3);
+  cut({ p0: () => V(7.55, 1.22, 19.9), l0: headOf(diniz, -0.05), fov: 20, focus: headOf(diniz), aperture: 22e-4, handheld: 4e-3 });
+  await wait(0.4);
+  await say("m1");
+  cut({ p0: V(8.05, 1.62, 18.4), p1: V(8.15, 1.62, 18.9), l0: headOf(prof, -0.12), dur: 4, fov: 30, focus: headOf(prof), aperture: 2e-3 });
+  look(prof, diniz.head);
+  prof.head.playGesture("handup", 1.4, true);
+  await wait(1.5);
+  look(prof, null);
+  state.suitMode = "pull";
+  const go = walkTo(prof, [V(8.8, 0, 19.6), DOOR_OUT], 1.35);
+  await wait(1.2);
+  cut({ p0: () => V(7.3, 1.2, 20.1), l0: headOf(diniz, -0.05), fov: 22, focus: headOf(diniz), aperture: 2e-3, handheld: 4e-3 });
+  look(diniz, prof.head);
+  await say("m2");
+  airport.strikeNow();
+  await go;
 }
 async function scene2() {
+  cut({ p0: V(7.1, 1.5, 12.4), p1: V(7.3, 1.5, 12.9), l0: V(8.3, 1.45, 16.5), dur: 6, fov: 32, focus: headOf(prof), aperture: 15e-4 });
+  land.doors(true);
+  sfx("door", 0.7);
+  await wait(0.5);
+  const inn = walkTo(prof, [V(8.3, 0, 15.6), DOOR_IN], 1.25);
+  await until(() => prof.pos.z < 15.2);
+  if (rainOut) rainOut.g.gain.setTargetAtTime(0.35, audioCtx.currentTime, 0.4);
+  EVENTS.push({ t: vt, type: "rainDuck" });
+  await inn;
+  land.doors(false);
+  sfx("door", 0.5);
+  turnTo(prof, Math.PI + 0.35);
+  sfx("buzz", 0.8);
+  phone2.setChat([{ me: false, text: "J\xE1 t\xE1 no aeroporto? Papai t\xE1 de roupa nova desde as 7h." }]);
+  state.phone = "hand";
+  state.suitMode = "parked";
+  look(prof, M_PHONE);
+  await wait(0.4);
+  cut({ p0: rel(prof, -0.26, 1.86, -0.06), p1: rel(prof, -0.22, 1.84, 0), l0: () => M_PHONE.position.clone(), dur: 5, fov: 22, focus: () => M_PHONE.position.clone(), aperture: 14e-4, handheld: 3e-3 });
+  await wait(2.4);
+  state.typing = true;
+  await wait(1.4);
+  state.typing = false;
+  phone2.setChat([{ me: false, text: "J\xE1 t\xE1 no aeroporto? Papai t\xE1 de roupa nova desde as 7h." }, { me: true, text: "Cheguei. Tudo no hor\xE1rio." }]);
+  await wait(1.8);
+  state.phone = false;
+  prof.ikR.release();
+}
+async function scene3() {
+  state.suitMode = "pull";
+  look(prof, M_BOARD2);
+  leo.onPhone = true;
+  cut({ p0: V(9.4, 1.6, 15.2), l0: headOf(prof, -0.2), fov: 34, focus: headOf(prof), aperture: 12e-4, smoothPos: true });
+  await walkTo(prof, [V(10.2, 0, 13.2), BOARD2_SPOT], 1.2);
+  turnTo(prof, yawTo(prof.pos, BOARD2));
+  state.suitMode = "parked";
+  prof.ikR.release();
+  cut({ p0: () => prof.pos.clone().add(V(-0.75, 1.75, 1.15)), p1: () => prof.pos.clone().add(V(-0.6, 1.72, 0.9)), l0: () => BOARD2.clone().add(V(0.45, -0.1, 0.1)), dur: 4.5, fov: 27, focus: () => BOARD2.clone(), aperture: 8e-4, handheld: 2e-3 });
+  await wait(3.6);
+  cut({ p0: rel(prof, 0.1, 1.58, 1.55), l0: headOf(prof, -0.05), fov: 28, focus: headOf(prof), aperture: 16e-4 });
+  prof.head.setMood("happy");
+  walkTo(leo, [LEO_B], 0.9);
+  await wait(1.1);
+  airport.strikeNow();
+  await wait(0.9);
+  prof.head.setMood("neutral");
+  cut({ p0: rel(prof, 0.45, 1.6, 1.5), l0: headOf(leo, -0.15), fov: 22, focus: headOf(leo), aperture: 2e-3 });
+  look(leo, null);
+  const l1 = say("l1", { anim: "talk1" });
+  await wait(1);
+  look(prof, leo.head);
+  turnTo(prof, yawTo(prof.pos, leo.pos) - 0.6);
+  await l1;
+  walkTo(leo, [LEO_A, V(9.2, 0, 15)], 0.9);
+  cut({ p0: rel(prof, -0.2, 1.6, 1.3), l0: headOf(prof, -0.06), fov: 26, focus: headOf(prof), aperture: 2e-3 });
+  look(prof, M_BOARD2);
+  prof.head.setMood("sad");
+  await wait(1.6);
+}
+async function scene4() {
+  prof.head.setMood("neutral");
+  look(prof, null);
+  state.suitMode = "pull";
+  cut({ p0: V(6.9, 1.62, 9.3), l0: V(3.4, 1.3, 11.7), fov: 34, focus: () => V(3, 1.4, 11.6), aperture: 12e-4 });
+  const go = walkTo(prof, [V(8, 0, 12), DESK_STOP], 1.3);
+  look(motti, prof.head);
+  look(sa, prof.head);
+  await wait(1.6);
+  const call = say("mt1", { gesture: ["handup", 1.6] });
+  await go;
+  turnTo(prof, -Math.PI / 2 + 0.25);
+  state.suitMode = "parked";
+  prof.ikR.release();
+  look(prof, motti.head);
+  await call;
+  cut({ p0: rel(motti, -0.3, 1.62, -0.55), l0: headOf(prof, -0.08), fov: 28, focus: headOf(prof), aperture: 22e-4 });
+  await say("p1", { anim: "talk1" });
+  cut({ p0: () => V(3.4, 1.5, 14.2), l0: () => mid(headOf(motti), headOf(sa))(), fov: 30, focus: headOf(motti), aperture: 15e-4 });
+  look(motti, sa.head);
+  look(sa, motti.head);
+  await wait(1.4);
+  look(sa, totem.head);
+  turnTo(sa, yawTo(sa.pos, KIOSK) + 0.5);
+  const sp = say("sa1", { gesture: ["index", 2.6] });
+  await wait(1.6);
+  cut({ p0: () => prof.headPos().add(V(-0.15, 0, -0.1)), l0: () => totem.head.getWorldPosition(new Vector3()), fov: 26, focus: () => totem.head.getWorldPosition(new Vector3()), aperture: 16e-4, handheld: 4e-3 });
   look(prof, totem.head);
-  cut({ p0: V(3.4, 1.55, 4.2), p1: V(2.6, 1.5, 3.4), l0: () => prof.headPos().add(V(0, -0.35, 0)), dur: 5, fov: 32, focus: headOf(prof), smoothPos: true });
-  await walkTo(prof, [V(-0.8, 0, 3), V(0.55, 0, 1.55), PROF_STOP], 1.15);
+  await sp;
+  cut({ p0: rel(motti, -0.3, 1.62, -0.55), l0: headOf(prof, -0.08), fov: 28, focus: headOf(prof), aperture: 22e-4 });
+  look(prof, sa.head);
+  prof.head.playGesture("thumbup", 1.2, true);
+  await wait(1.3);
+}
+async function scene5() {
+  look(prof, totem.head);
+  state.suitMode = "pull";
+  look(motti, prof.head);
+  look(sa, prof.head);
+  const run2 = walkTo(prof, [V(3.75, 0, 7.6), V(2.8, 0, 5), V(1.6, 0, 2.6), PROF_STOP], 2, 1.55);
+  cut({ p0: V(4.25, 0.32, 3.9), l0: V(3.1, 0.35, 5.6), fov: 38, focus: () => V(3, 0.3, 5.2), aperture: 12e-4, handheld: 3e-3 });
+  await until(() => prof.pos.z < 5.5);
+  prof.slip = 0.9;
+  sfx("squeak", 0.9);
+  await wait(0.7);
+  cut({ p0: V(2.2, 1.55, 3.6), p1: V(2, 1.5, 3.2), l0: () => prof.headPos().add(V(0, -0.35, 0)), dur: 3, fov: 32, focus: headOf(prof), smoothPos: true });
+  look(att, prof.head);
+  await run2;
   turnTo(prof, PROF_YAW);
   state.suitMode = "parked";
   prof.ikR.release();
   look(prof, att.head);
-  look(att, prof.head);
-  await wait(0.5);
+  await wait(0.4);
+}
+async function scene6() {
   cut({ p0: rel(att, -0.55, 1.6, -0.45), l0: headOf(prof, -0.08), fov: 30, focus: headOf(prof), aperture: 25e-4 });
   await say("p2", { gesture: ["index", 1.6, true] });
   cut({ p0: rel(prof, 0.55, 1.62, -0.45), l0: headOf(att, -0.08), fov: 30, focus: headOf(att), aperture: 25e-4 });
   await say("a1", { gesture: ["side", 2, true] });
 }
-async function scene3() {
+async function scene7() {
   cut({ p0: V(1.9, 1.45, 2.6), p1: V(1.6, 1.4, 2.2), l0: V(-0.15, 1.15, 0.55), dur: 4, fov: 32, focus: () => V(-0.15, 1.1, 0.7) });
   state.passMode = "prof";
   state.passOwner = prof;
@@ -52466,7 +53341,7 @@ async function scene3() {
   }
   await wait(3.5);
 }
-async function scene4() {
+async function scene8() {
   att.ikR.set(screenPt(0.5, 0.78), 1);
   await wait(0.5);
   att.ikR.release();
@@ -52506,49 +53381,95 @@ async function scene4() {
   await wait(5);
   cut({ p0: rel(prof, 0.38, 1.66, -0.62), l0: headOf(att, -0.06), fov: 25, focus: headOf(att), aperture: 28e-4 });
   await s;
-  att.head.setMood("happy");
+  cut({ p0: rel(prof, 0.45, 1.58, 1.15), p1: rel(prof, 0.4, 1.58, 1), l0: headOf(prof, -0.12), dur: 9, fov: 26, focus: headOf(prof), aperture: 3e-3 });
+  look(prof, M_SCREEN);
+  await wait(0.9);
+  M_FEET.position.copy(prof.pos).addScaledVector(fwdOf(prof), 0.35);
+  look(prof, M_FEET);
+  await wait(1);
+  look(prof, att.head);
+  await say("p8", { anim: "talk1" });
 }
-async function scene5() {
+async function scene9() {
   cut({ p0: rel(prof, 0.5, 1.56, 1.25), p1: rel(prof, 0.42, 1.57, 1.1), l0: headOf(prof, -0.12), dur: 10, fov: 26, focus: headOf(prof), aperture: 3e-3 });
   look(prof, M_BAG);
-  await wait(1.6);
-  const fwd = () => V(Math.sin(prof.yaw), 0, Math.cos(prof.yaw));
-  prof.ikL.set(prof.pos.clone().addScaledVector(fwd(), 0.28).add(V(0, 1.12, 0)), 1);
-  await wait(1.6);
+  await wait(1.4);
+  prof.ikL.set(prof.pos.clone().addScaledVector(fwdOf(prof), 0.28).add(V(0, 1.12, 0)), 1);
+  await wait(1.4);
   prof.ikL.release();
   look(prof, att.head);
   await say("p4");
   await wait(0.9);
-  look(prof, att.head);
   look(prof, camera);
   await say("p5");
-  cut({ p0: rel(prof, -0.3, 1.95, -0.22), p1: rel(prof, -0.27, 1.92, -0.17), l0: () => M_PHONE.position.clone(), dur: 5, fov: 30, focus: () => M_PHONE.position.clone(), aperture: 15e-4 });
-  state.phone = true;
-  state.typing = true;
-  look(prof, M_PHONE);
-  airport.strikeNow();
+}
+async function scene10() {
+  turnTo(prof, PROF_YAW + 0.7);
+  look(prof, null);
+  state.phone = "ear";
+  phone2.setChat([]);
+  sfx("buzz", 0.4);
+  cut({ p0: rel(prof, 0.35, 1.58, 1.5), p1: rel(prof, 0.3, 1.58, 1.3), l0: headOf(prof, -0.1), dur: 10, fov: 28, focus: headOf(prof), aperture: 26e-4 });
+  await wait(1.2);
+  await say("p6", { anim: "talk1" });
+  look(prof, M_BAG);
+  await say("p7");
+}
+async function scene11() {
+  state.phone = false;
+  prof.ikR.release();
+  look(prof, M_BOARD);
+  turnTo(prof, yawTo(prof.pos, M_BOARD.position));
+  const toB = M_BOARD.position.clone().sub(prof.pos).setY(0).normalize();
+  const camP = () => prof.pos.clone().addScaledVector(toB, -1.5).add(V(-toB.z * 0.45, 1.72, toB.x * 0.45));
+  cut({ p0: camP, l0: () => M_BOARD.position.clone().add(V(0, -0.2, 0)), fov: 24, focus: headOf(prof), aperture: 16e-4 });
   await wait(1.6);
-  for (let i2 = 0; i2 <= 30; i2++) {
-    grade.uniforms.uFade.value = 1 - i2 / 30;
-    await wait(1.4 / 30);
-  }
-}
-async function scene6() {
+  airport.setDelayed(true);
+  sfx("buzz", 0);
+  cut({ p0: camP, l0: () => M_BOARD.position.clone().add(V(0, -0.2, 0)), fov: 24, focus: () => M_BOARD.position.clone(), aperture: 16e-4 });
+  await wait(2.6);
+  cut({ p0: rel(prof, -0.15, 1.6, 1.15), p1: rel(prof, -0.1, 1.6, 1), l0: headOf(prof, -0.06), dur: 12, fov: 26, focus: headOf(prof), aperture: 3e-3 });
+  await wait(0.8);
+  look(prof, totem.head);
+  await wait(0.9);
+  look(prof, att.head);
+  await wait(0.7);
+  look(prof, null);
+  await say("p9", { anim: "talk1" });
   grade.uniforms.uFade.value = 0;
-  $("realcase").innerHTML = `Voo real: ${CFG.flight.airline} ${CFG.flight.code}, ${CFG.flight.origin} \u2192 ${CFG.flight.dest}, ${CFG.flight.date}<br>Previs\xE3o 1 h antes: ${Math.round(CFG.result.p * 100)}% \xB7 ${CFG.result.actual}`;
-  EVENTS.push({ t: vt, type: "end", title: "Como esse totem funciona?", sub: $("realcase").innerHTML.split("<br>") });
-  $("endcard").classList.add("on");
-  await wait(6);
+  await wait(0.8);
 }
-var SCENES = [scene1, scene2, scene3, scene4, scene5, scene6];
+async function scene12() {
+  grade.uniforms.uFade.value = 0;
+  const cr = CREDITS.map(([n, r2]) => `${n} \xB7 ${r2}`).join("<br>");
+  $("realcase").innerHTML = `Voo real: ${CFG.flight.airline} ${CFG.flight.code}, ${CFG.flight.origin} \u2192 ${CFG.flight.dest}, ${CFG.flight.date}<br>Previs\xE3o 1 h antes: ${Math.round(CFG.result.p * 100)}% \xB7 ${CFG.result.actual}<br><br><span style="font-size:.8em;opacity:.8">${cr}</span>`;
+  EVENTS.push({ t: vt, type: "end", title: "Como esse totem funciona?", sub: [`Voo real: ${CFG.flight.airline} ${CFG.flight.code}, ${CFG.flight.origin} \u2192 ${CFG.flight.dest}, ${CFG.flight.date}`, `Previs\xE3o 1 h antes: ${Math.round(CFG.result.p * 100)}% \xB7 ${CFG.result.actual}`, "", ...CREDITS.map(([n, r2]) => `${n} \xB7 ${r2}`)] });
+  $("endcard").classList.add("on");
+  await wait(8);
+}
+var SCENES = [scene1, scene2, scene3, scene4, scene5, scene6, scene7, scene8, scene9, scene10, scene11, scene12];
 async function run(from = 1) {
   const id = ++runId;
   resetWorld();
   if (from >= 2) {
-    placeAtKiosk();
-    if (from >= 4) setTotem("auto");
-    if (from >= 5) setTotem("result");
+    prof.pos.copy(DOOR_OUT);
+    prof.yaw = prof.yawGoal = Math.PI;
+    TX.setDoor(false);
   }
+  if (from >= 3) {
+    prof.pos.copy(DOOR_IN);
+  }
+  if (from >= 4) {
+    prof.pos.copy(BOARD2_SPOT);
+  }
+  if (from >= 5) {
+    prof.pos.copy(DESK_STOP);
+    prof.yaw = prof.yawGoal = -Math.PI / 2;
+    leo.onPhone = false;
+  }
+  if (from >= 6) placeAtKiosk();
+  if (from >= 8) setTotem("auto");
+  if (from >= 9) setTotem("result");
   try {
     for (let i2 = from; i2 <= SCENES.length; i2++) {
       $("scenelabel").textContent = `Cena ${i2}`;
@@ -52556,6 +53477,7 @@ async function run(from = 1) {
       await SCENES[i2 - 1]();
     }
     window.__finished = vt;
+    console.log("SCENES", JSON.stringify(EVENTS.filter((e3) => e3.type === "scene").map((e3) => [e3.n, +e3.t.toFixed(1)])), "END", vt.toFixed(1));
     $("controls").classList.add("on");
   } catch (e3) {
     if (e3.message !== "abort") console.error(e3);
@@ -52567,6 +53489,8 @@ function step(dt) {
   vt += dt;
   flushWaiters();
   airport.update(dt, vt);
+  land.update(dt);
+  land.setLightning(airport.lightning.level);
   totemAcc += dt;
   if (totemAcc > 1 / 30) {
     totem.update(totemAcc);
@@ -52584,11 +53508,19 @@ function render() {
 async function boot() {
   $("loading").textContent = "Carregando personagens\u2026";
   audioBuffers.murmur = await loadBuffer("./audio/murmur.mp3");
-  [prof, att] = await Promise.all([
-    makeActor({ name: "prof", pos: V(8.5, 0, 9.2), yaw: -2.1, avatar: { url: AV_DIR + "avatarsdk", body: "M", avatarMood: "neutral", retarget: { Neck: { z: -0.01, rx: 0.02 }, Neck1: { z: -0.01, rx: 0.02 }, Neck2: { z: -0.01, rx: 0.02 }, LeftShoulder: { rz: -0.3 }, RightShoulder: { rz: 0.3 }, scaleToEyesLevel: 1, origin: { y: -0.1 } }, baseline: { headRotateX: -0.08, eyeBlinkLeft: 0.05, eyeBlinkRight: 0.05 } } }),
-    makeActor({ name: "att", pos: ATT_POS, yaw: ATT_YAW, avatar: { url: AV_DIR + "avatarsdk", body: "M", avatarMood: "happy", retarget: { Neck: { z: -0.01, rx: 0.02 }, Neck1: { z: -0.01, rx: 0.02 }, Neck2: { z: -0.01, rx: 0.02 }, LeftShoulder: { rz: -0.3 }, RightShoulder: { rz: 0.3 }, scaleToEyesLevel: 1, origin: { y: -0.1 } }, baseline: { headRotateX: -0.08, eyeBlinkLeft: 0.05, eyeBlinkRight: 0.05 } } })
+  const RT = { Neck: { z: -0.01, rx: 0.02 }, Neck1: { z: -0.01, rx: 0.02 }, Neck2: { z: -0.01, rx: 0.02 }, LeftShoulder: { rz: -0.3 }, RightShoulder: { rz: 0.3 }, scaleToEyesLevel: 1, origin: { y: -0.1 } };
+  const BL = { headRotateX: -0.08, eyeBlinkLeft: 0.05, eyeBlinkRight: 0.05 };
+  const mk = (name, pos, yaw, mood = "neutral") => makeActor({ name, pos, yaw, avatar: { url: AV_DIR + "avatarsdk", body: "M", avatarMood: mood, retarget: RT, baseline: BL } });
+  [prof, att, diniz, leo, motti, sa] = await Promise.all([
+    mk("prof", V(8.5, 0, 9.2), -2.1),
+    mk("att", ATT_POS, ATT_YAW, "happy"),
+    mk("diniz", V(8, 0, 23), -Math.PI / 2),
+    mk("leo", V(10, 0, 14), 0),
+    mk("motti", V(2.15, 0, 11), Math.PI / 2, "happy"),
+    mk("sa", V(2.15, 0, 12), Math.PI / 2, "happy")
   ]);
-  actors.push(prof, att);
+  Object.assign(ACT, { prof, att, diniz, leo, motti, sa });
+  actors.push(prof, att, diniz, leo, motti, sa);
   for (let i2 = 0; i2 < 20; i2++) for (const a of actors) {
     a.arm.position.copy(a.pos);
     a.arm.rotation.y = a.yaw;
@@ -52605,7 +53537,7 @@ async function boot() {
     t.colorSpace = SRGBColorSpace;
     return t;
   };
-  const [shirt, headTex, aShirt, aHead, aJeans] = await Promise.all(["prof_shirt", "prof_head", "att_shirt", "att_head", "att_jeans"].map((n) => tex2("./avatars/" + n + ".jpg")));
+  const [shirt, headTex, aShirt, aHead, aJeans, dHead, dShirt, lHead, lShirt, mHead, sHead, stShirt] = await Promise.all(["prof_shirt", "prof_head", "att_shirt", "att_head", "att_jeans", "diniz_head", "diniz_shirt", "leo_head", "leo_shirt", "motti_head", "sa_head", "staff_shirt"].map((n) => tex2("./avatars/" + n + ".jpg")));
   const restyle = (arm, maps) => arm.traverse((o) => {
     if (!o.isMesh || !maps[o.material?.name]) return;
     o.material = o.material.clone();
@@ -52614,6 +53546,26 @@ async function boot() {
   });
   restyle(prof.arm, { outfit_top: shirt, AvatarHead: headTex });
   restyle(att.arm, { outfit_top: aShirt, AvatarHead: aHead, outfit_bottom: aJeans });
+  restyle(diniz.arm, { outfit_top: dShirt, AvatarHead: dHead });
+  restyle(leo.arm, { outfit_top: lShirt, AvatarHead: lHead });
+  restyle(motti.arm, { outfit_top: stShirt, AvatarHead: mHead });
+  restyle(sa.arm, { outfit_top: stShirt, AvatarHead: sHead });
+  diniz.arm.scale.setScalar(0.97);
+  leo.arm.scale.setScalar(0.99);
+  motti.arm.scale.setScalar(1.02);
+  sa.arm.scale.setScalar(0.995);
+  {
+    const g = glasses();
+    g.position.set(0, 0.075, 0.095);
+    diniz.bone("Head").add(g);
+    diniz.glasses = g;
+  }
+  for (const a of [motti, sa]) {
+    const b = badge();
+    b.position.set(-0.09, 0.08, 0.13);
+    b.rotation.y = 0;
+    a.bone("Spine2").add(b);
+  }
   att.arm.updateMatrixWorld(true);
   att.arm.traverse((o) => {
     if (!o.isMesh) return;
@@ -52706,6 +53658,12 @@ async function boot() {
   $("loading").textContent = "Carregando anima\xE7\xF5es\u2026";
   await preloadAnims(prof, ["walk", "talk1"]);
   await preloadAnims(att, ["walk", "talk0"]);
+  await preloadAnims(diniz, ["walk", "talk0"]);
+  await preloadAnims(leo, ["walk", "talk1"]);
+  await preloadAnims(motti, ["walk", "talk0"]);
+  await preloadAnims(sa, ["walk", "talk1"]);
+  diniz.head.playPose("sitting", null, 1e6);
+  for (const n of ["rain_out", "door", "buzz", "squeak", "carDoor"]) audioBuffers["sfx_" + n] = await loadBuffer("./audio/" + n + ".mp3");
   for (const id of Object.keys(LINES)) audioBuffers[id] = await loadBuffer("./audio/" + LINES[id].audio) || await loadBuffer("./audio/" + LINES[id].audio.replace(/\.mp3$/, ".wav"));
   const got = Object.keys(LINES).filter((k) => audioBuffers[k]).length;
   $("audiostatus").textContent = got ? `${got}/${Object.keys(LINES).length} falas com \xE1udio gravado` : "Vozes: sintetizadas pelo navegador (placeholder)";
@@ -52756,6 +53714,7 @@ async function runPreview() {
   render();
   const f = (v4) => v4.toArray().map((x2) => x2.toFixed(2)).join(",");
   console.log("DBG ikR", prof.ikR.weight.toFixed(2), prof.ikR.goal, prof.ikR.auto, "target", f(prof.ikR.target), "hand", f(prof.bone("RightHand").getWorldPosition(new Vector3())), "phone", phone2.visible, f(phone2.position), "typing", state.typing);
+  console.log("DBG diniz head", f(diniz.headPos()), "hips", f(diniz.bone("Hips").getWorldPosition(new Vector3())));
   console.log("DBG prof pos", f(prof.pos), "yaw", prof.yaw.toFixed(2), "head", f(prof.headPos()), "hips", f(prof.bone("Hips").getWorldPosition(new Vector3())), "| att head", f(att.headPos()), "cam", f(camera.position));
   window.__ready = true;
 }

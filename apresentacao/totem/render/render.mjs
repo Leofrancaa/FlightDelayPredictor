@@ -24,6 +24,7 @@ const arg = (k, d) => { const i = process.argv.indexOf(k); return i > -1 ? proce
 const RES = +arg('--res', 1080), FPS = +arg('--fps', 30), W = Math.round(RES * 16 / 9), H = RES;
 const LEGENDA = !process.argv.includes('--sem-legenda'), CPU = process.argv.includes('--cpu');
 const MAX = +arg('--max', 1e9);
+const NOME = arg('--saida', 'totem.mp4');   // nome do MP4 em saida/ (ex.: --saida previa_v2.mp4 --nao-publicar)
 
 // ---------- navegador (Chrome ou Edge instalados)
 const candidatos = [
@@ -89,6 +90,13 @@ for (const e of events.filter((e) => e.type === 'line' && e.file && e.t < DUR)) 
   const ms = Math.round(e.t * 1000);
   add(['-i', path.join(SITE, 'audio', e.file)], `adelay=${ms}|${ms},volume=1.0`);
 }
+const duck = events.find((e) => e.type === 'rainDuck');
+for (const e of events.filter((e) => e.type === 'sfx' && e.t < DUR && e.vol > 0)) {
+  const ms = Math.round(e.t * 1000);
+  // chuva de fora: abaixa quando ele entra no terminal
+  const vol = e.file === 'rain_out.mp3' && duck ? `volume='if(lt(t,${(duck.t - e.t).toFixed(2)}),${e.vol},${(e.vol * 0.35).toFixed(2)})':eval=frame` : `volume=${e.vol}`;
+  add(['-i', path.join(SITE, 'audio', e.file)], `${vol},adelay=${ms}|${ms}`);
+}
 for (const e of events.filter((e) => e.type === 'thunder' && e.t < DUR)) {
   const ms = Math.round(e.t * 1000);
   add(['-i', 'trovao.wav'], `adelay=${ms}|${ms},volume=0.05`);
@@ -104,7 +112,7 @@ ass += `Style: Fala,Segoe UI,${fs_},&H00FFFFFF,&H00FFFFFF,&H00000000,&H80000000,
 ass += `Style: Titulo,Segoe UI Light,${Math.round(H / 11)},&H00FFFFFF,&H00FFFFFF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,0,0,5,10,10,0,1\n`;
 ass += `Style: Sub,Segoe UI,${Math.round(H / 34)},&H00D9B39F,&H00FFFFFF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,0,0,8,10,10,${H * 0.58},1\n\n[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n`;
 if (LEGENDA) for (const e of events.filter((e) => e.type === 'line')) {
-  const quem = e.who === 'prof' ? 'SOUSSA' : 'GUIS';
+  const quem = (e.name || (e.who === 'prof' ? 'Soussa' : 'Guis')).toUpperCase();
   ass += `Dialogue: 0,${ts(e.t)},${ts(Math.min(DUR, e.t + e.dur + 0.2))},Fala,,0,0,0,,{\\fs${Math.round(fs_ * 0.55)}\\c&HFFD39F&}${quem}\\N{\\fs${fs_}\\c&HFFFFFF&}${e.text}\n`;
 }
 const fim = events.find((e) => e.type === 'end');
@@ -116,7 +124,7 @@ fs.writeFileSync(path.join(SAIDA, 'legendas.ass'), ass);
 
 // ---------- MP4
 run(['-framerate', String(FPS), '-i', 'frames/%05d.jpg', '-i', 'audio.wav', '-vf', 'hqdn3d=1.5:1.5:4:4,subtitles=legendas.ass,format=yuv420p',
-  '-c:v', 'libx264', '-preset', 'slow', '-crf', '22', '-maxrate', RES >= 1080 ? '4000k' : '2500k', '-bufsize', '8000k', '-c:a', 'aac', '-b:a', '192k', '-shortest', '-movflags', '+faststart', 'totem.mp4']);
-console.log('pronto:', path.join(SAIDA, 'totem.mp4'));
-if (!process.argv.includes('--nao-publicar')) { fs.copyFileSync(path.join(SAIDA, 'totem.mp4'), path.join(SITE, 'totem.mp4')); console.log('copiado para web/public/totem/totem.mp4 (é o vídeo que o /totem toca)'); }
-const mb = fs.statSync(path.join(SAIDA, 'totem.mp4')).size / 1e6; if (mb > 95) console.log(`AVISO: ${mb.toFixed(0)} MB passa do limite de 100 MB do GitHub; rode com --res 720`);
+  '-c:v', 'libx264', '-preset', 'slow', '-crf', '22', '-maxrate', RES >= 1080 ? '4000k' : '2500k', '-bufsize', '8000k', '-c:a', 'aac', '-b:a', '192k', '-shortest', '-movflags', '+faststart', NOME]);
+console.log('pronto:', path.join(SAIDA, NOME));
+if (!process.argv.includes('--nao-publicar')) { fs.copyFileSync(path.join(SAIDA, NOME), path.join(SITE, 'totem.mp4')); console.log('copiado para web/public/totem/totem.mp4 (é o vídeo que o /totem toca)'); }
+const mb = fs.statSync(path.join(SAIDA, NOME)).size / 1e6; if (mb > 95) console.log(`AVISO: ${mb.toFixed(0)} MB passa do limite de 100 MB do GitHub; rode com --res 720`);

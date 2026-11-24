@@ -78,4 +78,21 @@ export const LINES = {
   a4: { who: 'att', audio: 'a4.mp3', text: 'Principalmente porque o avião que vai fazer o seu voo saiu atrasado da última cidade, tem trovoada aqui agora, e o aeroporto inteiro já está atrasando.' },
   p4: { who: 'prof', audio: 'p4.mp3', text: 'Noventa e quatro anos esperando… meu sogro aguenta mais meia hora. Tranquilo.' },
   p5: { who: 'prof', audio: 'p5.mp3', text: 'A minha esposa é que não.' },
+  // roteiro v2 (camada C) — áudios provisórios até cada integrante gravar a própria fala
+  m1: { who: 'diniz', audio: 'm1.mp3', text: 'Ch… chegamos, senhor. É… dia feio pra voar, né?' },
+  m2: { who: 'diniz', audio: 'm2.mp3', text: 'Ah… boa viagem, senhor.' },
+  l1: { who: 'leo', audio: 'l1.mp3', text: 'Atrasou de novo? O painel dizia no horário até agora há pouco!' },
+  mt1: { who: 'motti', audio: 'mt1.mp3', text: 'Ô, senhor! Vi que o senhor tá com pressa…' },
+  sa1: { who: 'sa', audio: 'sa1.mp3', text: 'Então dá uma olhada no totem ali pra saber do seu voo.' },
+  p8: { who: 'prof', audio: 'p8.mp3', text: 'Se eu soubesse que existia isso, podia ter visto e saído de casa sem essa pressa toda.' },
+  p6: { who: 'prof', audio: 'p6.mp3', text: 'Amor… o voo vai atrasar uns quarenta minutos. Não, não fui eu, foi o avião!' },
+  p7: { who: 'prof', audio: 'p7.mp3', text: 'Mas fala pro seu pai que o presente vai chegar sequinho.' },
+  p9: { who: 'prof', audio: 'p9.mp3', text: 'Se eu tivesse alunos bons na minha época, esse preditor de atraso de voos daria um bom projeto de iniciação científica.' },
 };
+
+export const NAMES = { prof: 'Soussa', att: 'Guis', diniz: 'Diniz', leo: 'Leo', motti: 'Motti', sa: 'Sá' };
+
+export const CREDITS = [
+  ['Soussa', 'ele mesmo'], ['Guis', 'atendente do totem'], ['Diniz', 'motorista'],
+  ['Leo “Ratito”', 'passageiro ao telefone'], ['Motti e Sá', 'portaria'],
+];

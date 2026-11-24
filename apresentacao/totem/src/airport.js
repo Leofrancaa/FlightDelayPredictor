@@ -17,6 +17,7 @@ function add(parent, geo, mat, x = 0, y = 0, z = 0, opts = {}) {
 }
 
 export const HALL = { x0: -34, x1: 34, z0: -22, z1: 16, h: 9.5 };
+export const ENT = { x0: 4.5, x1: 11.5, h: 4.2 };   // landside entrance opening in the back wall
 
 export function buildAirport(scene, { quality = 'high', flights }) {
   const root = new THREE.Group(); scene.add(root);
@@ -73,14 +74,18 @@ export function buildAirport(scene, { quality = 'high', flights }) {
   // ---------- side & back walls
   add(root, new THREE.PlaneGeometry(D, HALL.h), wallMat, HALL.x0, HALL.h / 2, cz, { ry: Math.PI / 2, cast: false });
   add(root, new THREE.PlaneGeometry(D, HALL.h), wallMat, HALL.x1, HALL.h / 2, cz, { ry: -Math.PI / 2, cast: false });
-  add(root, new THREE.PlaneGeometry(W, HALL.h), wallMat, cx, HALL.h / 2, HALL.z1, { ry: Math.PI, cast: false });
+  // back (landside) wall with the entrance opening x∈[ENT.x0, ENT.x1], y < ENT.h
+  const wl = ENT.x0 - HALL.x0, wr = HALL.x1 - ENT.x1;
+  add(root, new THREE.PlaneGeometry(wl, HALL.h), wallMat, HALL.x0 + wl / 2, HALL.h / 2, HALL.z1, { ry: Math.PI, cast: false });
+  add(root, new THREE.PlaneGeometry(wr, HALL.h), wallMat, ENT.x1 + wr / 2, HALL.h / 2, HALL.z1, { ry: Math.PI, cast: false });
+  add(root, new THREE.PlaneGeometry(ENT.x1 - ENT.x0, HALL.h - ENT.h), wallMat, (ENT.x0 + ENT.x1) / 2, ENT.h + (HALL.h - ENT.h) / 2, HALL.z1, { ry: Math.PI, cast: false });
   const dm = new THREE.Object3D();
   // wood slat cladding on the back (z1) wall (texture, avoids moire)
   const sc = document.createElement('canvas'); sc.width = 512; sc.height = 64; const sg = sc.getContext('2d');
   sg.fillStyle = '#2b1d14'; sg.fillRect(0, 0, 512, 64);
   for (let i = 0; i < 16; i++) { const gr = sg.createLinearGradient(i * 32, 0, i * 32 + 22, 0); gr.addColorStop(0, '#7a5236'); gr.addColorStop(0.5, '#93663f'); gr.addColorStop(1, '#6a462d'); sg.fillStyle = gr; sg.fillRect(i * 32 + 2, 0, 22, 64); }
   const st = new THREE.CanvasTexture(sc); st.colorSpace = THREE.SRGBColorSpace; st.wrapS = st.wrapT = THREE.RepeatWrapping; st.repeat.set(W / 2.56, 1); st.anisotropy = 8;
-  add(root, new THREE.PlaneGeometry(W, HALL.h - 3), M({ map: st, roughness: 0.65 }), cx, 3 + (HALL.h - 3) / 2, HALL.z1 - 0.05, { ry: Math.PI, cast: false });
+  add(root, new THREE.PlaneGeometry(W, HALL.h - ENT.h - 0.3), M({ map: st, roughness: 0.65 }), cx, ENT.h + 0.3 + (HALL.h - ENT.h - 0.3) / 2, HALL.z1 - 0.05, { ry: Math.PI, cast: false });
 
   // ---------- glass curtain wall (z0) + outside world
   const glass = P({ color: 0x9fb4c4, metalness: 0, roughness: 0.04, transparent: true, opacity: 0.12, envMapIntensity: 1.2, side: THREE.DoubleSide, depthWrite: false });
@@ -143,7 +148,9 @@ export function buildAirport(scene, { quality = 'high', flights }) {
 
   // ---------- departures boards (hanging)
   const boardTex = T.departuresBoard(flights);
+  const boardTexLate = T.departuresBoard(flights.map((f) => (f[1] === 'AA 1455' ? [f[0], f[1], f[2], f[3], 'DELAYED 13:43'] : f)), 'SAT  12:18');
   const boardMat = new THREE.MeshBasicMaterial({ map: boardTex, toneMapped: true });
+  out.setDelayed = (on) => { boardMat.map = on ? boardTexLate : boardTex; boardMat.needsUpdate = true; };
   boardMat.color.setScalar(1.6);
   const mkBoard = (x, z, ry) => {
     const g = new THREE.Group(); g.position.set(x, 4.6, z); g.rotation.y = ry; root.add(g);
@@ -154,6 +161,7 @@ export function buildAirport(scene, { quality = 'high', flights }) {
   };
   out.board = mkBoard(-7.5, -4.5, 0.25);
   mkBoard(13, -10, -0.2);
+  out.board2 = mkBoard(14.2, 7.6, -0.5);   // seen right after the entrance
 
   // ---------- wayfinding signs (yellow on charcoal, US airport style)
   const sign = (lines, x, y, z, w, ry = 0, arrow = 'right') => {
@@ -169,8 +177,9 @@ export function buildAirport(scene, { quality = 'high', flights }) {
 
   // ---------- lighting
   scene.add(new THREE.HemisphereLight(0xdfe6f0, 0x5a5048, 0.35));
+  const spots = [];
   const mkSpot = (x, z, tx, tz, I, shadow) => {
-    const s = new THREE.SpotLight(0xfff1dd, I, 30, 0.62, 0.65, 1.6);
+    const s = new THREE.SpotLight(0xfff1dd, I, 30, 0.62, 0.65, 1.6); s.userData.base = I; spots.push(s);
     s.position.set(x, HALL.h - 0.2, z); s.target.position.set(tx, 0, tz);
     if (shadow) { s.castShadow = true; s.shadow.mapSize.set(2048, 2048); s.shadow.bias = -0.0002; s.shadow.normalBias = 0.02; s.shadow.radius = 6; s.shadow.camera.near = 2; s.shadow.camera.far = 20; }
     root.add(s, s.target); return s;
@@ -183,6 +192,10 @@ export function buildAirport(scene, { quality = 'high', flights }) {
   mkSpot(12, -8, 12, -8, 100, false);
   mkSpot(0, -10, 0, -10, 100, false);
   mkSpot(0, 11, 0, 11, 90, false);
+  out.entranceKey = mkSpot(9, 11.5, 8, 12, 110, quality === 'high');
+  mkSpot(3.5, 10, 3, 11.5, 90, false);
+  // lights flicker during a strike (power dip)
+  let flick = 0; out.flicker = () => { flick = 0.9; };
 
   // ---------- update (rain, lightning)
   let nextStrike = 9, strike = 0, strikeT = 0;
@@ -205,6 +218,8 @@ export function buildAirport(scene, { quality = 'high', flights }) {
       L = f; if (strikeT > 0.8) strike = 0;
     }
     out.lightning.level = L;
+    if (flick > 0) { flick -= dt; const k = flick > 0.75 ? 0.15 : flick > 0.6 ? 1 : flick > 0.5 ? 0.3 : flick > 0 ? 0.3 + (0.5 - flick) * 1.4 : 1; spots.forEach((s) => (s.intensity = s.userData.base * Math.min(1, k))); lightStrip.color.setRGB(3 * k, 2.91 * k, 2.7 * k); }
+    else if (flick > -1) { flick = -2; spots.forEach((s) => (s.intensity = s.userData.base)); lightStrip.color.setRGB(3, 2.91, 2.7); }
     flash.intensity = L * 1.6;
     skyMat.color.copy(skyColorBase).multiplyScalar(1 + L * 6);
     rainMat.opacity = 0.3 + L * 0.5;
