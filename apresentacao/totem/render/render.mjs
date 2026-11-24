@@ -115,8 +115,8 @@ if (fim) {
 fs.writeFileSync(path.join(SAIDA, 'legendas.ass'), ass);
 
 // ---------- MP4
-run(['-framerate', String(FPS), '-i', 'frames/%05d.jpg', '-i', 'audio.wav', '-vf', 'subtitles=legendas.ass,format=yuv420p',
-  '-c:v', 'libx264', '-preset', 'slow', '-crf', '18', '-c:a', 'aac', '-b:a', '192k', '-shortest', '-movflags', '+faststart', 'totem.mp4']);
+run(['-framerate', String(FPS), '-i', 'frames/%05d.jpg', '-i', 'audio.wav', '-vf', 'hqdn3d=1.5:1.5:4:4,subtitles=legendas.ass,format=yuv420p',
+  '-c:v', 'libx264', '-preset', 'slow', '-crf', '22', '-maxrate', RES >= 1080 ? '4000k' : '2500k', '-bufsize', '8000k', '-c:a', 'aac', '-b:a', '192k', '-shortest', '-movflags', '+faststart', 'totem.mp4']);
 console.log('pronto:', path.join(SAIDA, 'totem.mp4'));
 if (!process.argv.includes('--nao-publicar')) { fs.copyFileSync(path.join(SAIDA, 'totem.mp4'), path.join(SITE, 'totem.mp4')); console.log('copiado para web/public/totem/totem.mp4 (é o vídeo que o /totem toca)'); }
 const mb = fs.statSync(path.join(SAIDA, 'totem.mp4')).size / 1e6; if (mb > 95) console.log(`AVISO: ${mb.toFixed(0)} MB passa do limite de 100 MB do GitHub; rode com --res 720`);
