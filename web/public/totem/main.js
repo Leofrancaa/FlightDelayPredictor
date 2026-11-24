@@ -50740,7 +50740,7 @@ function buildAirport(scene7, { quality = "high", flights }) {
     if (nextStrike <= 0) {
       strike = 1;
       strikeT = 0;
-      nextStrike = 7 + Math.random() * 9;
+      nextStrike = 14 + Math.random() * 10;
       out.onStrike?.();
     }
     let L = 0;
@@ -51848,8 +51848,8 @@ function thunder(delay = 0.6) {
   lp.frequency.value = 220;
   const g = audioCtx.createGain();
   g.gain.setValueAtTime(0, t0);
-  g.gain.linearRampToValueAtTime(0.22, t0 + 0.12);
-  g.gain.exponentialRampToValueAtTime(0.07, t0 + 1.4);
+  g.gain.linearRampToValueAtTime(0.05, t0 + 0.25);
+  g.gain.exponentialRampToValueAtTime(0.018, t0 + 1.6);
   g.gain.exponentialRampToValueAtTime(1e-3, t0 + 4.8);
   s.connect(lp).connect(g).connect(master);
   s.start(t0);
@@ -52097,10 +52097,13 @@ if ("speechSynthesis" in window) {
 }
 function pickVoice(who) {
   const pt = voices.filter((v4) => /pt[-_]BR/i.test(v4.lang));
-  const male = /(daniel|antonio|ant[oô]nio|felipe|male|masculin|ricardo|brian|thalita)/i, female = /(maria|francisca|luciana|female|feminin|vit[oó]ria|thalita|google)/i;
-  if (who === "prof") return pt.find((v4) => /daniel|antonio|ant[oô]nio|felipe|ricardo/i.test(v4.name)) || pt[0];
-  return pt.find((v4) => /maria|francisca|luciana|vit[oó]ria|thalita/i.test(v4.name)) || pt.find((v4) => /google/i.test(v4.name)) || pt[0];
+  const rank = (v4) => /natural|online|neural/i.test(v4.name) ? 0 : /google/i.test(v4.name) ? 1 : 2;
+  pt.sort((x2, y) => rank(x2) - rank(y));
+  const male = /antonio|ant[oô]nio|daniel|donato|fabio|f[aá]bio|humberto|julio|j[uú]lio|nicolau|valerio|val[eé]rio|felipe/i;
+  const female = /francisca|thalita|maria|luciana|vit[oó]ria|brenda|elza|giovanna|leila|leticia|let[ií]cia|manuela|yara|google/i;
+  return (who === "prof" ? pt.find((v4) => male.test(v4.name)) : pt.find((v4) => female.test(v4.name))) || pt[0];
 }
+var ttsRatio = 1;
 var subtitlesOn = true;
 function showSub(who, text) {
   const el = $("sub");
@@ -52126,18 +52129,37 @@ async function say(id, { gesture = null, anim = null } = {}) {
     a.head.speakAudio({ audio: buf, ...wordTiming(L.text, e3 - s, s) }, { lipsyncLang: "pt_br" });
   } else {
     durMs = estimateMs(L.text);
+    durMs = estimateMs(L.text) * ttsRatio;
     const silent = audioCtx.createBuffer(1, Math.ceil(audioCtx.sampleRate * durMs / 1e3), audioCtx.sampleRate);
     const v4 = pickVoice(L.who);
+    let ended = null;
     if (v4) {
       const u = new SpeechSynthesisUtterance(L.text);
       u.voice = v4;
       u.lang = "pt-BR";
-      u.pitch = L.who === "prof" ? 0.85 : 1.1;
-      u.rate = 1;
+      const natural = /natural|online|neural/i.test(v4.name);
+      u.pitch = natural ? 1 : L.who === "prof" ? 0.9 : 1.05;
+      u.rate = L.who === "prof" ? 0.95 : 1;
+      const t0 = performance.now();
+      ended = new Promise((res) => {
+        u.onend = () => {
+          const real = performance.now() - t0;
+          ttsRatio = Math.min(1.8, Math.max(0.6, ttsRatio * 0.4 + 0.6 * ttsRatio * real / durMs));
+          res();
+        };
+        u.onerror = () => res();
+      });
       speechSynthesis.cancel();
       speechSynthesis.speak(u);
     }
     a.head.speakAudio({ audio: silent, ...wordTiming(L.text, durMs * 0.95, 0) }, { lipsyncLang: "pt_br" });
+    if (ended) {
+      await Promise.race([ended, wait(durMs / 1e3 * 2 + 1)]);
+      await wait(0.2);
+      if (anim) a.head.stopAnimation();
+      showSub(null);
+      return;
+    }
   }
   await wait(durMs / 1e3 + 0.25);
   if (anim) a.head.stopAnimation();
@@ -52355,8 +52377,13 @@ async function scene3() {
   att.ikR.set(screenPt(0.5, 0.67), 1);
   await wait(0.6);
   att.ikR.release();
+  await wait(1.4);
   setTotem("auto");
-  await wait(0.8);
+  {
+    const c = screenCam(0.55, 1.25);
+    cut({ p0: c.p, l0: c.l, fov: 30, focus: c.l, aperture: 8e-4, handheld: 2e-3 });
+  }
+  await wait(4.2);
   cut({ p0: () => att.pos.clone().add(V(0.95, 1.55, 1.05)), p1: () => att.pos.clone().add(V(0.8, 1.55, 0.9)), l0: headOf(att, -0.08), dur: 6, fov: 30, focus: headOf(att), aperture: 22e-4 });
   look(att, totem.head);
   const sp = say("a2", { gesture: ["index", 2.2, true] });
@@ -52364,10 +52391,10 @@ async function scene3() {
   look(att, prof.head);
   await sp;
   {
-    const c = screenCam(0.5, 1.2);
+    const c = screenCam(0.55, 1.25);
     cut({ p0: c.p, l0: c.l, fov: 30, focus: c.l, aperture: 8e-4, handheld: 3e-3 });
   }
-  await wait(1.6);
+  await wait(2.2);
 }
 async function scene4() {
   att.ikR.set(screenPt(0.5, 0.78), 1);
@@ -52380,7 +52407,16 @@ async function scene4() {
   }
   await wait(2.8);
   setTotem("result");
-  await wait(2.6);
+  {
+    const c0 = screenCam(0.36, 1.2), c1 = screenCam(0.4, 1.1);
+    cut({ p0: c0.p, p1: c1.p, l0: c0.l, l1: c1.l, dur: 5, fov: 30, focus: c1.l, aperture: 8e-4, handheld: 2e-3 });
+  }
+  await wait(4.8);
+  {
+    const c0 = screenCam(0.62, 1.15), c1 = screenCam(0.72, 1.1);
+    cut({ p0: c0.p, p1: c1.p, l0: c0.l, l1: c1.l, dur: 4, fov: 30, focus: c1.l, aperture: 8e-4, handheld: 2e-3 });
+  }
+  await wait(3.8);
   cut({ p0: rel(prof, 0.38, 1.66, -0.62), l0: headOf(att, -0.06), fov: 25, focus: headOf(att), aperture: 28e-4 });
   look(att, prof.head);
   att.head.setMood("neutral");
@@ -52397,7 +52433,7 @@ async function scene4() {
     const c = screenCam(0.72, 1.1);
     cut({ p0: c.p, l0: c.l, fov: 30, focus: c.l, aperture: 8e-4, handheld: 2e-3 });
   }
-  await wait(2.4);
+  await wait(3.8);
   cut({ p0: rel(prof, 0.38, 1.66, -0.62), l0: headOf(att, -0.06), fov: 25, focus: headOf(att), aperture: 28e-4 });
   await s;
   att.head.setMood("happy");

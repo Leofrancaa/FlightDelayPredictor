@@ -197,7 +197,7 @@ export function buildAirport(scene, { quality = 'high', flights }) {
     rainGeo.attributes.position.needsUpdate = true;
     // lightning: a few quick flickers
     nextStrike -= dt;
-    if (nextStrike <= 0) { strike = 1; strikeT = 0; nextStrike = 7 + Math.random() * 9; out.onStrike?.(); }
+    if (nextStrike <= 0) { strike = 1; strikeT = 0; nextStrike = 14 + Math.random() * 10; out.onStrike?.(); }
     let L = 0;
     if (strike) {
       strikeT += dt;
