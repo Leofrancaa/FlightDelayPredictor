@@ -52243,9 +52243,28 @@ var hand = new Vector3();
 var tmp4 = new Vector3();
 var state = { suitMode: "pull", bagHand: "Left", phone: false, typing: false, passMode: "hidden", passOwner: null };
 var suitWheel = new Vector3(6, 0, 9);
+function gripPoint(a, side, v4 = new Vector3()) {
+  const w4 = a.bone(side + "Hand").getWorldPosition(new Vector3());
+  const k = a.bone(side + "HandMiddle1")?.getWorldPosition(new Vector3()) || w4;
+  return v4.copy(w4).lerp(k, 0.8);
+}
+var CURL_AXIS = new Vector3(1, 0, 0);
+function curlFingers(a, side, amt) {
+  if (amt <= 0) return;
+  for (const f of ["Index", "Middle", "Ring", "Pinky"]) for (let j = 1; j <= 3; j++) {
+    const b = a.bone(side + "Hand" + f + j);
+    if (!b) continue;
+    b.quaternion.multiply(new Quaternion().setFromAxisAngle(CURL_AXIS, amt * (j === 1 ? 0.9 : 1.1)));
+  }
+  const t = a.bone(side + "HandThumb2");
+  if (t) t.quaternion.multiply(new Quaternion().setFromAxisAngle(CURL_AXIS, amt * 0.4));
+  a.arm.updateMatrixWorld(true);
+}
 function updateProps(dt) {
-  prof.bone(state.bagHand + "Hand").getWorldPosition(hand);
-  bag.position.lerp(tmp4.copy(hand).add(V(0, -0.03, 0)), Math.min(1, dt * 25));
+  curlFingers(prof, "Left", 1);
+  if (state.suitMode === "pull" || state.phone) curlFingers(prof, "Right", state.phone ? 0.6 : 1);
+  gripPoint(prof, state.bagHand, hand);
+  bag.position.copy(hand).add(V(0, 0.02, 0));
   bag.rotation.set(0, prof.yaw + Math.PI / 2, Math.sin(vt * 3) * 0.04 * (prof.walk ? 2 : 0.3));
   M_BAG.position.copy(bag.position).add(V(0, -0.25, 0));
   const fwd = V(Math.sin(prof.yaw), 0, Math.cos(prof.yaw)), right = V(-Math.cos(prof.yaw), 0, Math.sin(prof.yaw));
@@ -52253,15 +52272,15 @@ function updateProps(dt) {
     const grip = prof.pos.clone().addScaledVector(fwd, -0.28).addScaledVector(right, 0.24);
     grip.y = 0.84;
     prof.ikR.set(grip, prof.walk ? 1 : 0.6);
-    prof.bone("RightHand").getWorldPosition(hand);
-    const want = hand.clone().addScaledVector(fwd, -0.58);
-    want.y = 0.035;
-    suitWheel.lerp(want, Math.min(1, dt * 8));
+    gripPoint(prof, "Right", hand);
+    const L = 1.04, dy = Math.max(0.2, hand.y - 0.035), horiz = Math.sqrt(Math.max(0.01, L * L - dy * dy));
+    suitWheel.copy(hand).addScaledVector(fwd, -horiz);
+    suitWheel.y = 0.035;
     const up = hand.clone().sub(suitWheel).normalize();
     const zAxis = new Vector3().crossVectors(right, up).normalize();
     const m3 = new Matrix4().makeBasis(new Vector3().crossVectors(up, zAxis), up, zAxis);
-    suit.quaternion.slerp(new Quaternion().setFromRotationMatrix(m3), Math.min(1, dt * 10));
-    suit.position.copy(suitWheel).add(V(0, -0.035, 0));
+    suit.quaternion.setFromRotationMatrix(m3);
+    suit.position.copy(suitWheel).add(V(0, -0.035, 0)).addScaledVector(zAxis, 0.03);
   } else if (state.suitMode === "parked") {
     const want = prof.pos.clone().addScaledVector(right, 0.45).addScaledVector(fwd, -0.05);
     suit.position.lerp(V(want.x, 0, want.z), Math.min(1, dt * 3));
@@ -52270,11 +52289,10 @@ function updateProps(dt) {
   }
   phone2.visible = state.phone;
   if (state.phone) {
-    prof.bone("RightHand").getWorldPosition(hand);
+    gripPoint(prof, "Right", hand);
     const face = prof.headPos();
-    phone2.position.copy(hand).addScaledVector(fwd, 0.03).add(V(0, 0.05, 0));
+    phone2.position.copy(hand).add(face.clone().sub(hand).normalize().multiplyScalar(0.035));
     phone2.lookAt(face);
-    phone2.rotateX(-0.2);
     M_PHONE.position.copy(phone2.position);
   }
   pass.visible = state.passMode !== "hidden";
@@ -52294,10 +52312,10 @@ function guardArms(a) {
     a.arm.worldToLocal(_h);
     ik.fore.getWorldPosition(_e);
     a.arm.worldToLocal(_e);
-    const inside = (p2, r2) => p2.y > 0.75 && p2.y < 1.45 && Math.abs(p2.x) < r2 && p2.z > -0.14 && p2.z < 0.16;
-    if (inside(_h, 0.2) || inside(_e, 0.19)) {
-      _h.x = sgn * Math.max(Math.abs(_h.x), 0.27);
-      _h.z = Math.max(_h.z, 0.02);
+    const inside = (p2, r2) => p2.y > 0.75 && p2.y < 1.5 && Math.abs(p2.x) < r2 && p2.z > -0.15 && p2.z < 0.22;
+    if (inside(_h, 0.21) || inside(_e, 0.2)) {
+      _h.x = sgn * Math.max(Math.abs(_h.x), 0.28);
+      _h.z = Math.max(_h.z, 0.24);
       ik.set(a.arm.localToWorld(_h.clone()), 0.85);
       ik.auto = true;
     } else if (ik.auto) {
@@ -52318,7 +52336,7 @@ function updateActors(dt) {
   if (state.typing && prof.ikR) {
     const fwd = V(Math.sin(prof.yaw), 0, Math.cos(prof.yaw)), right = V(-Math.cos(prof.yaw), 0, Math.sin(prof.yaw));
     const p2 = prof.pos.clone().addScaledVector(fwd, 0.3).addScaledVector(right, 0.04);
-    p2.y = 1.18 + Math.sin(vt * 9) * 4e-3;
+    p2.y = 1.27 + Math.sin(vt * 9) * 4e-3;
     prof.ikR.set(p2, 1);
   }
   for (const a of actors) {
@@ -52504,7 +52522,7 @@ async function scene5() {
   look(prof, att.head);
   look(prof, camera);
   await say("p5");
-  cut({ p0: () => prof.pos.clone().add(V(-0.9, 1.45, -0.9)), p1: () => prof.pos.clone().add(V(-1.2, 1.5, -1.3)), l0: headOf(prof, -0.25), dur: 5, fov: 30, focus: headOf(prof, -0.2), aperture: 2e-3 });
+  cut({ p0: rel(prof, -0.3, 1.95, -0.22), p1: rel(prof, -0.27, 1.92, -0.17), l0: () => M_PHONE.position.clone(), dur: 5, fov: 30, focus: () => M_PHONE.position.clone(), aperture: 15e-4 });
   state.phone = true;
   state.typing = true;
   look(prof, M_PHONE);
@@ -52606,9 +52624,71 @@ async function boot() {
     geo.computeBoundingBox();
     const bb = geo.boundingBox, h = bb.max.y - bb.min.y;
     const unit = h > 10 ? 100 : 1;
+    let armV = null;
+    if (name === "outfit_top" && o.isSkinnedMesh) {
+      const bones = o.skeleton.bones, binds = o.skeleton.boneInverses.map((m3) => new Vector3().setFromMatrixPosition(m3.clone().invert()));
+      const bi = (n) => bones.findIndex((bn) => bn.name === n);
+      const sides = ["Left", "Right"].map((sd) => ({ arm: bi(sd + "Arm"), fore: bi(sd + "ForeArm"), lower: new Set(bones.map((bn, k) => bn.name.startsWith(sd + "ForeArm") || bn.name.startsWith(sd + "Hand") ? k : -1).filter((k) => k >= 0)) }));
+      const si = geo.attributes.skinIndex, sw = geo.attributes.skinWeight, v4 = new Vector3();
+      armV = new Uint8Array(pos.count);
+      for (let i2 = 0; i2 < pos.count; i2++) {
+        let best = -1, bw = 0;
+        for (let j = 0; j < 4; j++) {
+          const w4 = sw.getComponent(i2, j);
+          if (w4 > bw) {
+            bw = w4;
+            best = si.getComponent(i2, j);
+          }
+        }
+        for (const sd of sides) {
+          if (sd.lower.has(best)) armV[i2] = 2;
+          else if (best === sd.arm) {
+            v4.fromBufferAttribute(pos, i2).applyMatrix4(o.bindMatrix);
+            const s0 = binds[sd.arm], d = binds[sd.fore].clone().sub(s0);
+            armV[i2] = v4.sub(s0).dot(d) / d.lengthSq() > 0.42 ? 2 : 1;
+          }
+        }
+      }
+      const img = o.material.map.image, cv = document.createElement("canvas");
+      cv.width = img.width;
+      cv.height = img.height;
+      const g2 = cv.getContext("2d");
+      g2.drawImage(img, 0, 0);
+      const uv = geo.attributes.uv, idx = geo.index.array, W2 = cv.width, H2 = cv.height;
+      const tri = (t, fill, grow) => {
+        g2.beginPath();
+        for (let k = 0; k < 3; k++) {
+          const q4 = idx[t + k];
+          const x2 = uv.getX(q4) * W2, y = uv.getY(q4) * H2;
+          k ? g2.lineTo(x2, y) : g2.moveTo(x2, y);
+        }
+        g2.closePath();
+        g2.fillStyle = fill;
+        g2.fill();
+        if (grow) {
+          g2.strokeStyle = fill;
+          g2.lineWidth = grow;
+          g2.stroke();
+        }
+      };
+      for (let t = 0; t < idx.length; t += 3) {
+        const c = (armV[idx[t]] === 2) + (armV[idx[t + 1]] === 2) + (armV[idx[t + 2]] === 2);
+        if (c === 3) tri(t, "#cf9e86", 3);
+      }
+      for (let t = 0; t < idx.length; t += 3) {
+        const c = (armV[idx[t]] === 2) + (armV[idx[t + 1]] === 2) + (armV[idx[t + 2]] === 2);
+        if (c === 1 || c === 2) tri(t, "#9c6c1f", 1);
+      }
+      const nt = new CanvasTexture(cv);
+      nt.flipY = false;
+      nt.colorSpace = SRGBColorSpace;
+      nt.anisotropy = 8;
+      o.material.map = nt;
+      o.material.needsUpdate = true;
+    }
     for (let i2 = 0; i2 < pos.count; i2++) {
       let k = 0;
-      if (name === "outfit_top") k = 0.012;
+      if (name === "outfit_top") k = armV && armV[i2] ? armV[i2] === 1 ? 6e-3 : 0 : 0.012;
       else {
         const knee = bb.min.y + h * 0.42, y = pos.getY(i2);
         if (y < knee) {
@@ -52621,33 +52701,6 @@ async function boot() {
       pos.setXYZ(i2, pos.getX(i2) + nx * k * unit, pos.getY(i2) + ny * k * unit, pos.getZ(i2) + nz * k * unit);
     }
     pos.needsUpdate = true;
-    if (name === "outfit_top" && o.isSkinnedMesh && geo.index) {
-      const bones = o.skeleton.bones, binds = o.skeleton.boneInverses.map((m3) => new Vector3().setFromMatrixPosition(m3.clone().invert()));
-      const bi = (n) => bones.findIndex((b) => b.name === n);
-      const sides = ["Left", "Right"].map((sd) => ({ arm: bi(sd + "Arm"), fore: bi(sd + "ForeArm"), lower: new Set(bones.map((b, k) => b.name.startsWith(sd + "ForeArm") || b.name.startsWith(sd + "Hand") ? k : -1).filter((k) => k >= 0)) }));
-      const si = geo.attributes.skinIndex, sw = geo.attributes.skinWeight, v4 = new Vector3(), cut2 = new Uint8Array(pos.count);
-      for (let i2 = 0; i2 < pos.count; i2++) {
-        let best = -1, bw = 0;
-        for (let j = 0; j < 4; j++) {
-          const w4 = sw.getComponent(i2, j);
-          if (w4 > bw) {
-            bw = w4;
-            best = si.getComponent(i2, j);
-          }
-        }
-        for (const sd of sides) {
-          if (sd.lower.has(best)) cut2[i2] = 1;
-          else if (best === sd.arm) {
-            v4.fromBufferAttribute(pos, i2).applyMatrix4(o.bindMatrix);
-            const s0 = binds[sd.arm], e0 = binds[sd.fore], d = e0.clone().sub(s0);
-            if (v4.clone().sub(s0).dot(d) / d.lengthSq() > 0.45) cut2[i2] = 1;
-          }
-        }
-      }
-      const idx = geo.index.array, keep = [];
-      for (let t = 0; t < idx.length; t += 3) if (!cut2[idx[t]] && !cut2[idx[t + 1]] && !cut2[idx[t + 2]]) keep.push(idx[t], idx[t + 1], idx[t + 2]);
-      geo.setIndex(keep);
-    }
     geo.computeBoundingSphere();
   });
   $("loading").textContent = "Carregando anima\xE7\xF5es\u2026";
@@ -52702,6 +52755,7 @@ async function runPreview() {
   step(dt);
   render();
   const f = (v4) => v4.toArray().map((x2) => x2.toFixed(2)).join(",");
+  console.log("DBG ikR", prof.ikR.weight.toFixed(2), prof.ikR.goal, prof.ikR.auto, "target", f(prof.ikR.target), "hand", f(prof.bone("RightHand").getWorldPosition(new Vector3())), "phone", phone2.visible, f(phone2.position), "typing", state.typing);
   console.log("DBG prof pos", f(prof.pos), "yaw", prof.yaw.toFixed(2), "head", f(prof.headPos()), "hips", f(prof.bone("Hips").getWorldPosition(new Vector3())), "| att head", f(att.headPos()), "cam", f(camera.position));
   window.__ready = true;
 }

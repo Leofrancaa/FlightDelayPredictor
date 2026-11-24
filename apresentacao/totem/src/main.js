@@ -360,10 +360,29 @@ const hand = new THREE.Vector3(), tmp = new THREE.Vector3();
 const state = { suitMode: 'pull', bagHand: 'Left', phone: false, typing: false, passMode: 'hidden', passOwner: null };
 const suitWheel = new THREE.Vector3(6, 0, 9);
 
+// point between the wrist and the knuckles (where a handle sits in a closed hand)
+function gripPoint(a, side, v = new THREE.Vector3()) {
+  const w = a.bone(side + 'Hand').getWorldPosition(new THREE.Vector3());
+  const k = a.bone(side + 'HandMiddle1')?.getWorldPosition(new THREE.Vector3()) || w;
+  return v.copy(w).lerp(k, 0.8);
+}
+const CURL_AXIS = new THREE.Vector3(1, 0, 0);
+function curlFingers(a, side, amt) {
+  if (amt <= 0) return;
+  for (const f of ['Index', 'Middle', 'Ring', 'Pinky']) for (let j = 1; j <= 3; j++) {
+    const b = a.bone(side + 'Hand' + f + j); if (!b) continue;
+    b.quaternion.multiply(new THREE.Quaternion().setFromAxisAngle(CURL_AXIS, amt * (j === 1 ? 0.9 : 1.1)));
+  }
+  const t = a.bone(side + 'HandThumb2'); if (t) t.quaternion.multiply(new THREE.Quaternion().setFromAxisAngle(CURL_AXIS, amt * 0.4));
+  a.arm.updateMatrixWorld(true);
+}
+
 function updateProps(dt) {
   // gift bag hangs from prof's left hand
-  prof.bone(state.bagHand + 'Hand').getWorldPosition(hand);
-  bag.position.lerp(tmp.copy(hand).add(V(0, -0.03, 0)), Math.min(1, dt * 25));
+  curlFingers(prof, 'Left', 1.0);
+  if (state.suitMode === 'pull' || state.phone) curlFingers(prof, 'Right', state.phone ? 0.6 : 1.0);
+  gripPoint(prof, state.bagHand, hand);
+  bag.position.copy(hand).add(V(0, 0.02, 0));
   bag.rotation.set(0, prof.yaw + Math.PI / 2, Math.sin(vt * 3) * 0.04 * (prof.walk ? 2 : 0.3));
   M_BAG.position.copy(bag.position).add(V(0, -0.25, 0));
   // suitcase
@@ -372,14 +391,15 @@ function updateProps(dt) {
     // right arm reaches back to the handle; suitcase trails ~0.6 m behind the hand
     const grip = prof.pos.clone().addScaledVector(fwd, -0.28).addScaledVector(right, 0.24); grip.y = 0.84;
     prof.ikR.set(grip, prof.walk ? 1 : 0.6);
-    prof.bone('RightHand').getWorldPosition(hand);
-    const want = hand.clone().addScaledVector(fwd, -0.58); want.y = 0.035;
-    suitWheel.lerp(want, Math.min(1, dt * 8));
+    gripPoint(prof, 'Right', hand);
+    // place the wheels on the floor behind the hand so the handle top lands exactly in the hand
+    const L = 1.04, dy = Math.max(0.2, hand.y - 0.035), horiz = Math.sqrt(Math.max(0.01, L * L - dy * dy));
+    suitWheel.copy(hand).addScaledVector(fwd, -horiz); suitWheel.y = 0.035;
     const up = hand.clone().sub(suitWheel).normalize();
     const zAxis = new THREE.Vector3().crossVectors(right, up).normalize();
     const m = new THREE.Matrix4().makeBasis(new THREE.Vector3().crossVectors(up, zAxis), up, zAxis);
-    suit.quaternion.slerp(new THREE.Quaternion().setFromRotationMatrix(m), Math.min(1, dt * 10));
-    suit.position.copy(suitWheel).add(V(0, -0.035, 0));
+    suit.quaternion.setFromRotationMatrix(m);
+    suit.position.copy(suitWheel).add(V(0, -0.035, 0)).addScaledVector(zAxis, 0.03);
   } else if (state.suitMode === 'parked') {
     const want = prof.pos.clone().addScaledVector(right, 0.45).addScaledVector(fwd, -0.05);
     suit.position.lerp(V(want.x, 0, want.z), Math.min(1, dt * 3));
@@ -389,10 +409,10 @@ function updateProps(dt) {
   // phone in prof right hand
   phone.visible = state.phone;
   if (state.phone) {
-    prof.bone('RightHand').getWorldPosition(hand);
+    gripPoint(prof, 'Right', hand);
     const face = prof.headPos();
-    phone.position.copy(hand).addScaledVector(fwd, 0.03).add(V(0, 0.05, 0));
-    phone.lookAt(face); phone.rotateX(-0.2);
+    phone.position.copy(hand).add(face.clone().sub(hand).normalize().multiplyScalar(0.035));
+    phone.lookAt(face);
     M_PHONE.position.copy(phone.position);
   }
   // boarding pass
@@ -412,9 +432,9 @@ function guardArms(a) {
     if (ik.goal > 0 && !ik.auto) continue; // scripted IK wins
     ik.hand.getWorldPosition(_h); a.arm.worldToLocal(_h);
     ik.fore.getWorldPosition(_e); a.arm.worldToLocal(_e);
-    const inside = (p, r) => p.y > 0.75 && p.y < 1.45 && Math.abs(p.x) < r && p.z > -0.14 && p.z < 0.16;
-    if (inside(_h, 0.2) || inside(_e, 0.19)) {
-      _h.x = sgn * Math.max(Math.abs(_h.x), 0.27); _h.z = Math.max(_h.z, 0.02);
+    const inside = (p, r) => p.y > 0.75 && p.y < 1.5 && Math.abs(p.x) < r && p.z > -0.15 && p.z < 0.22;
+    if (inside(_h, 0.21) || inside(_e, 0.2)) {
+      _h.x = sgn * Math.max(Math.abs(_h.x), 0.28); _h.z = Math.max(_h.z, 0.24);
       ik.set(a.arm.localToWorld(_h.clone()), 0.85); ik.auto = true;
     } else if (ik.auto) { ik.release(); ik.auto = false; }
   }
@@ -431,7 +451,7 @@ function updateActors(dt) {
   // procedural targets
   if (state.typing && prof.ikR) {
     const fwd = V(Math.sin(prof.yaw), 0, Math.cos(prof.yaw)), right = V(-Math.cos(prof.yaw), 0, Math.sin(prof.yaw));
-    const p = prof.pos.clone().addScaledVector(fwd, 0.3).addScaledVector(right, 0.04); p.y = 1.18 + Math.sin(vt * 9) * 0.004;
+    const p = prof.pos.clone().addScaledVector(fwd, 0.3).addScaledVector(right, 0.04); p.y = 1.27 + Math.sin(vt * 9) * 0.004;
     prof.ikR.set(p, 1);
   }
   for (const a of actors) { guardArms(a); a.look.update(dt); a.ikL.update(dt); a.ikR.update(dt); }
@@ -558,7 +578,7 @@ async function scene5() {
   look(prof, camera);
   await say('p5');
   // takes his phone and starts typing
-  cut({ p0: () => prof.pos.clone().add(V(-0.9, 1.45, -0.9)), p1: () => prof.pos.clone().add(V(-1.2, 1.5, -1.3)), l0: headOf(prof, -0.25), dur: 5, fov: 30, focus: headOf(prof, -0.2), aperture: 0.002 });
+  cut({ p0: rel(prof, -0.3, 1.95, -0.22), p1: rel(prof, -0.27, 1.92, -0.17), l0: () => M_PHONE.position.clone(), dur: 5, fov: 30, focus: () => M_PHONE.position.clone(), aperture: 0.0015 });
   state.phone = true; state.typing = true; look(prof, M_PHONE);
   airport.strikeNow();
   await wait(1.6);
@@ -628,7 +648,7 @@ async function boot() {
   });
   restyle(prof.arm, { outfit_top: shirt, AvatarHead: headTex });
   restyle(att.arm, { outfit_top: aShirt, AvatarHead: aHead, outfit_bottom: aJeans });
-  // attendant: loose short-sleeve shirt and bell-bottom jeans (legs flare below the knee)
+  // attendant: loose short-sleeve shirt (sleeve below mid upper arm painted as skin) and bell-bottom jeans
   att.arm.updateMatrixWorld(true);
   att.arm.traverse((o) => {
     if (!o.isMesh) return;
@@ -637,38 +657,44 @@ async function boot() {
     o.geometry = o.geometry.clone();
     const geo = o.geometry, pos = geo.attributes.position, nor = geo.attributes.normal;
     geo.computeBoundingBox(); const bb = geo.boundingBox, h = bb.max.y - bb.min.y;
-    const unit = h > 10 ? 100 : 1; // cm vs m
+    const unit = h > 10 ? 100 : 1;
+    let armV = null;
+    if (name === 'outfit_top' && o.isSkinnedMesh) {
+      const bones = o.skeleton.bones, binds = o.skeleton.boneInverses.map((m) => new THREE.Vector3().setFromMatrixPosition(m.clone().invert()));
+      const bi = (n) => bones.findIndex((bn) => bn.name === n);
+      const sides = ['Left', 'Right'].map((sd) => ({ arm: bi(sd + 'Arm'), fore: bi(sd + 'ForeArm'), lower: new Set(bones.map((bn, k) => (bn.name.startsWith(sd + 'ForeArm') || bn.name.startsWith(sd + 'Hand') ? k : -1)).filter((k) => k >= 0)) }));
+      const si = geo.attributes.skinIndex, sw = geo.attributes.skinWeight, v = new THREE.Vector3();
+      armV = new Uint8Array(pos.count); // 1 = sleeve (no inflation), 2 = bare arm (painted skin)
+      for (let i = 0; i < pos.count; i++) {
+        let best = -1, bw = 0; for (let j = 0; j < 4; j++) { const w = sw.getComponent(i, j); if (w > bw) { bw = w; best = si.getComponent(i, j); } }
+        for (const sd of sides) {
+          if (sd.lower.has(best)) armV[i] = 2;
+          else if (best === sd.arm) {
+            v.fromBufferAttribute(pos, i).applyMatrix4(o.bindMatrix);
+            const s0 = binds[sd.arm], d = binds[sd.fore].clone().sub(s0);
+            armV[i] = v.sub(s0).dot(d) / d.lengthSq() > 0.42 ? 2 : 1;
+          }
+        }
+      }
+      // paint the bare-arm triangles with skin in UV space, and a darker hem where the sleeve ends
+      const img = o.material.map.image, cv = document.createElement('canvas'); cv.width = img.width; cv.height = img.height;
+      const g2 = cv.getContext('2d'); g2.drawImage(img, 0, 0);
+      const uv = geo.attributes.uv, idx = geo.index.array, W2 = cv.width, H2 = cv.height;
+      const tri = (t, fill, grow) => { g2.beginPath(); for (let k = 0; k < 3; k++) { const q = idx[t + k]; const x = uv.getX(q) * W2, y = uv.getY(q) * H2; k ? g2.lineTo(x, y) : g2.moveTo(x, y); } g2.closePath(); g2.fillStyle = fill; g2.fill(); if (grow) { g2.strokeStyle = fill; g2.lineWidth = grow; g2.stroke(); } };
+      for (let t = 0; t < idx.length; t += 3) { const c = (armV[idx[t]] === 2) + (armV[idx[t + 1]] === 2) + (armV[idx[t + 2]] === 2); if (c === 3) tri(t, '#cf9e86', 3); }
+      for (let t = 0; t < idx.length; t += 3) { const c = (armV[idx[t]] === 2) + (armV[idx[t + 1]] === 2) + (armV[idx[t + 2]] === 2); if (c === 1 || c === 2) tri(t, '#9c6c1f', 1); }
+      const nt = new THREE.CanvasTexture(cv); nt.flipY = false; nt.colorSpace = THREE.SRGBColorSpace; nt.anisotropy = 8;
+      o.material.map = nt; o.material.needsUpdate = true;
+    }
     for (let i = 0; i < pos.count; i++) {
       let k = 0;
-      if (name === 'outfit_top') k = 0.012;
+      if (name === 'outfit_top') k = armV && armV[i] ? (armV[i] === 1 ? 0.006 : 0) : 0.012;
       else { const knee = bb.min.y + h * 0.42, y = pos.getY(i); if (y < knee) { const t = (knee - y) / (knee - bb.min.y); k = 0.075 * t * t; } }
       if (!k) continue;
       const nx = nor.getX(i), ny = name === 'outfit_top' ? nor.getY(i) : 0, nz = nor.getZ(i);
       pos.setXYZ(i, pos.getX(i) + nx * k * unit, pos.getY(i) + ny * k * unit, pos.getZ(i) + nz * k * unit);
     }
-    pos.needsUpdate = true;
-    if (name === 'outfit_top' && o.isSkinnedMesh && geo.index) {
-      // cut the sleeves at mid upper arm (bind pose): drop triangles driven by fore arm/hand or past 45% of the upper arm
-      const bones = o.skeleton.bones, binds = o.skeleton.boneInverses.map((m) => new THREE.Vector3().setFromMatrixPosition(m.clone().invert()));
-      const bi = (n) => bones.findIndex((b) => b.name === n);
-      const sides = ['Left', 'Right'].map((sd) => ({ arm: bi(sd + 'Arm'), fore: bi(sd + 'ForeArm'), lower: new Set(bones.map((b, k) => (b.name.startsWith(sd + 'ForeArm') || b.name.startsWith(sd + 'Hand') ? k : -1)).filter((k) => k >= 0)) }));
-      const si = geo.attributes.skinIndex, sw = geo.attributes.skinWeight, v = new THREE.Vector3(), cut = new Uint8Array(pos.count);
-      for (let i = 0; i < pos.count; i++) {
-        let best = -1, bw = 0; for (let j = 0; j < 4; j++) { const w = sw.getComponent(i, j); if (w > bw) { bw = w; best = si.getComponent(i, j); } }
-        for (const sd of sides) {
-          if (sd.lower.has(best)) cut[i] = 1;
-          else if (best === sd.arm) {
-            v.fromBufferAttribute(pos, i).applyMatrix4(o.bindMatrix);
-            const s0 = binds[sd.arm], e0 = binds[sd.fore], d = e0.clone().sub(s0);
-            if (v.clone().sub(s0).dot(d) / d.lengthSq() > 0.45) cut[i] = 1;
-          }
-        }
-      }
-      const idx = geo.index.array, keep = [];
-      for (let t = 0; t < idx.length; t += 3) if (!cut[idx[t]] && !cut[idx[t + 1]] && !cut[idx[t + 2]]) keep.push(idx[t], idx[t + 1], idx[t + 2]);
-      geo.setIndex(keep);
-    }
-    geo.computeBoundingSphere();
+    pos.needsUpdate = true; geo.computeBoundingSphere();
   });
   $('loading').textContent = 'Carregando animações…';
   await preloadAnims(prof, ['walk', 'talk1']);
@@ -702,6 +728,7 @@ async function runPreview() {
   while (vt < SIM_AT) { step(dt); if (++n % 30 === 0) await new Promise((r) => setTimeout(r, 0)); }
   step(dt); render();
   const f = (v) => v.toArray().map((x) => x.toFixed(2)).join(',');
+  console.log('DBG ikR', prof.ikR.weight.toFixed(2), prof.ikR.goal, prof.ikR.auto, 'target', f(prof.ikR.target), 'hand', f(prof.bone('RightHand').getWorldPosition(new THREE.Vector3())), 'phone', phone.visible, f(phone.position), 'typing', state.typing);
   console.log('DBG prof pos', f(prof.pos), 'yaw', prof.yaw.toFixed(2), 'head', f(prof.headPos()), 'hips', f(prof.bone('Hips').getWorldPosition(new THREE.Vector3())), '| att head', f(att.headPos()), 'cam', f(camera.position));
   window.__ready = true;
 }
