@@ -17,6 +17,7 @@ import { CFG, LINES } from './config.js';
 // ---------------------------------------------------------------- params
 const Q = new URLSearchParams(location.search);
 const QUALITY = Q.get('q') || 'high';
+const EXPORT = Q.has('export');         // offline video export: deterministic frames + event log
 const SIM = Q.has('at');                 // headless preview: simulate up to `at` seconds of a scene
 const START_SCENE = +(Q.get('scene') || 1);
 const SIM_AT = +(Q.get('at') || 0);
@@ -27,7 +28,7 @@ const smooth = (x) => { x = Math.min(1, Math.max(0, x)); return x * x * (3 - 2 *
 
 // ---------------------------------------------------------------- renderer
 const container = $('stage');
-const renderer = new THREE.WebGLRenderer({ antialias: QUALITY === 'low', powerPreference: 'high-performance', preserveDrawingBuffer: SIM });
+const renderer = new THREE.WebGLRenderer({ antialias: QUALITY === 'low', powerPreference: 'high-performance', preserveDrawingBuffer: SIM || EXPORT });
 renderer.setPixelRatio(Math.min(devicePixelRatio, QUALITY === 'high' ? 1.5 : 1));
 renderer.setSize(container.clientWidth, container.clientHeight);
 renderer.shadowMap.enabled = true;
@@ -124,7 +125,8 @@ function thunder(delay = 0.6) {
   const g = audioCtx.createGain(); g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(0.05, t0 + 0.25); g.gain.exponentialRampToValueAtTime(0.018, t0 + 1.6); g.gain.exponentialRampToValueAtTime(0.001, t0 + 4.8);
   s.connect(lp).connect(g).connect(master); s.start(t0);
 }
-airport.onStrike = () => thunder(0.5 + Math.random() * 0.8);
+const EVENTS = (window.__events = []);
+airport.onStrike = () => { const d = 0.5 + Math.random() * 0.8; EVENTS.push({ t: vt + d, type: 'thunder' }); thunder(d); };
 
 // ---------------------------------------------------------------- props
 const bag = PROPS.giftBag(); scene.add(bag);
@@ -292,6 +294,7 @@ function showSub(who, text) { const el = $('sub'); if (!subtitlesOn || !text) { 
 async function say(id, { gesture = null, anim = null } = {}) {
   const L = LINES[id], a = L.who === 'prof' ? prof : att;
   showSub(L.who, L.text);
+  const t0 = vt;
   if (anim && !a.walk) a.head.playAnimation(ANIM[anim], null, 30);
   if (gesture) setTimeout(() => a.head.playGesture(gesture[0], gesture[1] || 2.5, gesture[2] || false), 250);
   let durMs;
@@ -318,6 +321,7 @@ async function say(id, { gesture = null, anim = null } = {}) {
     a.head.speakAudio({ audio: silent, ...wordTiming(L.text, durMs * 0.95, 0) }, { lipsyncLang: 'pt_br' });
     if (ended) { await Promise.race([ended, wait(durMs / 1000 * 2 + 1)]); await wait(0.2); if (anim) a.head.stopAnimation(); showSub(null); return; }
   }
+  EVENTS.push({ t: t0, type: 'line', id, who: L.who, text: L.text, dur: durMs / 1000, file: audioBuffers[id] ? L.audio : null });
   await wait(durMs / 1000 + 0.25);
   if (anim) a.head.stopAnimation();
   showSub(null);
@@ -549,6 +553,7 @@ async function scene5() {
 async function scene6() {
   grade.uniforms.uFade.value = 0;
   $('realcase').innerHTML = `Voo real: ${CFG.flight.airline} ${CFG.flight.code}, ${CFG.flight.origin} → ${CFG.flight.dest}, ${CFG.flight.date}<br>Previsão 1 h antes: ${Math.round(CFG.result.p * 100)}% · ${CFG.result.actual}`;
+  EVENTS.push({ t: vt, type: 'end', title: 'Como esse totem funciona?', sub: $('realcase').innerHTML.split('<br>') });
   $('endcard').classList.add('on');
   await wait(6);
 }
@@ -564,7 +569,8 @@ async function run(from = 1) {
     if (from >= 5) setTotem('result');
   }
   try {
-    for (let i = from; i <= SCENES.length; i++) { $('scenelabel').textContent = `Cena ${i}`; await SCENES[i - 1](); }
+    for (let i = from; i <= SCENES.length; i++) { $('scenelabel').textContent = `Cena ${i}`; EVENTS.push({ t: vt, type: 'scene', n: i }); await SCENES[i - 1](); }
+    window.__finished = vt;
     $('controls').classList.add('on');
   } catch (e) { if (e.message !== 'abort') console.error(e); }
 }
@@ -632,6 +638,13 @@ async function boot() {
   const got = Object.keys(LINES).filter((k) => audioBuffers[k]).length;
   $('audiostatus').textContent = got ? `${got}/${Object.keys(LINES).length} falas com áudio gravado` : 'Vozes: sintetizadas pelo navegador (placeholder)';
 
+  if (EXPORT) {
+    $('loading').style.display = 'none'; document.querySelectorAll('.bar').forEach((b) => (b.style.display = 'none')); $('ui').style.display = 'none';
+    master.gain.value = 0; await audioCtx.resume().catch(() => {});
+    const FPS = +(Q.get('fps') || 30);
+    window.__frame = () => { step(1 / FPS); render(); return renderer.domElement.toDataURL('image/jpeg', 0.92); };
+    resetWorld(); run(START_SCENE); window.__ready = true; return;
+  }
   if (SIM) {
     $('loading').style.display = 'none'; document.querySelectorAll('.bar').forEach((b) => (b.style.display = Q.has('bars') ? '' : 'none'));
     resetWorld(); runPreview(); return;

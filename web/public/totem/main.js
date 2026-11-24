@@ -51734,6 +51734,7 @@ var LINES = {
 // src/main.js
 var Q = new URLSearchParams(location.search);
 var QUALITY = Q.get("q") || "high";
+var EXPORT = Q.has("export");
 var SIM = Q.has("at");
 var START_SCENE = +(Q.get("scene") || 1);
 var SIM_AT = +(Q.get("at") || 0);
@@ -51745,7 +51746,7 @@ var smooth = (x2) => {
   return x2 * x2 * (3 - 2 * x2);
 };
 var container = $("stage");
-var renderer = new WebGLRenderer({ antialias: QUALITY === "low", powerPreference: "high-performance", preserveDrawingBuffer: SIM });
+var renderer = new WebGLRenderer({ antialias: QUALITY === "low", powerPreference: "high-performance", preserveDrawingBuffer: SIM || EXPORT });
 renderer.setPixelRatio(Math.min(devicePixelRatio, QUALITY === "high" ? 1.5 : 1));
 renderer.setSize(container.clientWidth, container.clientHeight);
 renderer.shadowMap.enabled = true;
@@ -51871,7 +51872,12 @@ function thunder(delay = 0.6) {
   s.connect(lp).connect(g).connect(master);
   s.start(t0);
 }
-airport.onStrike = () => thunder(0.5 + Math.random() * 0.8);
+var EVENTS = window.__events = [];
+airport.onStrike = () => {
+  const d = 0.5 + Math.random() * 0.8;
+  EVENTS.push({ t: vt + d, type: "thunder" });
+  thunder(d);
+};
 var bag = giftBag();
 scene.add(bag);
 var suit = suitcase();
@@ -52138,6 +52144,7 @@ function showSub(who, text) {
 async function say(id, { gesture = null, anim = null } = {}) {
   const L = LINES[id], a = L.who === "prof" ? prof : att;
   showSub(L.who, L.text);
+  const t0 = vt;
   if (anim && !a.walk) a.head.playAnimation(ANIM[anim], null, 30);
   if (gesture) setTimeout(() => a.head.playGesture(gesture[0], gesture[1] || 2.5, gesture[2] || false), 250);
   let durMs;
@@ -52161,10 +52168,10 @@ async function say(id, { gesture = null, anim = null } = {}) {
       const natural = /natural|online|neural/i.test(v4.name);
       u.pitch = natural ? 1 : L.who === "prof" ? 0.9 : 1.05;
       u.rate = L.who === "prof" ? 0.95 : 1;
-      const t0 = performance.now();
+      const t02 = performance.now();
       ended = new Promise((res) => {
         u.onend = () => {
-          const real = performance.now() - t0;
+          const real = performance.now() - t02;
           ttsRatio = Math.min(1.8, Math.max(0.6, ttsRatio * 0.4 + 0.6 * ttsRatio * real / durMs));
           res();
         };
@@ -52182,6 +52189,7 @@ async function say(id, { gesture = null, anim = null } = {}) {
       return;
     }
   }
+  EVENTS.push({ t: t0, type: "line", id, who: L.who, text: L.text, dur: durMs / 1e3, file: audioBuffers[id] ? L.audio : null });
   await wait(durMs / 1e3 + 0.25);
   if (anim) a.head.stopAnimation();
   showSub(null);
@@ -52487,6 +52495,7 @@ async function scene5() {
 async function scene6() {
   grade.uniforms.uFade.value = 0;
   $("realcase").innerHTML = `Voo real: ${CFG.flight.airline} ${CFG.flight.code}, ${CFG.flight.origin} \u2192 ${CFG.flight.dest}, ${CFG.flight.date}<br>Previs\xE3o 1 h antes: ${Math.round(CFG.result.p * 100)}% \xB7 ${CFG.result.actual}`;
+  EVENTS.push({ t: vt, type: "end", title: "Como esse totem funciona?", sub: $("realcase").innerHTML.split("<br>") });
   $("endcard").classList.add("on");
   await wait(6);
 }
@@ -52502,8 +52511,10 @@ async function run(from = 1) {
   try {
     for (let i2 = from; i2 <= SCENES.length; i2++) {
       $("scenelabel").textContent = `Cena ${i2}`;
+      EVENTS.push({ t: vt, type: "scene", n: i2 });
       await SCENES[i2 - 1]();
     }
+    window.__finished = vt;
     $("controls").classList.add("on");
   } catch (e3) {
     if (e3.message !== "abort") console.error(e3);
@@ -52594,6 +52605,24 @@ async function boot() {
   for (const id of Object.keys(LINES)) audioBuffers[id] = await loadBuffer("./audio/" + LINES[id].audio) || await loadBuffer("./audio/" + LINES[id].audio.replace(/\.mp3$/, ".wav"));
   const got = Object.keys(LINES).filter((k) => audioBuffers[k]).length;
   $("audiostatus").textContent = got ? `${got}/${Object.keys(LINES).length} falas com \xE1udio gravado` : "Vozes: sintetizadas pelo navegador (placeholder)";
+  if (EXPORT) {
+    $("loading").style.display = "none";
+    document.querySelectorAll(".bar").forEach((b) => b.style.display = "none");
+    $("ui").style.display = "none";
+    master.gain.value = 0;
+    await audioCtx.resume().catch(() => {
+    });
+    const FPS = +(Q.get("fps") || 30);
+    window.__frame = () => {
+      step(1 / FPS);
+      render();
+      return renderer.domElement.toDataURL("image/jpeg", 0.92);
+    };
+    resetWorld();
+    run(START_SCENE);
+    window.__ready = true;
+    return;
+  }
   if (SIM) {
     $("loading").style.display = "none";
     document.querySelectorAll(".bar").forEach((b) => b.style.display = Q.has("bars") ? "" : "none");
