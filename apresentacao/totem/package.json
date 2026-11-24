@@ -1,0 +1,10 @@
+{
+  "name": "totem-animacao",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "esbuild src/main.js --bundle --format=esm --target=es2022 --outfile=../../web/public/totem/main.js --log-level=warning"
+  },
+  "dependencies": { "three": "0.186.0" },
+  "devDependencies": { "esbuild": "^0.25.0", "puppeteer-core": "^23.0.0" }
+}

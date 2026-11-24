@@ -7,6 +7,8 @@ const nextConfig: NextConfig = {
       { source: "/eua", destination: "/", permanent: true },
       { source: "/eua/:pagina*", destination: "/:pagina*", permanent: true },
       { source: "/comparacao", destination: "/analista", permanent: true },
+      // animação da apresentação (página estática em public/totem)
+      { source: "/totem", destination: "/totem/index.html", permanent: false },
     ];
   },
 };
