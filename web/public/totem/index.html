@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>O aniversário de 94 anos — Previsão de atraso de voos</title>
+<style>
+  html,body{margin:0;height:100%;background:#000;color:#fff;font-family:"Segoe UI",Inter,"Helvetica Neue",Arial,sans-serif;overflow:hidden}
+  video{position:fixed;inset:0;width:100%;height:100%;object-fit:contain;background:#000}
+  #play{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.4em;cursor:pointer;
+        background:radial-gradient(ellipse at center,rgba(5,10,25,.45),rgba(0,0,0,.85));transition:opacity .4s}
+  #play.hide{opacity:0;pointer-events:none}
+  #play h1{font-weight:300;font-size:clamp(28px,4.2vw,64px);margin:0}
+  #play p{color:#a9b8d6;margin:0;font-size:clamp(14px,1.4vw,20px)}
+  #play .btn{margin-top:1.2em;width:96px;height:96px;border-radius:50%;border:2px solid #fff;display:flex;align-items:center;justify-content:center}
+  #play .btn:after{content:"";border-left:30px solid #fff;border-top:18px solid transparent;border-bottom:18px solid transparent;margin-left:8px}
+  #play small{margin-top:1.6em;color:#7f8ba3;font-size:13px}
+  #links{position:fixed;right:16px;bottom:14px;font-size:13px;opacity:0;transition:opacity .3s}
+  body:hover #links{opacity:.8}
+  #links a{color:#9fb3d9;text-decoration:none;margin-left:14px}
+  #erro{display:none;position:fixed;inset:0;align-items:center;justify-content:center;text-align:center;color:#a9b8d6;padding:2em}
+</style>
+</head>
+<body>
+<video id="v" src="totem.mp4" preload="auto" playsinline></video>
+<div id="play"><h1>O aniversário de 94 anos</h1><p>Uma previsão de atraso de voo</p><div class="btn"></div><small>F: tela cheia · espaço: pausar</small></div>
+<div id="erro">O vídeo ainda não foi publicado.<br><a href="animacao.html" style="color:#9fb3d9">Abrir a versão 3D interativa</a></div>
+<div id="links"><a href="animacao.html">versão 3D interativa</a><a href="/">voltar ao site</a></div>
+<script>
+{
+  const v = document.getElementById('v'), play = document.getElementById('play');
+  const start = () => { play.classList.add('hide'); v.play().catch(() => {}); };
+  play.addEventListener('click', () => { document.documentElement.requestFullscreen?.().catch(() => {}); start(); });
+  v.addEventListener('click', () => (v.paused ? v.play() : v.pause()));
+  v.addEventListener('ended', () => { play.classList.remove('hide'); });
+  v.addEventListener('error', () => { play.style.display = 'none'; document.getElementById('erro').style.display = 'flex'; });
+  addEventListener('keydown', (e) => {
+    if (e.key === 'f' || e.key === 'F') (document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen());
+    if (e.key === ' ') { e.preventDefault(); if (!play.classList.contains('hide')) start(); else v.paused ? v.play() : v.pause(); }
+  });
+}
+</script>
+</body>
+</html>

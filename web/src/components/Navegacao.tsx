@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 const LINKS = [
   { href: "/passageiro", rotulo: "Meu voo" },
   { href: "/analista", rotulo: "Análise do modelo" },
+  { href: "/totem", rotulo: "Apresentação", estatico: true },
 ];
 
 export default function Navegacao() {
@@ -20,6 +21,12 @@ export default function Navegacao() {
         <nav className="flex gap-1 text-[15px]">
           {LINKS.map((l) => {
             const ativo = rota.startsWith(l.href);
+            if ("estatico" in l)
+              return (
+                <a key={l.href} href={l.href} className="rounded px-3 py-1.5 transition-colors hover:bg-white/10">
+                  {l.rotulo}
+                </a>
+              );
             return (
               <Link
                 key={l.href}

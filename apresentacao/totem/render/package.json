@@ -1,0 +1,7 @@
+{
+  "name": "totem-render",
+  "private": true,
+  "type": "module",
+  "scripts": { "render": "node render.mjs" },
+  "dependencies": { "ffmpeg-static": "^5.2.0", "puppeteer-core": "^23.0.0" }
+}
