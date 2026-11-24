@@ -58,7 +58,7 @@ const page = await browser.newPage();
 await page.setViewport({ width: W, height: H, deviceScaleFactor: 1 });
 page.on('pageerror', (e) => console.log('ERRO NA PÁGINA:', e.message));
 console.log('navegador:', browserPath);
-await page.goto(`http://localhost:${PORT}/index.html?export=1&q=high&fps=${FPS}`, { waitUntil: 'load', timeout: 0 });
+await page.goto(`http://localhost:${PORT}/animacao.html?export=1&q=high&fps=${FPS}`, { waitUntil: 'load', timeout: 0 });
 await page.waitForFunction('window.__ready===true', { timeout: 0, polling: 300 });
 const gpu = await page.evaluate(() => { const g = document.createElement('canvas').getContext('webgl2'); const d = g?.getExtension('WEBGL_debug_renderer_info'); return d ? g.getParameter(d.UNMASKED_RENDERER_WEBGL) : '?'; });
 console.log('GPU:', gpu, `| ${W}x${H} @ ${FPS} fps`);
@@ -118,3 +118,5 @@ fs.writeFileSync(path.join(SAIDA, 'legendas.ass'), ass);
 run(['-framerate', String(FPS), '-i', 'frames/%05d.jpg', '-i', 'audio.wav', '-vf', 'subtitles=legendas.ass,format=yuv420p',
   '-c:v', 'libx264', '-preset', 'slow', '-crf', '18', '-c:a', 'aac', '-b:a', '192k', '-shortest', '-movflags', '+faststart', 'totem.mp4']);
 console.log('pronto:', path.join(SAIDA, 'totem.mp4'));
+if (!process.argv.includes('--nao-publicar')) { fs.copyFileSync(path.join(SAIDA, 'totem.mp4'), path.join(SITE, 'totem.mp4')); console.log('copiado para web/public/totem/totem.mp4 (é o vídeo que o /totem toca)'); }
+const mb = fs.statSync(path.join(SAIDA, 'totem.mp4')).size / 1e6; if (mb > 95) console.log(`AVISO: ${mb.toFixed(0)} MB passa do limite de 100 MB do GitHub; rode com --res 720`);
