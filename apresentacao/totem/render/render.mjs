@@ -97,6 +97,17 @@ for (const e of events.filter((e) => e.type === 'sfx' && e.t < DUR && e.vol > 0)
   const vol = e.file === 'rain_out.mp3' && duck ? `volume='if(lt(t,${(duck.t - e.t).toFixed(2)}),${e.vol},${(e.vol * 0.35).toFixed(2)})':eval=frame` : `volume=${e.vol}`;
   add(['-i', path.join(SITE, 'audio', e.file)], `${vol},adelay=${ms}|${ms}`);
 }
+// música do pós-crédito: camada abafada (atrás da porta) + camada limpa, com envelope de volume
+const pw = (keys, i) => {   // envelope linear por partes -> expressão do ffmpeg (t = tempo desde o início da música)
+  let ex = keys[keys.length - 1][i].toFixed(3);
+  for (let j = keys.length - 2; j >= 0; j--) { const [t0, t1] = [keys[j][0], keys[j + 1][0]], [v0, v1] = [keys[j][i], keys[j + 1][i]]; if (t1 <= t0) continue; ex = `if(lt(t,${t1.toFixed(3)}),${v0.toFixed(3)}+(${(v1 - v0).toFixed(3)})*(t-${t0.toFixed(3)})/${(t1 - t0).toFixed(3)},${ex})`; }
+  return ex;
+};
+for (const e of events.filter((e) => e.type === 'music' && e.t < DUR)) {
+  const ms = Math.round(e.t * 1000), fim = events.find((x) => x.type === 'musicStop' && x.t > e.t), len = ((fim ? fim.t : DUR) - e.t).toFixed(2);
+  add(['-i', path.join(SITE, 'audio', e.file)], `atrim=0:${len},lowpass=f=520,volume='${pw(e.keys, 1)}':eval=frame,adelay=${ms}|${ms}`);
+  add(['-i', path.join(SITE, 'audio', e.file)], `atrim=0:${len},volume='${pw(e.keys, 2)}':eval=frame,adelay=${ms}|${ms}`);
+}
 for (const e of events.filter((e) => e.type === 'thunder' && e.t < DUR)) {
   const ms = Math.round(e.t * 1000);
   add(['-i', 'trovao.wav'], `adelay=${ms}|${ms},volume=0.05`);
@@ -110,15 +121,26 @@ const fs_ = Math.round(H / 22);
 let ass = `[Script Info]\nScriptType: v4.00+\nPlayResX: ${W}\nPlayResY: ${H}\n\n[V4+ Styles]\nFormat: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\n`;
 ass += `Style: Fala,Segoe UI,${fs_},&H00FFFFFF,&H00FFFFFF,&H00000000,&H80000000,0,0,0,0,100,100,0,0,1,${Math.max(2, fs_ / 14)},1,2,${W * 0.14},${W * 0.14},${H * 0.05},1\n`;
 ass += `Style: Titulo,Segoe UI Light,${Math.round(H / 11)},&H00FFFFFF,&H00FFFFFF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,0,0,5,10,10,0,1\n`;
+ass += `Style: Rolo,Segoe UI,${Math.round(H / 26)},&H00FFFFFF,&H00FFFFFF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,0,0,8,10,10,0,1\n`;
 ass += `Style: Sub,Segoe UI,${Math.round(H / 34)},&H00D9B39F,&H00FFFFFF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,0,0,8,10,10,${H * 0.58},1\n\n[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n`;
 if (LEGENDA) for (const e of events.filter((e) => e.type === 'line')) {
   const quem = (e.name || (e.who === 'prof' ? 'Soussa' : 'Guis')).toUpperCase();
   ass += `Dialogue: 0,${ts(e.t)},${ts(Math.min(DUR, e.t + e.dur + 0.2))},Fala,,0,0,0,,{\\fs${Math.round(fs_ * 0.55)}\\c&HFFD39F&}${quem}\\N{\\fs${fs_}\\c&HFFFFFF&}${e.text}\n`;
 }
-const fim = events.find((e) => e.type === 'end');
+const fim = events.find((e) => e.type === 'end'), fimOff = events.find((e) => e.type === 'endOff');
 if (fim) {
-  ass += `Dialogue: 1,${ts(fim.t + 0.4)},${ts(DUR)},Titulo,,0,0,0,,{\\fad(1000,0)}${fim.title}\n`;
-  ass += `Dialogue: 1,${ts(fim.t + 1.6)},${ts(DUR)},Sub,,0,0,0,,{\\fad(1000,0)}${fim.sub.join('\\N')}\n`;
+  const ate = fimOff ? fimOff.t : DUR;
+  ass += `Dialogue: 1,${ts(fim.t + 0.4)},${ts(ate)},Titulo,,0,0,0,,{\\fad(1000,300)}${fim.title}\n`;
+  ass += `Dialogue: 1,${ts(fim.t + 1.6)},${ts(ate)},Sub,,0,0,0,,{\\fad(1000,300)}${fim.sub.join('\\N')}\n`;
+}
+// créditos finais subindo (pós-crédito)
+for (const r of events.filter((e) => e.type === 'roll')) {
+  const lh = Math.round(H / 15), total = H + r.lines.length * lh + lh;
+  r.lines.forEach((l, i) => {
+    if (!l) return;
+    const y0 = H + lh + i * lh, y1 = y0 - total;
+    ass += `Dialogue: 2,${ts(r.t)},${ts(Math.min(DUR, r.t + r.dur))},Rolo,,0,0,0,,{\\an8\\move(${W / 2},${y0},${W / 2},${y1})}${l}\n`;
+  });
 }
 fs.writeFileSync(path.join(SAIDA, 'legendas.ass'), ass);
 

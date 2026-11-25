@@ -14,6 +14,7 @@ import { createTotem } from './totem.js';
 import { ArmIK, HeadLook } from './ik.js';
 import * as PROPS from './props.js';
 import { CFG, LINES, NAMES, CREDITS } from './config.js';
+import { buildCabin, rowZ, laptop, djDeck, printShirt, plainShirt } from './cabin.js';
 
 // ---------------------------------------------------------------- params
 const Q = new URLSearchParams(location.search);
@@ -53,6 +54,15 @@ const airport = buildAirport(scene, { quality: QUALITY, flights: CFG.board });
 const land = buildLandside(scene, { quality: QUALITY });
 const totem = createTotem(CFG);
 scene.add(totem.group);
+const cabin = buildCabin(scene);
+// which set is live: the airport (main film) or the plane (post-credits)
+function setWorld(w) {
+  const inPlane = w === 'cabin';
+  airport.root.visible = !inPlane; land.root.visible = !inPlane; totem.group.visible = !inPlane; cabin.root.visible = inPlane;
+  for (const a of [att, diniz, leo, motti, sa]) a.arm.visible = !inPlane;
+  for (const a of [kauai, zuma, lopo]) a.arm.visible = inPlane;
+  state.world = w;
+}
 
 // ---------------------------------------------------------------- post
 const composer = new EffectComposer(renderer);
@@ -134,6 +144,28 @@ function sfx(name, vol = 1) {
   const b = audioBuffers['sfx_' + name]; if (!b || SIM || audioCtx.state !== 'running') return null;
   const s = audioCtx.createBufferSource(); s.buffer = b; const g = audioCtx.createGain(); g.gain.value = vol; s.connect(g).connect(master); s.start(); return { s, g };
 }
+// music with a muffled (behind the door) and a clear layer; keys: [t, muffledGain, clearGain] relative to start
+const BEAT = 0.5803, BEAT0 = 0.4;   // lopo_music.mp3: ~103 BPM, first downbeat at 0.40 s
+let musicT0 = null, musicLive = null;
+function music(file, keys) {
+  musicT0 = vt; keys = keys.map((k) => k.slice()); keys.push([600, ...keys[keys.length - 1].slice(1)]);
+  musicEv = { t: vt, type: 'music', file, keys }; EVENTS.push(musicEv);
+  const b = audioBuffers['sfx_' + file.replace(/\.mp3$/, '')]; if (!b || SIM || audioCtx.state !== 'running') return;
+  const mk = (muf) => { const s = audioCtx.createBufferSource(); s.buffer = b; const g = audioCtx.createGain(); g.gain.value = 0; let n = s; if (muf) { const lp = audioCtx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 520; n.connect(lp); n = lp; } n.connect(g).connect(master); return { s, g }; };
+  const A = mk(true), B = mk(false), now = audioCtx.currentTime;
+  for (const [t, m, c] of keys) { A.g.gain.linearRampToValueAtTime(m, now + t); B.g.gain.linearRampToValueAtTime(c, now + t); }
+  A.s.start(); B.s.start(); musicLive = [A, B];
+}
+let musicEv = null;
+function musicAt(rel) { const k = musicEv.keys; let p = k[0]; for (const q of k) { if (q[0] >= rel) { const u = q[0] > p[0] ? (rel - p[0]) / (q[0] - p[0]) : 1; return [p[1] + (q[1] - p[1]) * u, p[2] + (q[2] - p[2]) * u]; } p = q; } return [p[1], p[2]]; }
+function musicTo(muf, clr, ramp = 0.3) {
+  if (!musicEv) return; const rel = vt - musicT0, [m, c] = musicAt(rel);
+  musicEv.keys = musicEv.keys.filter((q) => q[0] < rel); musicEv.keys.push([rel, m, c], [rel + ramp, muf, clr], [rel + 600, muf, clr]);
+  if (musicLive) { const now = audioCtx.currentTime; musicLive[0].g.gain.cancelScheduledValues(now); musicLive[1].g.gain.cancelScheduledValues(now); musicLive[0].g.gain.setValueAtTime(m, now); musicLive[1].g.gain.setValueAtTime(c, now); musicLive[0].g.gain.linearRampToValueAtTime(muf, now + ramp); musicLive[1].g.gain.linearRampToValueAtTime(clr, now + ramp); }
+}
+function musicStop() { EVENTS.push({ t: vt, type: 'musicStop' }); if (musicLive) { musicLive.forEach((x) => { try { x.s.stop(); } catch {} }); musicLive = null; } musicT0 = null; musicEv = null; }
+const beatNow = () => (musicT0 == null ? 0 : Math.max(0, (vt - musicT0 - BEAT0) / BEAT));
+
 airport.onStrike = () => { const d = 0.5 + Math.random() * 0.8; EVENTS.push({ t: vt + d, type: 'thunder' }); thunder(d); airport.flicker?.(); };
 
 // ---------------------------------------------------------------- props
@@ -246,7 +278,7 @@ function calibrateArms(a) {
   }
 }
 
-let prof, att, diniz, leo, motti, sa;
+let prof, att, diniz, leo, motti, sa, kauai, zuma, lopo;
 const actors = [];
 const ACT = {};
 
@@ -382,7 +414,7 @@ async function say(id, { gesture = null, anim = null } = {}) {
   const tl = TALKS[L.who] || [];
   if (anim === null && !gesture) anim = tl.length && !a.noTalkAnim ? tl[(a.lineN = (a.lineN || 0) + 1) % tl.length] : null;
   if (anim === false) anim = null;
-  if (anim && !a.walk && !a.fall) playTalk(a, anim);
+  if (anim && !a.walk && !a.fall && !a.seated) playTalk(a, anim);
   if (gesture) wait(0.25).then(() => gesture_(a, gesture[0], gesture[1] || 2.5, gesture[2] || false)).catch(() => {});
   let durMs;
   if (SIM) {
@@ -616,10 +648,12 @@ function updateActors(dt) {
     a.yaw = angleLerp(a.yaw, a.yawGoal, Math.min(1, dt * 5));
     a.arm.position.copy(a.pos); a.arm.rotation.y = a.yaw;
     a.head.animate(dt * 1000);
+    if (a.seated) chairPose(a);
     if (a.fall && a.fall.up != null) { const u = Math.min(1, a.fall.up / 1.9), S = tpl(a, 'sitting'), K = tpl(a, 'oneknee'); if (u < 0.45) applyPoseBlend(a, S, K, smooth(u / 0.45)); else applyPoseBlend(a, K, null, smooth((u - 0.45) / 0.55)); }
     else if (a.fall && a.fall.k > 0) applySit(a, a.fall.k);
     a.arm.updateMatrixWorld(true);
   }
+  nodToBeat();
   // procedural targets
   const earPt = (a) => { const r = V(-Math.cos(a.yaw), 0, Math.sin(a.yaw)), f = V(Math.sin(a.yaw), 0, Math.cos(a.yaw)); return earPos(a).addScaledVector(r, 0.06).addScaledVector(f, 0.035).add(V(0, -0.055, 0)); };
   if ((state.phone === 'hand' && !state.typing) || state.phone === 'ear') { const f = fwdOf(prof), r = V(-Math.cos(prof.yaw), 0, Math.sin(prof.yaw)); const hold = prof.pos.clone().addScaledVector(f, 0.42).addScaledVector(r, 0.05).add(V(0, 1.18, 0)); prof.ikR.set(hold.lerp(earPt(prof), smooth(prof.phoneT || 0)), 1); }
@@ -659,12 +693,74 @@ function updateActors(dt) {
     prof.ikR.set(p, 1);
   }
   if (diniz.head.poseName !== 'sitting') diniz.head.playPose('sitting', null, 1e6);
+  updatePlane(dt);
   for (const a of actors) { guardArms(a); a.look.update(dt); a.ikL.update(dt); a.ikR.update(dt); }
   updateProps(dt);
   // he gets soaked between the taxi and the doors, then slowly dries
   const want = prof.pos.z > 19.6 && prof.pos.z < 22.5 ? 1 : null;
   if (want) prof.wet = Math.min(1, (prof.wet || 0) + dt * 0.5); else if (prof.pos.z < 16) prof.wet = Math.max(0.35, (prof.wet || 0) - dt * 0.004);
   applyWet(prof.wet || 0); updateDrips(dt);
+}
+
+
+// ---------------------------------------------------------------- the plane (post-credits)
+const lap = laptop(); scene.add(lap);
+const deck = djDeck(); scene.add(deck);
+const _l = new THREE.Vector3(), _k1 = new THREE.Vector3(), _k2 = new THREE.Vector3();
+// a seated actor's lap, from the bones (hips -> knees), raised a little
+function lapPoint(a, out) {
+  a.bone('Hips').getWorldPosition(out); a.bone('LeftLeg').getWorldPosition(_k1); a.bone('RightLeg').getWorldPosition(_k2);
+  _k1.add(_k2).multiplyScalar(0.5); out.lerp(_k1, 0.62); out.y += 0.1; return out;
+}
+// chair sitting: thighs forward, shins down, a slight recline (applied after the animation each frame)
+const CH = { up: +(Q.get('chU') || 1.5), knee: +(Q.get('chK') || -1.45), spine: +(Q.get('chS') || -0.06), drop: +(Q.get('chD') || 0.5) };
+const _q = new THREE.Quaternion(), _ax = new THREE.Vector3(1, 0, 0);
+function chairPose(a) {
+  for (const sd of ['Left', 'Right']) {
+    a.bone(sd + 'UpLeg')?.quaternion.multiply(_q.setFromAxisAngle(_ax, CH.up));
+    a.bone(sd + 'Leg')?.quaternion.multiply(_q.setFromAxisAngle(_ax, CH.knee));
+  }
+  a.bone('Spine')?.quaternion.multiply(_q.setFromAxisAngle(_ax, CH.spine));
+  a.arm.updateMatrixWorld(true);
+}
+// seat a passenger: root at the seat pan, sitting pose
+function seat(a, row, letter, yaw = 0) {
+  a.seated = true; a.walk = null; a.head.stopAnimation(); a.idleOK = false;
+  a.pos.copy(cabin.seat(row, letter)).add(V(0, 0.06 - CH.drop, 0.06)); a.yaw = a.yawGoal = yaw;
+}
+function updatePlane(dt) {
+  if (state.world !== 'cabin') { lap.visible = deck.visible = false; return; }
+  const beat = beatNow(), on = musicT0 != null && (state.party || 0) > 0.05;
+  state.partyK = (state.partyK || 0) + ((state.party || 0) - (state.partyK || 0)) * Math.min(1, dt * 2.5);
+  cabin.setParty(state.partyK); cabin.update(dt, beat);
+  // Kauai: laptop on his lap, typing (until he looks up)
+  lap.visible = true; lapPoint(kauai, lap.position); lap.rotation.set(0, kauai.yaw + Math.PI, 0);
+  const f = V(Math.sin(kauai.yaw), 0, Math.cos(kauai.yaw)), r = V(-Math.cos(kauai.yaw), 0, Math.sin(kauai.yaw));
+  const kb = lap.position.clone().addScaledVector(f, -0.02).add(V(0, 0.03, 0));
+  const tap = (ph) => (kauai.typing ? Math.max(0, Math.sin(vt * 17 + ph)) * 0.012 : 0);
+  kauai.ikL.set(kb.clone().addScaledVector(r, 0.08).add(V(0, tap(0), 0)), 1);
+  kauai.ikR.set(kb.clone().addScaledVector(r, -0.08).add(V(0, tap(1.7), 0)), 1);
+  // Zuma: hands relaxed on the lap
+  lapPoint(zuma, _l); const fz = V(Math.sin(zuma.yaw), 0, Math.cos(zuma.yaw)), rz = V(-Math.cos(zuma.yaw), 0, Math.sin(zuma.yaw));
+  zuma.ikL.set(_l.clone().addScaledVector(rz, 0.13).addScaledVector(fz, 0.02), 0.8); zuma.ikR.set(_l.clone().addScaledVector(rz, -0.13).addScaledVector(fz, 0.02), 0.8);
+  // Lopo carries the DJ deck in front of his chest; it keeps playing
+  deck.visible = !!lopo.carry;
+  if (lopo.carry) {
+    const fl = V(Math.sin(lopo.yaw), 0, Math.cos(lopo.yaw)), rl = V(-Math.cos(lopo.yaw), 0, Math.sin(lopo.yaw));
+    const bob = lopo.walk ? Math.abs(Math.sin(vt * 9)) * 0.03 : 0;
+    deck.position.copy(lopo.pos).addScaledVector(fl, 0.36).add(V(0, (lopo.liftDeck ? 1.2 : 1.04) + bob, 0));
+    deck.rotation.set(-0.25, lopo.yaw, 0);
+    lopo.ikL.set(deck.position.clone().addScaledVector(rl, -0.25).add(V(0, 0.03, 0)), 1);
+    lopo.ikR.set(deck.position.clone().addScaledVector(rl, 0.25).add(V(0, 0.03, 0)), 1);
+  }
+  deck.userData.update(dt, beat, on);
+}
+// heads nodding on the beat (after the animation, before the head-look)
+function nodToBeat() {
+  if (state.world !== 'cabin') return;
+  if (musicT0 == null) return;
+  const b = beatNow(), dip = Math.pow(Math.max(0, Math.cos(b * Math.PI * 2)), 3);
+  for (const [a, amp] of [[kauai, 0.16], [zuma, 0.2], [lopo, 0.1]]) { if (!a.nod) continue; a.bone('Neck')?.rotateX(amp * dip * (state.partyK || 0)); }
 }
 
 // ---------------------------------------------------------------- scenes
@@ -691,6 +787,7 @@ function resetWorld() {
   actors.forEach((a) => { a.ikL.weight = a.ikL.goal = 0; a.ikR.weight = a.ikR.goal = 0; a.look.weight = a.look.goal = 0; a.look.target = null; a.arm.rotation.x = a.arm.rotation.z = 0; });
   suit.position.copy(EXT_START).add(V(0.45, 0, 0.1)); suit.quaternion.setFromEuler(new THREE.Euler(0, Math.PI, 0));
   airport.setDelayed(false); land.doors(false); TX.setDoor(true);
+  hideRoll(); eyeContact(prof, false); setWorld('airport'); prof.seated = false; lopo.carry = false; musicT0 = null; state.party = 0;
   setTotem('idle'); grade.uniforms.uFade.value = 1; $('endcard').classList.remove('on'); showSub(null);
 }
 function placeAtKiosk() {
@@ -987,9 +1084,125 @@ async function scene12() {
   EVENTS.push({ t: vt, type: 'end', title: 'Como esse totem funciona?', sub: [`Voo real: ${CFG.flight.airline} ${CFG.flight.code}, ${CFG.flight.origin} → ${CFG.flight.dest}, ${CFG.flight.date}`, `Previsão 1 h antes: ${Math.round(CFG.result.p * 100)}% · ${CFG.result.actual}`, '', ...CREDITS.map(([n, r]) => `${n} · ${r}`)] });
   $('endcard').classList.add('on');
   await wait(8);
+  EVENTS.push({ t: vt, type: 'endOff' });
 }
 
-const SCENES = [scene1, scene2, scene3, scene4, scene5, scene6, scene7, scene8, scene9, scene10, scene11, scene12];
+function showRoll(lines, dur) {
+  let el = $('roll'); if (!el) { el = document.createElement('div'); el.id = 'roll'; document.body.appendChild(el); }
+  el.style.cssText = 'position:fixed;inset:0;overflow:hidden;pointer-events:none;z-index:30;font-family:Segoe UI,system-ui,sans-serif;color:#fff;text-align:center';
+  el.innerHTML = '<div id="rollin" style="position:absolute;left:0;right:0;top:100%;font-size:clamp(16px,2.2vw,34px);line-height:2.1">' + lines.map(([a, b]) => (b ? `<div><b style="font-weight:600">${a}</b><span style="opacity:.65"> · ${b}</span></div>` : `<div style="${a === 'ELENCO' ? 'letter-spacing:.3em;opacity:.8' : ''}">${a || '&nbsp;'}</div>`)).join('') + '</div>';
+  const inner = $('rollin'); inner.style.transition = `transform ${dur}s linear`;
+  requestAnimationFrame(() => requestAnimationFrame(() => { inner.style.transform = `translateY(calc(-100vh - 100%))`; }));
+}
+function hideRoll() { $('roll')?.remove(); }
+function eyeContact(a, on) { const av = a.head.avatar; av.avatarSpeakingEyeContact = on ? 1 : 0; av.avatarIdleEyeContact = on ? 1 : 0; av.avatarSpeakingHeadMove = on ? 0.08 : 0.45; av.avatarIgnoreCamera = !on; }
+
+// 13 — post-credits: the plane
+async function scene13() {
+  const W = (x, y, z) => cabin.toWorld(x, y, z);
+  $('endcard').classList.remove('on'); grade.uniforms.uFade.value = 0;
+  setWorld('cabin'); musicT0 = null; state.party = 0; state.partyK = 0;
+  prof.seated = false; prof.fall = null; prof.slip = 0; prof.head.setMood('neutral'); prof.wet = Math.min(prof.wet || 0.3, 0.3);
+  state.phone = false; state.passMode = 'hidden'; prof.ikR.release(); prof.ikL.release();
+  seat(kauai, 5, 'C'); seat(zuma, 8, 'D');
+  kauai.typing = true; kauai.nod = true; zuma.nod = true; look(kauai, null); look(zuma, null);
+  lopo.carry = false; lopo.pos.copy(W(-2.6, 0, 1.35)); lopo.yaw = lopo.yawGoal = Math.PI / 2; lopo.idleOK = false; lopo.nod = false;
+  cabin.door.set(true); cabin.setReading(false);
+  // Soussa at the aircraft door, suitcase in tow
+  prof.pos.copy(W(-1.55, 0, 1.35)); prof.yaw = prof.yawGoal = Math.PI / 2; prof.head.stopAnimation();
+  state.suitMode = 'pull'; look(prof, null);
+  sfx('cabin_hum', 0.35);
+  await wait(0.6); sfx('chime', 0.6);
+  await wait(0.5); sfx('an1', 0.55);
+  // 1) wide, mid-cabin looking forward: he steps in through the door
+  cut({ p0: W(0.25, 1.6, -5.6), p1: W(0.2, 1.58, -5.2), l0: W(-0.7, 1.25, 0.9), l1: W(-0.3, 1.3, 0.2), dur: 6, fov: 34, focus: () => prof.headPos(), aperture: 0.0012 });
+  for (let i = 1; i <= 12; i++) { grade.uniforms.uFade.value = i / 12; await wait(1 / 12); }
+  const go = walkTo(prof, [W(-0.9, 0, 1.0), W(-0.15, 0, 0.45), W(0.05, 0, -1.2), W(0.1, 0, rowZ(5) + 0.08)], 1.05);
+  await until(() => prof.pos.z < W(0, 0, -0.6).z);
+  // 2) leading him down the aisle (camera backs away in front of him)
+  cut({ p0: () => prof.pos.clone().add(V(0.12, 1.6, -2.1)), l0: headOf(prof, -0.08), fov: 30, focus: headOf(prof), aperture: 0.0018, smoothPos: true, handheld: 0.004 });
+  look(prof, V(0, 0, 0).copy(W(0, 1.1, rowZ(7))));
+  await wait(1.2); kauai.typing = false; look(kauai, prof.head);
+  await go; turnTo(prof, yawTo(prof.pos, kauai.pos)); state.suitMode = 'parked'; prof.ikR.release(); look(prof, kauai.head);
+  // 3) over Soussa's shoulder: Kauai with the laptop
+  cut({ p0: () => prof.pos.clone().add(V(0.5, 1.68, -0.5)), l0: () => kauai.headPos().add(V(0, -0.12, 0)), fov: 30, focus: headOf(kauai), aperture: 0.002, handheld: 0.003 });
+  const k1 = say('k1');
+  await wait(2.4);
+  // insert: the screen (CPF field, "CRIAR MOEDA")
+  cut({ p0: () => lap.position.clone().add(V(0.34, 0.5, -0.26)), l0: () => lap.position.clone().add(V(0, 0.09, 0.04)), fov: 32, focus: () => lap.position.clone().add(V(0, 0.09, 0.04)), aperture: 0.0016, handheld: 0.002 });
+  await wait(1.8);
+  cut({ p0: () => prof.pos.clone().add(V(0.5, 1.68, -0.5)), l0: () => kauai.headPos().add(V(0, -0.12, 0)), fov: 30, focus: headOf(kauai), aperture: 0.002, handheld: 0.003 });
+  await k1;
+  // 4) Soussa, low angle from Kauai's seat
+  cut({ p0: () => kauai.headPos().add(V(0.12, -0.08, -0.05)), l0: headOf(prof, -0.05), fov: 28, focus: headOf(prof), aperture: 0.0024 });
+  await wait(0.3);
+  await say('p11');
+  await wait(0.4); kauai.typing = true; look(kauai, null);
+  // on to Zuma
+  state.suitMode = 'pull'; look(prof, null);
+  const go2 = walkTo(prof, [W(0.02, 0, rowZ(8) + 0.08)], 1.0);
+  cut({ p0: () => prof.pos.clone().add(V(-0.1, 1.6, -2.0)), l0: headOf(prof, -0.08), fov: 30, focus: headOf(prof), aperture: 0.0018, smoothPos: true, handheld: 0.004 });
+  await wait(0.8); look(zuma, prof.head); zuma.head.setMood('happy');
+  await go2; turnTo(prof, yawTo(prof.pos, zuma.pos)); state.suitMode = 'parked'; prof.ikR.release(); look(prof, zuma.head);
+  // 5) Zuma, colourful shirt, smug
+  cut({ p0: () => prof.pos.clone().add(V(-0.5, 1.68, -0.5)), l0: () => zuma.headPos().add(V(0, -0.12, 0)), fov: 30, focus: headOf(zuma), aperture: 0.002, handheld: 0.003 });
+  await say('z1');
+  cut({ p0: () => zuma.headPos().add(V(-0.12, -0.08, -0.05)), l0: headOf(prof, -0.05), fov: 28, focus: headOf(prof), aperture: 0.0024 });
+  prof.head.setMood('sad');
+  await wait(0.2);
+  await say('p13');
+  prof.head.setMood('neutral'); look(zuma, null);
+  // to his seat (11D), sit down (cut)
+  state.suitMode = 'pull'; look(prof, null);
+  const go3 = walkTo(prof, [W(0.06, 0, rowZ(11) + 0.45)], 1.05);
+  cut({ p0: W(-0.35, 1.55, rowZ(13)), l0: () => prof.headPos().add(V(0, -0.15, 0)), fov: 30, focus: headOf(prof), aperture: 0.0016 });
+  await go3; turnTo(prof, Math.PI / 2 + 0.6); await wait(0.6);
+  state.suitMode = 'hidden'; suit.position.set(0, -10, 0); prof.ikR.release();
+  seat(prof, 11, 'D'); prof.seated = true; 
+  // 6) seated, relief; the door starts closing; music from outside
+  cut({ p0: () => prof.headPos().add(V(-0.22, -0.02, 1.15)), p1: () => prof.headPos().add(V(-0.2, -0.02, 0.95)), l0: headOf(prof, -0.06), dur: 7, fov: 26, focus: headOf(prof), aperture: 0.003 });
+  look(prof, W(0.6, 1.3, rowZ(9))); await wait(0.6);
+  prof.head.setMood('happy'); await wait(1.4);
+  cabin.door.set(false); sfx('doorclose', 0.5);
+  music('lopo_music.mp3', [[0, 0, 0], [1.5, 0.35, 0], [3.6, 0.8, 0]]);
+  await wait(1.2); look(prof, W(-0.4, 1.4, 1.2)); prof.head.setMood('neutral');
+  await wait(1.0);
+  // 7) the door: stops, opens again, Lopo bursts in with the deck
+  cut({ p0: W(0.35, 1.5, -2.2), l0: W(-1.2, 1.25, 1.25), fov: 34, focus: () => lopo.headPos(), aperture: 0.0014, handheld: 0.005 });
+  await wait(0.6);
+  cabin.door.set(true); sfx('door', 0.5); musicTo(0.04, 0.9, 0.35);
+  lopo.carry = true; lopo.nod = true; state.party = 1; cabin.setReading(true);
+  const run = walkTo(lopo, [W(-1.0, 0, 1.25), W(-0.2, 0, 0.7), W(0.0, 0, -0.6), W(-0.05, 0, rowZ(10) + 0.1)], 2.5);
+  await wait(0.9); cabin.door.set(false);
+  look(kauai, lopo.head); look(zuma, lopo.head); kauai.typing = false;
+  // 8) from behind Soussa's seat: Lopo runs down the aisle toward us
+  cut({ p0: () => prof.headPos().add(V(0.25, 0.12, -0.55)), l0: () => lopo.headPos().add(V(0, -0.25, 0)), fov: 30, focus: () => lopo.headPos(), aperture: 0.0016, handheld: 0.006 });
+  look(prof, lopo.head);
+  await run; turnTo(lopo, Math.PI - 0.15); lopo.liftDeck = true; look(lopo, prof.head);
+  await wait(0.35);
+  await say('lp1');
+  await wait(0.5);
+  // 9) Soussa, to camera
+  cut({ p0: () => prof.headPos().add(V(-0.04, -0.03, 1.0)), l0: headOf(prof, -0.03), fov: 24, focus: headOf(prof), aperture: 0.0032 });
+  look(prof, lopo.head); await wait(0.9); look(prof, camera);
+  eyeContact(prof, true);   // he turns to us: eyes on the lens, no wandering while he talks
+  musicTo(0.03, 0.28, 0.4);
+  await say('p12');
+  musicTo(0.03, 1.0, 0.25);
+  await wait(1.3);
+  // the music takes over: fade to black, the final credits roll
+  for (let i = 1; i <= 15; i++) { grade.uniforms.uFade.value = 1 - i / 15; await wait(1 / 15); }
+  const roll = [['ELENCO', ''], ...CREDITS, ['', ''], ['Kauai', 'investidor de bordo'], ['Zuma', 'aluno da USP'], ['Lopo', 'DJ (atrasado)'], ['', ''], ['Música', CFG.music || 'tocada pelo Lopo'], ['', ''], ['Nenhum professor foi reprovado', ''], ['na produção deste vídeo.', '']];
+  const ROLL = 16;
+  EVENTS.push({ t: vt, type: 'roll', dur: ROLL, lines: roll.map(([a, b]) => (b ? `${a}  ·  ${b}` : a)) });
+  showRoll(roll, ROLL);
+  await wait(ROLL - 3);
+  musicTo(0, 0, 3); await wait(3.2);
+  musicStop(); hideRoll();
+  await wait(0.4);
+}
+
+const SCENES = [scene1, scene2, scene3, scene4, scene5, scene6, scene7, scene8, scene9, scene10, scene11, scene12, scene13];
 async function run(from = 1) {
   const id = ++runId;
   resetWorld();
@@ -1001,6 +1214,7 @@ async function run(from = 1) {
   if (from >= 6) placeAtKiosk();
   if (from >= 8) { setTotem('auto'); prof.wet = 0.3; }
   if (from >= 9) setTotem('result');
+  if (from >= 13) { prof.wet = 0.3; }
   try {
     for (let i = from; i <= SCENES.length; i++) { $('scenelabel').textContent = `Cena ${i}`; EVENTS.push({ t: vt, type: 'scene', n: i }); await SCENES[i - 1](); }
     window.__finished = vt; console.log('SCENES', JSON.stringify(EVENTS.filter((e) => e.type === 'scene').map((e) => [e.n, +e.t.toFixed(1)])), 'END', vt.toFixed(1));
@@ -1032,12 +1246,13 @@ async function boot() {
   const RT = { Neck: { z: -0.01, rx: 0.02 }, Neck1: { z: -0.01, rx: 0.02 }, Neck2: { z: -0.01, rx: 0.02 }, LeftShoulder: { rz: -0.3 }, RightShoulder: { rz: 0.3 }, scaleToEyesLevel: 1.0, origin: { y: -0.1 } };
   const BL = { headRotateX: -0.04, eyeBlinkLeft: 0, eyeBlinkRight: 0, eyeWideLeft: 0.4, eyeWideRight: 0.4 };
   const mk = (name, pos, yaw, mood = 'neutral') => makeActor({ name, pos, yaw, avatar: { url: AV_DIR + 'avatarsdk', body: 'M', avatarMood: mood, retarget: RT, baseline: BL } });
-  [prof, att, diniz, leo, motti, sa] = await Promise.all([
+  [prof, att, diniz, leo, motti, sa, kauai, zuma, lopo] = await Promise.all([
     mk('prof', V(8.5, 0, 9.2), -2.1), mk('att', ATT_POS, ATT_YAW, 'happy'), mk('diniz', V(8, 0, 23), -Math.PI / 2),
     mk('leo', V(10, 0, 14), 0), mk('motti', V(2.15, 0, 11), Math.PI / 2, 'happy'), mk('sa', V(2.15, 0, 12), Math.PI / 2, 'happy'),
+    mk('kauai', V(0, 0, -204), 0, 'happy'), mk('zuma', V(1, 0, -206), 0, 'happy'), mk('lopo', V(-1, 0, -199), Math.PI, 'happy'),
   ]);
-  Object.assign(ACT, { prof, att, diniz, leo, motti, sa });
-  actors.push(prof, att, diniz, leo, motti, sa);
+  Object.assign(ACT, { prof, att, diniz, leo, motti, sa, kauai, zuma, lopo });
+  actors.push(prof, att, diniz, leo, motti, sa, kauai, zuma, lopo);
   for (let i = 0; i < 20; i++) for (const a of actors) { a.arm.position.copy(a.pos); a.arm.rotation.y = a.yaw; a.head.animate(16); }
   for (const a of actors) { a.arm.updateMatrixWorld(true); a.look.calibrate(); }
   att.arm.scale.setScalar(0.97);
@@ -1054,11 +1269,20 @@ async function boot() {
   restyle(leo.arm, { outfit_top: lShirt, AvatarHead: lHead });
   restyle(motti.arm, { outfit_top: stShirt, AvatarHead: mHead });
   // brown eyes for the group members whose photos we have
-  { const eb = await tex('./avatars/eyes_brown.jpg'); for (const a of [prof, att, diniz, motti, sa]) restyle(a.arm, { AvatarLeftEyeball: eb, AvatarRightEyeball: eb }); }
+  { const eb = await tex('./avatars/eyes_brown.jpg'); for (const a of [prof, att, diniz, motti, sa, kauai, zuma, lopo]) restyle(a.arm, { AvatarLeftEyeball: eb, AvatarRightEyeball: eb }); }
   restyle(sa.arm, { outfit_top: stShirt, AvatarHead: sHead });
   // Sá and Soussa are tanned: match hands/arms (body texture) to their faces
   for (const [a, c] of [[sa, [0.88, 0.76, 0.66]], [prof, [0.9, 0.8, 0.72]]]) a.arm.traverse((o) => { if (o.isMesh && o.material?.name === 'AvatarBody') { o.material = o.material.clone(); o.material.color.setRGB(...c); } });
+  {
+    const [kH, zH, lH] = await Promise.all(['kauai_head', 'zuma_head', 'lopo_head'].map((n) => tex('./avatars/' + n + '.jpg')));
+    const flip = (t) => { t.flipY = false; return t; };
+    restyle(kauai.arm, { AvatarHead: kH, outfit_top: flip(plainShirt('#c8b48e', 0.08)) });
+    restyle(zuma.arm, { AvatarHead: zH, outfit_top: flip(printShirt()) });
+    restyle(lopo.arm, { AvatarHead: lH, outfit_top: flip(plainShirt('#d6d4cd', 0.05)) });
+    for (const [a, c] of [[zuma, [0.72, 0.58, 0.48]], [kauai, [0.84, 0.72, 0.62]]]) a.arm.traverse((o) => { if (o.isMesh && o.material?.name === 'AvatarBody') { o.material = o.material.clone(); o.material.color.setRGB(...c); } });
+  }
   setupWet(prof); wetHeadTex = await tex('./avatars/prof_head_wet.jpg');
+  setWorld('airport');
   diniz.arm.scale.setScalar(1.0); leo.arm.scale.setScalar(0.99); motti.arm.scale.setScalar(1.02); sa.arm.scale.setScalar(0.995);
   // accessories: Diniz's glasses, staff badges
   for (const a of [motti, sa]) { const b = PROPS.badge(); b.position.set(-0.09, 0.08, 0.13); b.rotation.y = 0; a.bone('Spine2').add(b); }
@@ -1117,10 +1341,13 @@ async function boot() {
   await preloadAnims(leo, ['walk', 'talk1', 'idle']);
   await preloadAnims(motti, ['walk', 'talk0', 'idle', 'laugh']);
   await preloadAnims(sa, ['walk', 'talk1', 'talk2', 'idle', 'laugh']);
+  await preloadAnims(lopo, ['walk']);
+  for (const a of [kauai, zuma]) a.seated = true;
+  for (const a of [kauai, zuma, prof]) a.look.maxUp = 0.6;
   // everyone but the driver breathes and shifts weight when standing still (out of phase with each other)
   if (!Q.has('noidle')) [prof, att, leo, motti, sa].forEach((a, i) => { a.idleOK = true; a.idlePhase = (i * 0.37) % 1; });
   diniz.head.playPose('sitting', null, 1e6);
-  for (const n of ['rain_out', 'door', 'buzz', 'squeak', 'carDoor', 'thud']) audioBuffers['sfx_' + n] = await loadBuffer('./audio/' + n + '.mp3');
+  for (const n of ['rain_out', 'door', 'buzz', 'squeak', 'carDoor', 'thud', 'chime', 'an1', 'cabin_hum', 'doorclose', 'lopo_music']) audioBuffers['sfx_' + n] = await loadBuffer('./audio/' + n + '.mp3');
   for (const id of Object.keys(LINES)) audioBuffers[id] = (await loadBuffer('./audio/' + LINES[id].audio)) || (await loadBuffer('./audio/' + LINES[id].audio.replace(/\.mp3$/, '.wav')));
   const got = Object.keys(LINES).filter((k) => audioBuffers[k]).length;
   $('audiostatus').textContent = got ? `${got}/${Object.keys(LINES).length} falas com áudio gravado` : 'Vozes: sintetizadas pelo navegador (placeholder)';
@@ -1152,7 +1379,7 @@ async function runPreview() {
   const bodyCam = () => { if (!Q.has('body')) return; const a = ACT[Q.get('body')] || prof; const ang = a.yaw + (+Q.get('ang') || 0); const h = a.pos.clone().add(V(0, 1.25, 0)); camera.fov = 30; camera.updateProjectionMatrix(); camera.position.copy(h).addScaledVector(V(Math.sin(ang), 0, Math.cos(ang)), 2.4).add(V(0, 0.15, 0)); camera.lookAt(h); shot = null; if (bokeh) bokeh.uniforms.focus.value = 2.4; };
   if (Q.has('lineup')) {
     const who = (Q.get('lineup') || 'prof,att,leo,motti,sa').split(',').map((k) => ACT[k]);
-    who.forEach((a, i) => { a.walk = null; a.pos.set(3 + i * 1.0, 0, 6.5); a.yaw = a.yawGoal = +(Q.get('ang') || 0); a.look.goal = 0; });
+    who.forEach((a, i) => { a.walk = null; a.seated = Q.has('chair'); a.pos.set(3 + i * 1.0, Q.has('chair') ? -CH.drop + 0.45 : 0, 6.5); a.yaw = a.yawGoal = +(Q.get('ang') || 0); a.look.goal = 0; });
     state.suitMode = 'hidden'; suit.position.set(0, -5, 0); state.phone = false;
     for (let i = 0; i < 20; i++) step(dt);
     const cx = 3 + (who.length - 1) * 0.5, d = +(Q.get('d') || 4.2), y = +(Q.get('y') || 1.0);
@@ -1161,6 +1388,8 @@ async function runPreview() {
   bodyCam(); step(dt); bodyCam(); if (Q.has('lineup')) { const cx = 3 + ((Q.get('lineup') || 'prof,att,leo,motti,sa').split(',').length - 1) * 0.5, d = +(Q.get('d') || 4.2), y = +(Q.get('y') || 1.0); camera.position.set(cx, y + 0.25, 6.5 + d); camera.lookAt(cx, y, 6.5); } if (Q.has('face')) { const a = ACT[Q.get('face')] || prof; const h = a.headPos(); const fw = V(Math.sin(a.yaw), 0, Math.cos(a.yaw)); camera.position.copy(h).addScaledVector(fw, 1.1); camera.lookAt(h.add(V(0, -0.04, 0))); } render();
   const f = (v) => v.toArray().map((x) => x.toFixed(2)).join(',');
   console.log('DBG ikR', prof.ikR.weight.toFixed(2), prof.ikR.goal, prof.ikR.auto, 'target', f(prof.ikR.target), 'hand', f(prof.bone('RightHand').getWorldPosition(new THREE.Vector3())), 'phone', phone.visible, f(phone.position), 'typing', state.typing);
+  { const K = kauai.look; console.log('DBG klook', K.target && (K.target.isVector3 ? 'vec' : K.target.name), 'w', K.weight.toFixed(2), 'goal', K.goal, 'cur', K.cur && f(K.cur), 'khead', f(kauai.headPos()), 'maxUp', K.maxUp); }
+  { const L = prof.look; console.log('DBG look', L.target && (L.target.isVector3 ? 'vec ' + f(L.target) : L.target.name), 'w', L.weight.toFixed(2), 'cur', L.cur && f(L.cur), 'head', f(prof.headPos()), 'cam', f(camera.position), 'yaw', prof.yaw.toFixed(2), 'seated', !!prof.seated); }
   console.log('DBG pose', prof.head.poseName, JSON.stringify(Object.keys(prof.head.poseCurrentTemplate||{})), prof.head.poseCurrentTemplate===prof.head.poseTemplates.sitting, 'mixer', !!prof.head.mixer);
   console.log('DBG prof pos', f(prof.pos), 'yaw', prof.yaw.toFixed(2), 'head', f(prof.headPos()), 'hips', f(prof.bone('Hips').getWorldPosition(new THREE.Vector3())), '| att head', f(att.headPos()), 'cam', f(camera.position));
   window.__ready = true;
