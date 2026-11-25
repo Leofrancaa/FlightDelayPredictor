@@ -12,7 +12,7 @@ function add(parent, geo, mat, x = 0, y = 0, z = 0, o = {}) {
 }
 function canvasTex(w, h, draw) { const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; return t; }
 
-export const CURB = { z: 21.6, taxi: new THREE.Vector3(8.6, 0, 22.95), canopyEdge: 27.2 };
+export const CURB = { z: 21.6, taxi: new THREE.Vector3(8.6, 0, 22.95), canopyEdge: 19.6 };
 export const DESK = new THREE.Vector3(-0.5, 0, 11.6);
 
 export function buildLandside(scene, { quality = 'high' } = {}) {
@@ -62,13 +62,13 @@ export function buildLandside(scene, { quality = 'high' } = {}) {
   // island + canopy columns
   add(root, new THREE.BoxGeometry(48, 0.15, 1.2), M({ map: conc, roughness: 0.4, color: 0xa8a8a8 }), 8, 0.075, 26.8, { cast: false });
   const colM = M({ color: 0xdcdcd8, roughness: 0.5 });
-  for (const x of [-6, 2, 14.5, 22]) add(root, new THREE.CylinderGeometry(0.28, 0.28, 5.2, 24), colM, x, 2.6, 26.8);
+  for (const x of [-6, 2, 14.5, 22]) add(root, new THREE.CylinderGeometry(0.28, 0.28, 5.2, 24), colM, x, 2.6, 19.3);
   // canopy slab with light strips
   add(root, new THREE.BoxGeometry(34, 0.45, CURB.canopyEdge - zf), M({ color: 0xd8d8d4, roughness: 0.6 }), 8, 5.25, (zf + CURB.canopyEdge) / 2, { cast: false });
   const strip = new THREE.MeshBasicMaterial({ color: new THREE.Color(1.3, 1.3, 1.25) });
   for (let z = zf + 1.5; z < CURB.canopyEdge; z += 2.5) add(root, new THREE.BoxGeometry(30, 0.03, 0.18), strip, 8, 5.02, z, { cast: false, receive: false });
-  for (const x of [3, 9, 15]) { const p = new THREE.PointLight(0xf2f4ff, 3, 12, 1.6); p.position.set(x, 4.8, 20); root.add(p); }
-  const under = new THREE.SpotLight(0xeef2ff, 28, 16, 0.8, 0.6, 1.5); under.position.set(8.5, 5, 19.5); under.target.position.set(8.5, 0, 22.5);
+  for (const x of [3, 9, 15]) { const p = new THREE.PointLight(0xf2f4ff, 3, 12, 1.6); p.position.set(x, 4.8, 17.8); root.add(p); }
+  const under = new THREE.SpotLight(0xeef2ff, 28, 16, 0.8, 0.6, 1.5); under.position.set(8.5, 5, 18.6); under.target.position.set(8.5, 0, 22.5);
   if (quality === 'high') { under.castShadow = true; under.shadow.mapSize.set(1024, 1024); under.shadow.bias = -0.0003; }
   root.add(under, under.target);
 
