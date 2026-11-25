@@ -18,21 +18,57 @@
   #links{position:fixed;right:16px;bottom:14px;font-size:13px;opacity:0;transition:opacity .3s}
   body:hover #links{opacity:.8}
   #links a{color:#9fb3d9;text-decoration:none;margin-left:14px}
+  #bar{position:fixed;left:0;right:0;bottom:0;padding:28px 20px 14px;display:flex;align-items:center;gap:14px;
+       background:linear-gradient(transparent,rgba(0,0,0,.75));opacity:0;transition:opacity .3s;z-index:5}
+  #bar.on{opacity:1}
+  #bar button{background:none;border:0;color:#fff;cursor:pointer;font:600 14px/1 inherit;padding:6px 8px;border-radius:6px;opacity:.9}
+  #bar button:hover{background:rgba(255,255,255,.12);opacity:1}
+  #pp{width:38px;font-size:18px!important}
+  #seek{flex:1;-webkit-appearance:none;appearance:none;height:5px;border-radius:3px;cursor:pointer;
+        background:linear-gradient(90deg,#4f8cff var(--p,0%),rgba(255,255,255,.25) var(--p,0%))}
+  #seek::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:#fff}
+  #seek::-moz-range-thumb{width:14px;height:14px;border:0;border-radius:50%;background:#fff}
+  #tempo{font-size:13px;color:#cfd8ea;font-variant-numeric:tabular-nums;min-width:96px;text-align:center}
+  #links{bottom:64px}
   #erro{display:none;position:fixed;inset:0;align-items:center;justify-content:center;text-align:center;color:#a9b8d6;padding:2em}
 </style>
 </head>
 <body>
 <video id="v" src="totem.mp4" preload="auto" playsinline></video>
-<div id="play"><h1>O aniversário de 94 anos</h1><p>Uma previsão de atraso de voo</p><div class="btn"></div><small>F: tela cheia · espaço: pausar</small></div>
+<div id="play"><h1>O aniversário de 94 anos</h1><p>Uma previsão de atraso de voo</p><div class="btn"></div><small>F: tela cheia · espaço: pausar · ← →: voltar/avançar 5 s</small></div>
+<div id="bar"><button id="pp" title="Play/pausa (espaço)">▶</button><button id="back" title="Voltar 10 s (←)">« 10s</button><button id="fwd" title="Avançar 10 s (→)">10s »</button><input id="seek" type="range" min="0" max="1000" value="0"><span id="tempo">0:00 / 0:00</span><button id="fs" title="Tela cheia (F)">⛶</button></div>
 <div id="erro">O vídeo ainda não foi publicado.<br><a href="animacao.html" style="color:#9fb3d9">Abrir a versão 3D interativa</a></div>
 <div id="links"><a href="animacao.html">versão 3D interativa</a><a href="/">voltar ao site</a></div>
 <script>
 {
   const v = document.getElementById('v'), play = document.getElementById('play');
-  const start = () => { play.classList.add('hide'); v.play().catch(() => {}); };
+  const start = () => { play.classList.add('hide'); v.play().catch(() => {}); mostra(); };
   play.addEventListener('click', () => { document.documentElement.requestFullscreen?.().catch(() => {}); start(); });
   v.addEventListener('click', () => (v.paused ? v.play() : v.pause()));
   v.addEventListener('ended', () => { play.classList.remove('hide'); });
+  // controles: barra aparece ao mexer o mouse, some após 2,5 s com o vídeo rodando
+  const bar = document.getElementById('bar'), pp = document.getElementById('pp'), seek = document.getElementById('seek'), tempo = document.getElementById('tempo');
+  const fmt = (t) => { t = Math.max(0, t || 0); return Math.floor(t / 60) + ':' + String(Math.floor(t % 60)).padStart(2, '0'); };
+  let hideT = null, arrastando = false;
+  const mostra = () => { bar.classList.add('on'); document.body.style.cursor = ''; clearTimeout(hideT); hideT = setTimeout(() => { if (!v.paused && !arrastando) { bar.classList.remove('on'); document.body.style.cursor = 'none'; } }, 2500); };
+  const pula = (d) => { v.currentTime = Math.min(v.duration || 0, Math.max(0, v.currentTime + d)); mostra(); };
+  const atualiza = () => {
+    if (!arrastando && v.duration) { seek.value = (v.currentTime / v.duration) * 1000; }
+    seek.style.setProperty('--p', (seek.value / 10) + '%');
+    tempo.textContent = fmt(v.currentTime) + ' / ' + fmt(v.duration);
+    pp.textContent = v.paused ? '▶' : '❚❚';
+  };
+  ['timeupdate', 'play', 'pause', 'loadedmetadata', 'seeked'].forEach((ev) => v.addEventListener(ev, atualiza));
+  v.addEventListener('pause', mostra); v.addEventListener('play', mostra);
+  pp.onclick = () => { if (!play.classList.contains('hide')) start(); else v.paused ? v.play() : v.pause(); };
+  document.getElementById('back').onclick = () => pula(-10);
+  document.getElementById('fwd').onclick = () => pula(10);
+  document.getElementById('fs').onclick = () => (document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen());
+  seek.addEventListener('input', () => { arrastando = true; if (v.duration) { v.currentTime = (seek.value / 1000) * v.duration; } atualiza(); mostra(); });
+  seek.addEventListener('change', () => { arrastando = false; mostra(); });
+  addEventListener('mousemove', mostra);
+  addEventListener('keydown', (e) => { if (e.key === 'ArrowLeft') { e.preventDefault(); pula(-5); } if (e.key === 'ArrowRight') { e.preventDefault(); pula(5); } });
+
   v.addEventListener('error', () => { play.style.display = 'none'; document.getElementById('erro').style.display = 'flex'; });
   addEventListener('keydown', (e) => {
     if (e.key === 'f' || e.key === 'F') (document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen());
