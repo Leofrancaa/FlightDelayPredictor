@@ -417,8 +417,9 @@ async function say(id, { gesture = null, anim = null } = {}) {
   if (anim && !a.walk && !a.fall && !a.seated) playTalk(a, anim);
   if (gesture) wait(0.25).then(() => gesture_(a, gesture[0], gesture[1] || 2.5, gesture[2] || false)).catch(() => {});
   let durMs;
-  if (SIM) {
+  if (SIM || (EXPORT && !audioBuffers[id])) {
     durMs = estimateMs(L.text);
+    if (EXPORT) console.warn('FALTA ÁUDIO: ' + L.audio);
   } else if (audioBuffers[id]) {
     const buf = audioBuffers[id]; const [s, e] = voicedSpan(buf);
     durMs = buf.duration * 1000;
