@@ -387,20 +387,26 @@ function applySit(a, k) {
 // ---------------------------------------------------------------- wet look
 const wetMats = [];
 function setupWet(a) {
-  a.arm.traverse((o) => { if (!o.isMesh || !/outfit/.test(o.material?.name || '')) return; o.material = o.material.clone(); wetMats.push({ m: o.material, c: o.material.color.clone(), r: o.material.roughness }); });
+  a.arm.traverse((o) => { if (o.isMesh && o.material?.name === 'AvatarHead' && !headMat) { headMat = o.material; headRough = o.material.roughness ?? 0.6; dryHeadTex = o.material.map; } });
+  a.arm.traverse((o) => { if (!o.isMesh || !/outfit/.test(o.material?.name || '')) return; const old = o.material; const m = new THREE.MeshPhysicalMaterial(); THREE.MeshStandardMaterial.prototype.copy.call(m, old); m.name = old.name; m.clearcoat = 0; m.clearcoatRoughness = 0.6; o.material = m; wetMats.push({ m, c: m.color.clone(), r: m.roughness }); });
 }
-function applyWet(w) { for (const x of wetMats) { x.m.color.copy(x.c).multiplyScalar(1 - 0.38 * w); x.m.roughness = x.r * (1 - 0.55 * w); if ('envMapIntensity' in x.m) x.m.envMapIntensity = 1 + w; } }
-const DRIPS = 46, dripMesh = new THREE.InstancedMesh(new THREE.SphereGeometry(0.006, 6, 4), new THREE.MeshStandardMaterial({ color: 0xdfeaf5, roughness: 0.05, metalness: 0.2, transparent: true, opacity: 0.8 }), DRIPS);
+function applyWet(w) {
+  for (const x of wetMats) { x.m.color.copy(x.c).multiplyScalar(1 - 0.55 * w); x.m.roughness = Math.max(0.42, x.r * (1 - 0.45 * w)); x.m.envMapIntensity = 1 + 0.6 * w; x.m.clearcoat = 0.18 * w; }
+  // hair: soaked texture while really wet; face a little shinier
+  if (headMat) { const want = w > 0.55 ? wetHeadTex : dryHeadTex; if (want && headMat.map !== want) { headMat.map = want; headMat.needsUpdate = true; } headMat.roughness = headRough * (1 - 0.35 * w); }
+}
+let headMat = null, headRough = 0.6, wetHeadTex = null, dryHeadTex = null;
+const DRIPS = 80, dripMesh = new THREE.InstancedMesh(new THREE.SphereGeometry(0.0045, 8, 6), new THREE.MeshPhysicalMaterial({ color: 0xcfe0f2, roughness: 0.02, metalness: 0, transparent: true, opacity: 0.55, envMapIntensity: 2.5 }), DRIPS);
 dripMesh.frustumCulled = false; scene.add(dripMesh);
 const drips = Array.from({ length: DRIPS }, () => ({ p: new THREE.Vector3(0, -9, 0), v: 0, life: 0 }));
-const DRIP_BONES = ['Head', 'LeftHand', 'RightHand', 'LeftShoulder', 'RightShoulder', 'LeftForeArm', 'RightForeArm', 'Hips'];
+const DRIP_BONES = ['LeftHand', 'RightHand', 'LeftForeArm', 'RightForeArm', 'Hips', 'LeftHand', 'RightHand'];
 const _dm = new THREE.Object3D();
 function updateDrips(dt) {
-  const w = prof.wet || 0;
+  const w = (prof.wet || 0) > 0.55 ? prof.wet : 0;   // only drips while really soaked
   for (const d of drips) {
     d.life -= dt;
     if (d.life <= 0 || d.p.y < 0.01) {
-      if (Math.random() < w * dt * 14) { const b = prof.bone(DRIP_BONES[(Math.random() * DRIP_BONES.length) | 0]); b.getWorldPosition(d.p); d.p.add(V((Math.random() - 0.5) * 0.12, -0.05, (Math.random() - 0.5) * 0.12)); d.v = 0; d.life = 1.5; }
+      if (Math.random() < (w * 14 + (prof.shake > 0 ? 160 : 0)) * dt) { const b = prof.bone(DRIP_BONES[(Math.random() * DRIP_BONES.length) | 0]); b.getWorldPosition(d.p); d.p.add(V((Math.random() - 0.5) * 0.12, -0.05, (Math.random() - 0.5) * 0.12)); d.v = 0; d.life = 1.5; }
       else { d.p.y = -9; }
     } else { d.v += 9.8 * dt; d.p.y -= d.v * dt; }
     _dm.position.copy(d.p); _dm.scale.set(1, 1 + Math.min(3, d.v * 0.6), 1); _dm.updateMatrix(); dripMesh.setMatrixAt(drips.indexOf(d), _dm.matrix);
@@ -522,6 +528,7 @@ function updateActors(dt) {
   const earPt = (a) => { const r = V(-Math.cos(a.yaw), 0, Math.sin(a.yaw)), f = V(Math.sin(a.yaw), 0, Math.cos(a.yaw)); return earPos(a).addScaledVector(r, 0.04).addScaledVector(f, 0.03).add(V(0, -0.1, 0)); };
   if ((state.phone === 'hand' && !state.typing) || state.phone === 'ear') { const f = fwdOf(prof), r = V(-Math.cos(prof.yaw), 0, Math.sin(prof.yaw)); const hold = prof.pos.clone().addScaledVector(f, 0.42).addScaledVector(r, 0.05).add(V(0, 1.18, 0)); prof.ikR.set(hold.lerp(earPt(prof), smooth(prof.phoneT || 0)), 1); }
   if (leo.onPhone) leo.ikR.set(earPt(leo), 1);
+  if (prof.shake > 0) { prof.shake -= dt; const k = Math.max(0, prof.shake) / 0.8; prof.arm.rotation.z = Math.sin(prof.shake * 38) * 0.05 * k; if (prof.shake <= 0) prof.arm.rotation.z = 0; }
   if (prof.fall) {
     prof.fall.t += dt; const k = smooth(prof.fall.t / 0.42);
     prof.fall.k = k; prof.arm.rotation.x = 0.28 * k; prof.pos.y = 0;
@@ -562,7 +569,7 @@ const EXT_START = TX.rearDoor.clone();
 const DOOR_OUT = V(8.2, 0, 17.4), DOOR_IN = V(8.4, 0, 13.9);
 const BOARD2 = V(14.2, 4.6, 7.6), BOARD2_SPOT = V(11.5, 0, 12.3);
 const DESK_STOP = V(0.65, 0, 11.75), MOTTI_POS = V(-1.25, 0, 11.05), SA_POS = V(-1.25, 0, 12.15);
-const LEO_A = V(10.4, 0, 14.4), LEO_B = V(12.9, 0, 14.0);
+const LEO_A = V(9.9, 0, 14.4), LEO_B = V(7.4, 0, 14.1);
 const M_BOARD2 = marker(BOARD2), M_FEET = marker(V(0, 0.1, 0));
 let rainOut = null;
 
@@ -570,7 +577,7 @@ function resetWorld() {
   prof.pos.copy(EXT_START); prof.yaw = prof.yawGoal = Math.PI; prof.walk = null; prof.head.stopAnimation(); prof.slip = 0; prof.fall = null; prof.wet = 0.25; prof.phoneT = 0; suitRoll.set(0, 0, 0);
   att.pos.copy(ATT_POS); att.yaw = att.yawGoal = ATT_YAW;
   diniz.pos.copy(TX.driverSeat).add(V(0, 0.47, 0)); diniz.yaw = diniz.yawGoal = -Math.PI / 2;
-  leo.pos.copy(LEO_A); leo.yaw = leo.yawGoal = Math.PI / 2; leo.onPhone = true; leo.walk = null;
+  leo.pos.copy(LEO_A); leo.yaw = leo.yawGoal = -Math.PI / 2; leo.onPhone = true; leo.walk = null;
   motti.pos.copy(MOTTI_POS); motti.yaw = motti.yawGoal = Math.PI / 2;
   sa.pos.copy(SA_POS); sa.yaw = sa.yawGoal = Math.PI / 2;
   state.suitMode = 'parked'; state.phone = false; state.typing = false; state.passMode = 'hidden'; state.passOwner = null;
@@ -631,6 +638,8 @@ async function scene2() {
   await inn;
   land.doors(false); sfx('door', 0.5);
   turnTo(prof, Math.PI + 0.35);
+  cut({ p0: () => prof.pos.clone().add(V(-0.9, 1.6, -1.9)), p1: () => prof.pos.clone().add(V(-0.8, 1.6, -1.7)), l0: headOf(prof, -0.25), dur: 2, fov: 32, focus: headOf(prof), aperture: 0.0016 });
+  prof.shake = 0.8; prof.head.playGesture('shrug', 0.9); await wait(1.2);
   // phone buzzes: message from his wife
   sfx('buzz', 0.8);
   phone.setChat([{ me: false, text: 'Já tá no aeroporto? Papai tá de roupa nova desde as 7h.' }]);
@@ -657,7 +666,7 @@ async function scene3() {
   // relief, then the lightning and the lights dip
   cut({ p0: rel(prof, 0.1, 1.58, 1.55), l0: headOf(prof, -0.05), fov: 28, focus: headOf(prof), aperture: 0.0016 });
   prof.head.setMood('happy');
-  walkTo(leo, [LEO_B], 1.1);
+  walkTo(leo, [LEO_B], 1.1).then(() => turnTo(leo, yawTo(leo.pos, prof.pos) - 0.5));
   await wait(1.1);
   airport.strikeNow();
   await wait(0.9);
@@ -668,7 +677,7 @@ async function scene3() {
   const l1 = say('l1', { anim: 'talk1' });
   await wait(1.0); look(prof, leo.head); turnTo(prof, yawTo(prof.pos, leo.pos) - 0.6);
   await l1;
-  walkTo(leo, [LEO_A, V(9.2, 0, 15.0)], 1.1);
+  walkTo(leo, [LEO_A, V(11.5, 0, 14.8)], 1.1);
   cut({ p0: rel(prof, -0.2, 1.6, 1.3), l0: headOf(prof, -0.06), fov: 26, focus: headOf(prof), aperture: 0.002 });
   look(prof, M_BOARD2); prof.head.setMood('sad');
   await wait(1.6);
@@ -772,6 +781,7 @@ async function scene7() {
 
 // 8 — the result
 async function scene8() {
+  prof.wet = Math.min(prof.wet, 0.3);
   att.ikR.set(screenPt(0.5, 0.78), 1); await wait(0.5); att.ikR.release();
   setTotem('analyzing');
   { const c0 = screenCam(0.5, 1.3), c1 = screenCam(0.38, 1.15); cut({ p0: c0.p, p1: c1.p, l0: c0.l, l1: c1.l, dur: 6, fov: 30, focus: c1.l, aperture: 0.0008, handheld: 0.002 }); }
@@ -799,8 +809,9 @@ async function scene8() {
   cut({ p0: rel(prof, 0.45, 1.58, 1.15), p1: rel(prof, 0.4, 1.58, 1.0), l0: headOf(prof, -0.12), dur: 9, fov: 26, focus: headOf(prof), aperture: 0.003 });
   look(prof, M_SCREEN); await wait(0.9);
   M_FEET.position.copy(prof.pos).addScaledVector(fwdOf(prof), 0.35); look(prof, M_FEET); await wait(1.0);
-  look(prof, att.head);
+  look(prof, att.head); prof.head.setMood('happy');
   await say('p8', { anim: 'talk1' });
+  prof.head.setMood('neutral');
 }
 
 // 9 — the reaction
@@ -844,7 +855,7 @@ async function scene11() {
   // close on him: board, kiosk, Guis
   cut({ p0: rel(prof, -0.15, 1.6, 1.15), p1: rel(prof, -0.1, 1.6, 1.0), l0: headOf(prof, -0.06), dur: 12, fov: 26, focus: headOf(prof), aperture: 0.003 });
   await wait(0.8); look(prof, totem.head); await wait(0.9); look(prof, att.head); await wait(0.7);
-  look(prof, null);
+  look(prof, att.head);
   await say('p9', { anim: 'talk1' });
   grade.uniforms.uFade.value = 0;   // hard cut to black
   await wait(0.8);
@@ -870,7 +881,7 @@ async function run(from = 1) {
   if (from >= 4) { prof.pos.copy(BOARD2_SPOT); }
   if (from >= 5) { prof.pos.copy(DESK_STOP); prof.yaw = prof.yawGoal = -Math.PI / 2; leo.onPhone = false; }
   if (from >= 6) placeAtKiosk();
-  if (from >= 8) setTotem('auto');
+  if (from >= 8) { setTotem('auto'); prof.wet = 0.3; }
   if (from >= 9) setTotem('result');
   try {
     for (let i = from; i <= SCENES.length; i++) { $('scenelabel').textContent = `Cena ${i}`; EVENTS.push({ t: vt, type: 'scene', n: i }); await SCENES[i - 1](); }
@@ -901,7 +912,7 @@ async function boot() {
   $('loading').textContent = 'Carregando personagens…';
   audioBuffers.murmur = await loadBuffer('./audio/murmur.mp3');
   const RT = { Neck: { z: -0.01, rx: 0.02 }, Neck1: { z: -0.01, rx: 0.02 }, Neck2: { z: -0.01, rx: 0.02 }, LeftShoulder: { rz: -0.3 }, RightShoulder: { rz: 0.3 }, scaleToEyesLevel: 1.0, origin: { y: -0.1 } };
-  const BL = { headRotateX: -0.08, eyeBlinkLeft: 0.05, eyeBlinkRight: 0.05 };
+  const BL = { headRotateX: -0.04, eyeBlinkLeft: 0, eyeBlinkRight: 0, eyeWideLeft: 0.4, eyeWideRight: 0.4 };
   const mk = (name, pos, yaw, mood = 'neutral') => makeActor({ name, pos, yaw, avatar: { url: AV_DIR + 'avatarsdk', body: 'M', avatarMood: mood, retarget: RT, baseline: BL } });
   [prof, att, diniz, leo, motti, sa] = await Promise.all([
     mk('prof', V(8.5, 0, 9.2), -2.1), mk('att', ATT_POS, ATT_YAW, 'happy'), mk('diniz', V(8, 0, 23), -Math.PI / 2),
@@ -925,7 +936,7 @@ async function boot() {
   restyle(leo.arm, { outfit_top: lShirt, AvatarHead: lHead });
   restyle(motti.arm, { outfit_top: stShirt, AvatarHead: mHead });
   restyle(sa.arm, { outfit_top: stShirt, AvatarHead: sHead });
-  setupWet(prof);
+  setupWet(prof); wetHeadTex = await tex('./avatars/prof_head_wet.jpg');
   diniz.arm.scale.setScalar(0.97); leo.arm.scale.setScalar(0.99); motti.arm.scale.setScalar(1.02); sa.arm.scale.setScalar(0.995);
   // accessories: Diniz's glasses, staff badges
   { const g = PROPS.glasses(); g.position.set(0, 0.075, 0.095); diniz.bone('Head').add(g); diniz.glasses = g; }
@@ -1014,7 +1025,8 @@ async function runPreview() {
   run(START_SCENE);
   const dt = 1 / 30; let n = 0;
   while (vt < SIM_AT) { step(dt); if (++n % 30 === 0) await new Promise((r) => setTimeout(r, 0)); }
-  step(dt); render();
+  if (Q.has('face')) { const a = ACT[Q.get('face')] || prof; const h = a.headPos(); const fw = V(Math.sin(a.yaw), 0, Math.cos(a.yaw)); camera.fov = 14; camera.updateProjectionMatrix(); camera.position.copy(h).addScaledVector(fw, 1.1).add(V(0, -0.02, 0)); camera.lookAt(h.add(V(0, -0.04, 0))); shot = null; if (bokeh) bokeh.uniforms.focus.value = 1.1; }
+  step(dt); if (Q.has('face')) { const a = ACT[Q.get('face')] || prof; const h = a.headPos(); const fw = V(Math.sin(a.yaw), 0, Math.cos(a.yaw)); camera.position.copy(h).addScaledVector(fw, 1.1); camera.lookAt(h.add(V(0, -0.04, 0))); } render();
   const f = (v) => v.toArray().map((x) => x.toFixed(2)).join(',');
   console.log('DBG ikR', prof.ikR.weight.toFixed(2), prof.ikR.goal, prof.ikR.auto, 'target', f(prof.ikR.target), 'hand', f(prof.bone('RightHand').getWorldPosition(new THREE.Vector3())), 'phone', phone.visible, f(phone.position), 'typing', state.typing);
   console.log('DBG pose', prof.head.poseName, JSON.stringify(Object.keys(prof.head.poseCurrentTemplate||{})), prof.head.poseCurrentTemplate===prof.head.poseTemplates.sitting, 'mixer', !!prof.head.mixer);

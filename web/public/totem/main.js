@@ -52990,6 +52990,43 @@ function buildLandside(scene13, { quality = "high" } = {}) {
   add2(sg, new BoxGeometry(2.1, 0.55, 0.08), M2({ color: 1908514 }), 0, 0, -0.05);
   add2(sg, new PlaneGeometry(2, 0.5), new MeshBasicMaterial({ map: info, color: new Color(1.3, 1.3, 1.3) }), 0, 0, 0, { cast: false });
   add2(sg, new CylinderGeometry(0.012, 0.012, HALL.h - 2.75, 6), M2({ color: 10133670, metalness: 0.9, roughness: 0.3 }), 0, (HALL.h - 2.75) / 2, -0.05);
+  const wel = canvasTex(2048, 640, (q4, w4, h) => {
+    const gr = q4.createLinearGradient(0, 0, w4, h);
+    gr.addColorStop(0, "#0b2a66");
+    gr.addColorStop(0.55, "#1d4fa3");
+    gr.addColorStop(1, "#f08a24");
+    q4.fillStyle = gr;
+    q4.fillRect(0, 0, w4, h);
+    q4.fillStyle = "rgba(255,255,255,0.08)";
+    for (let i2 = 0; i2 < 14; i2++) {
+      q4.beginPath();
+      q4.arc(1500 + i2 * 30, 900, 300 + i2 * 60, Math.PI, 1.5 * Math.PI);
+      q4.lineWidth = 6;
+      q4.strokeStyle = "rgba(255,255,255,0.07)";
+      q4.stroke();
+    }
+    q4.fillStyle = "#fff";
+    q4.font = '300 120px "Segoe UI", Arial';
+    q4.fillText("Welcome to", 110, 250);
+    q4.font = 'bold 170px "Segoe UI", Arial';
+    q4.fillText("Dallas Fort Worth", 100, 430);
+    q4.font = '60px "Segoe UI", Arial';
+    q4.fillStyle = "rgba(255,255,255,0.8)";
+    q4.fillText("DFW International Airport", 110, 540);
+  });
+  const lb = new Group();
+  lb.position.set(-4.6, 2.6, HALL.z1 - 0.12);
+  lb.rotation.y = Math.PI;
+  root.add(lb);
+  add2(lb, new BoxGeometry(6.6, 2.15, 0.12), M2({ color: 1776671, metalness: 0.5, roughness: 0.4 }), 0, 0, 0.04);
+  add2(lb, new PlaneGeometry(6.4, 2), new MeshBasicMaterial({ map: wel, color: new Color(1.05, 1.05, 1.05) }), 0, 0, 0.11, { cast: false });
+  for (const x2 of [-3.6, 2.4]) {
+    add2(root, new RoundedBoxGeometry(0.9, 0.7, 0.9, 3, 0.05), M2({ color: 3881787, roughness: 0.6 }), x2, 0.35, 14.9);
+    for (let k = 0; k < 14; k++) {
+      const lf = add2(root, new ConeGeometry(0.1, 1.1, 4), M2({ color: 3103274, roughness: 0.7, side: DoubleSide }), x2 + Math.sin(k * 2.1) * 0.35, 1 + k % 3 * 0.12, 14.9 + Math.cos(k * 1.7) * 0.35);
+      lf.rotation.set(Math.sin(k) * 0.5, k, Math.cos(k * 1.3) * 0.5);
+    }
+  }
   out.wetSign = wetFloorSign(root, new Vector3(1.55, 0, 5.2));
   const fp = canvasTex(64, 128, (g) => {
     g.fillStyle = "rgba(0,0,0,0.55)";
@@ -53048,11 +53085,11 @@ function buildTaxi(root, at) {
   g.position.copy(at);
   g.rotation.y = Math.PI;
   root.add(g);
-  const paint = new MeshPhysicalMaterial({ color: 15314194, roughness: 0.35, metalness: 0.1, clearcoat: 0.8, clearcoatRoughness: 0.12 });
+  const paint = new MeshPhysicalMaterial({ color: 14262288, roughness: 0.4, metalness: 0.05, clearcoat: 0.5, clearcoatRoughness: 0.2, envMapIntensity: 0.7 });
   const black = M2({ color: 987154, roughness: 0.6 });
   const trim = M2({ color: 1776671, roughness: 0.45, metalness: 0.4 });
   const chrome = M2({ color: 13620184, metalness: 1, roughness: 0.22 });
-  const tint = new MeshPhysicalMaterial({ color: 1712425, roughness: 0.04, transparent: true, opacity: 0.28, side: DoubleSide, depthWrite: false, envMapIntensity: 1.4 });
+  const tint = new MeshPhysicalMaterial({ color: 1712425, roughness: 0.12, transparent: true, opacity: 0.24, side: DoubleSide, depthWrite: false, envMapIntensity: 0.35 });
   const L = 4.75, Wd = 1.84, BELT = 0.97, ROOF = 1.46;
   const xs = (x2) => x2;
   const side = new Shape();
@@ -54722,31 +54759,57 @@ function applySit(a, k) {
 var wetMats = [];
 function setupWet(a) {
   a.arm.traverse((o) => {
+    if (o.isMesh && o.material?.name === "AvatarHead" && !headMat) {
+      headMat = o.material;
+      headRough = o.material.roughness ?? 0.6;
+      dryHeadTex = o.material.map;
+    }
+  });
+  a.arm.traverse((o) => {
     if (!o.isMesh || !/outfit/.test(o.material?.name || "")) return;
-    o.material = o.material.clone();
-    wetMats.push({ m: o.material, c: o.material.color.clone(), r: o.material.roughness });
+    const old = o.material;
+    const m3 = new MeshPhysicalMaterial();
+    MeshStandardMaterial.prototype.copy.call(m3, old);
+    m3.name = old.name;
+    m3.clearcoat = 0;
+    m3.clearcoatRoughness = 0.6;
+    o.material = m3;
+    wetMats.push({ m: m3, c: m3.color.clone(), r: m3.roughness });
   });
 }
 function applyWet(w4) {
   for (const x2 of wetMats) {
-    x2.m.color.copy(x2.c).multiplyScalar(1 - 0.38 * w4);
-    x2.m.roughness = x2.r * (1 - 0.55 * w4);
-    if ("envMapIntensity" in x2.m) x2.m.envMapIntensity = 1 + w4;
+    x2.m.color.copy(x2.c).multiplyScalar(1 - 0.55 * w4);
+    x2.m.roughness = Math.max(0.42, x2.r * (1 - 0.45 * w4));
+    x2.m.envMapIntensity = 1 + 0.6 * w4;
+    x2.m.clearcoat = 0.18 * w4;
+  }
+  if (headMat) {
+    const want = w4 > 0.55 ? wetHeadTex : dryHeadTex;
+    if (want && headMat.map !== want) {
+      headMat.map = want;
+      headMat.needsUpdate = true;
+    }
+    headMat.roughness = headRough * (1 - 0.35 * w4);
   }
 }
-var DRIPS = 46;
-var dripMesh = new InstancedMesh(new SphereGeometry(6e-3, 6, 4), new MeshStandardMaterial({ color: 14674677, roughness: 0.05, metalness: 0.2, transparent: true, opacity: 0.8 }), DRIPS);
+var headMat = null;
+var headRough = 0.6;
+var wetHeadTex = null;
+var dryHeadTex = null;
+var DRIPS = 80;
+var dripMesh = new InstancedMesh(new SphereGeometry(45e-4, 8, 6), new MeshPhysicalMaterial({ color: 13623538, roughness: 0.02, metalness: 0, transparent: true, opacity: 0.55, envMapIntensity: 2.5 }), DRIPS);
 dripMesh.frustumCulled = false;
 scene.add(dripMesh);
 var drips = Array.from({ length: DRIPS }, () => ({ p: new Vector3(0, -9, 0), v: 0, life: 0 }));
-var DRIP_BONES = ["Head", "LeftHand", "RightHand", "LeftShoulder", "RightShoulder", "LeftForeArm", "RightForeArm", "Hips"];
+var DRIP_BONES = ["LeftHand", "RightHand", "LeftForeArm", "RightForeArm", "Hips", "LeftHand", "RightHand"];
 var _dm = new Object3D();
 function updateDrips(dt) {
-  const w4 = prof.wet || 0;
+  const w4 = (prof.wet || 0) > 0.55 ? prof.wet : 0;
   for (const d of drips) {
     d.life -= dt;
     if (d.life <= 0 || d.p.y < 0.01) {
-      if (Math.random() < w4 * dt * 14) {
+      if (Math.random() < (w4 * 14 + (prof.shake > 0 ? 160 : 0)) * dt) {
         const b = prof.bone(DRIP_BONES[Math.random() * DRIP_BONES.length | 0]);
         b.getWorldPosition(d.p);
         d.p.add(V((Math.random() - 0.5) * 0.12, -0.05, (Math.random() - 0.5) * 0.12));
@@ -54909,6 +54972,12 @@ function updateActors(dt) {
     prof.ikR.set(hold.lerp(earPt(prof), smooth(prof.phoneT || 0)), 1);
   }
   if (leo.onPhone) leo.ikR.set(earPt(leo), 1);
+  if (prof.shake > 0) {
+    prof.shake -= dt;
+    const k = Math.max(0, prof.shake) / 0.8;
+    prof.arm.rotation.z = Math.sin(prof.shake * 38) * 0.05 * k;
+    if (prof.shake <= 0) prof.arm.rotation.z = 0;
+  }
   if (prof.fall) {
     prof.fall.t += dt;
     const k = smooth(prof.fall.t / 0.42);
@@ -54975,8 +55044,8 @@ var BOARD2_SPOT = V(11.5, 0, 12.3);
 var DESK_STOP = V(0.65, 0, 11.75);
 var MOTTI_POS = V(-1.25, 0, 11.05);
 var SA_POS = V(-1.25, 0, 12.15);
-var LEO_A = V(10.4, 0, 14.4);
-var LEO_B = V(12.9, 0, 14);
+var LEO_A = V(9.9, 0, 14.4);
+var LEO_B = V(7.4, 0, 14.1);
 var M_BOARD2 = marker(BOARD2);
 var M_FEET = marker(V(0, 0.1, 0));
 var rainOut = null;
@@ -54995,7 +55064,7 @@ function resetWorld() {
   diniz.pos.copy(TX.driverSeat).add(V(0, 0.47, 0));
   diniz.yaw = diniz.yawGoal = -Math.PI / 2;
   leo.pos.copy(LEO_A);
-  leo.yaw = leo.yawGoal = Math.PI / 2;
+  leo.yaw = leo.yawGoal = -Math.PI / 2;
   leo.onPhone = true;
   leo.walk = null;
   motti.pos.copy(MOTTI_POS);
@@ -55084,6 +55153,10 @@ async function scene2() {
   land.doors(false);
   sfx("door", 0.5);
   turnTo(prof, Math.PI + 0.35);
+  cut({ p0: () => prof.pos.clone().add(V(-0.9, 1.6, -1.9)), p1: () => prof.pos.clone().add(V(-0.8, 1.6, -1.7)), l0: headOf(prof, -0.25), dur: 2, fov: 32, focus: headOf(prof), aperture: 16e-4 });
+  prof.shake = 0.8;
+  prof.head.playGesture("shrug", 0.9);
+  await wait(1.2);
   sfx("buzz", 0.8);
   phone2.setChat([{ me: false, text: "J\xE1 t\xE1 no aeroporto? Papai t\xE1 de roupa nova desde as 7h." }]);
   state.phone = "hand";
@@ -55113,7 +55186,7 @@ async function scene3() {
   await wait(3.6);
   cut({ p0: rel(prof, 0.1, 1.58, 1.55), l0: headOf(prof, -0.05), fov: 28, focus: headOf(prof), aperture: 16e-4 });
   prof.head.setMood("happy");
-  walkTo(leo, [LEO_B], 1.1);
+  walkTo(leo, [LEO_B], 1.1).then(() => turnTo(leo, yawTo(leo.pos, prof.pos) - 0.5));
   await wait(1.1);
   airport.strikeNow();
   await wait(0.9);
@@ -55125,7 +55198,7 @@ async function scene3() {
   look(prof, leo.head);
   turnTo(prof, yawTo(prof.pos, leo.pos) - 0.6);
   await l1;
-  walkTo(leo, [LEO_A, V(9.2, 0, 15)], 1.1);
+  walkTo(leo, [LEO_A, V(11.5, 0, 14.8)], 1.1);
   cut({ p0: rel(prof, -0.2, 1.6, 1.3), l0: headOf(prof, -0.06), fov: 26, focus: headOf(prof), aperture: 2e-3 });
   look(prof, M_BOARD2);
   prof.head.setMood("sad");
@@ -55266,6 +55339,7 @@ async function scene7() {
   await wait(3.5);
 }
 async function scene8() {
+  prof.wet = Math.min(prof.wet, 0.3);
   att.ikR.set(screenPt(0.5, 0.78), 1);
   await wait(0.5);
   att.ikR.release();
@@ -55312,7 +55386,9 @@ async function scene8() {
   look(prof, M_FEET);
   await wait(1);
   look(prof, att.head);
+  prof.head.setMood("happy");
   await say("p8", { anim: "talk1" });
+  prof.head.setMood("neutral");
 }
 async function scene9() {
   cut({ p0: rel(prof, 0.5, 1.56, 1.25), p1: rel(prof, 0.42, 1.57, 1.1), l0: headOf(prof, -0.12), dur: 10, fov: 26, focus: headOf(prof), aperture: 3e-3 });
@@ -55362,7 +55438,7 @@ async function scene11() {
   await wait(0.9);
   look(prof, att.head);
   await wait(0.7);
-  look(prof, null);
+  look(prof, att.head);
   await say("p9", { anim: "talk1" });
   grade.uniforms.uFade.value = 0;
   await wait(0.8);
@@ -55397,7 +55473,10 @@ async function run(from = 1) {
     leo.onPhone = false;
   }
   if (from >= 6) placeAtKiosk();
-  if (from >= 8) setTotem("auto");
+  if (from >= 8) {
+    setTotem("auto");
+    prof.wet = 0.3;
+  }
   if (from >= 9) setTotem("result");
   try {
     for (let i2 = from; i2 <= SCENES.length; i2++) {
@@ -55438,7 +55517,7 @@ async function boot() {
   $("loading").textContent = "Carregando personagens\u2026";
   audioBuffers.murmur = await loadBuffer("./audio/murmur.mp3");
   const RT = { Neck: { z: -0.01, rx: 0.02 }, Neck1: { z: -0.01, rx: 0.02 }, Neck2: { z: -0.01, rx: 0.02 }, LeftShoulder: { rz: -0.3 }, RightShoulder: { rz: 0.3 }, scaleToEyesLevel: 1, origin: { y: -0.1 } };
-  const BL = { headRotateX: -0.08, eyeBlinkLeft: 0.05, eyeBlinkRight: 0.05 };
+  const BL = { headRotateX: -0.04, eyeBlinkLeft: 0, eyeBlinkRight: 0, eyeWideLeft: 0.4, eyeWideRight: 0.4 };
   const mk = (name, pos, yaw, mood = "neutral") => makeActor({ name, pos, yaw, avatar: { url: AV_DIR + "avatarsdk", body: "M", avatarMood: mood, retarget: RT, baseline: BL } });
   [prof, att, diniz, leo, motti, sa] = await Promise.all([
     mk("prof", V(8.5, 0, 9.2), -2.1),
@@ -55480,6 +55559,7 @@ async function boot() {
   restyle(motti.arm, { outfit_top: stShirt, AvatarHead: mHead });
   restyle(sa.arm, { outfit_top: stShirt, AvatarHead: sHead });
   setupWet(prof);
+  wetHeadTex = await tex2("./avatars/prof_head_wet.jpg");
   diniz.arm.scale.setScalar(0.97);
   leo.arm.scale.setScalar(0.99);
   motti.arm.scale.setScalar(1.02);
@@ -55640,7 +55720,25 @@ async function runPreview() {
     step(dt);
     if (++n % 30 === 0) await new Promise((r2) => setTimeout(r2, 0));
   }
+  if (Q.has("face")) {
+    const a = ACT[Q.get("face")] || prof;
+    const h = a.headPos();
+    const fw = V(Math.sin(a.yaw), 0, Math.cos(a.yaw));
+    camera.fov = 14;
+    camera.updateProjectionMatrix();
+    camera.position.copy(h).addScaledVector(fw, 1.1).add(V(0, -0.02, 0));
+    camera.lookAt(h.add(V(0, -0.04, 0)));
+    shot = null;
+    if (bokeh) bokeh.uniforms.focus.value = 1.1;
+  }
   step(dt);
+  if (Q.has("face")) {
+    const a = ACT[Q.get("face")] || prof;
+    const h = a.headPos();
+    const fw = V(Math.sin(a.yaw), 0, Math.cos(a.yaw));
+    camera.position.copy(h).addScaledVector(fw, 1.1);
+    camera.lookAt(h.add(V(0, -0.04, 0)));
+  }
   render();
   const f = (v4) => v4.toArray().map((x2) => x2.toFixed(2)).join(",");
   console.log("DBG ikR", prof.ikR.weight.toFixed(2), prof.ikR.goal, prof.ikR.auto, "target", f(prof.ikR.target), "hand", f(prof.bone("RightHand").getWorldPosition(new Vector3())), "phone", phone2.visible, f(phone2.position), "typing", state.typing);
