@@ -54357,6 +54357,7 @@ function thunder(delay = 0.6) {
   s.start(t0);
 }
 var EVENTS = window.__events = [];
+window.__st = () => ({ vt: +vt.toFixed(2), z: +prof.pos.z.toFixed(2), walk: !!prof.walk, slip: +(prof.slip || 0).toFixed(2), fall: prof.fall ? +prof.fall.t.toFixed(2) : null, k: prof.fall ? +(prof.fall.k || 0).toFixed(2) : null });
 function sfx(name, vol = 1) {
   EVENTS.push({ t: vt, type: "sfx", file: name + ".mp3", vol });
   const b = audioBuffers["sfx_" + name];
@@ -54501,6 +54502,37 @@ async function preloadAnims(a, keys) {
         v4[i2 * 3 + 2] = v4[2];
       }
     }
+  }
+  calibrateArms(a);
+}
+var ARM_BONES = ["Shoulder", "Arm", "ForeArm", "Hand"].flatMap((b) => ["Left" + b, "Right" + b]);
+function calibrateArms(a) {
+  if (!a.restArms) {
+    a.restArms = {};
+    for (const b of ARM_BONES) a.restArms[b] = a.bone(b).quaternion.clone();
+  }
+  const idle = a.head.animClips.find((x2) => x2.url === ANIM.idle + "-0");
+  if (!idle) return;
+  const corr = {};
+  for (const b of ARM_BONES) {
+    const t = idle.clip.tracks.find((x2) => x2.name === b + ".quaternion");
+    if (!t) continue;
+    const q0 = new Quaternion().fromArray(t.values, 0);
+    corr[b] = a.restArms[b].clone().multiply(q0.invert());
+  }
+  const q4 = new Quaternion();
+  for (const item of a.head.animClips) {
+    if (item.url === ANIM.walk + "-0" || item.armsFixed) continue;
+    for (const t of item.clip.tracks) {
+      const b = t.name.split(".")[0];
+      if (!corr[b] || !t.name.endsWith("quaternion")) continue;
+      for (let i2 = 0; i2 < t.values.length; i2 += 4) {
+        q4.fromArray(t.values, i2).premultiply(corr[b]).normalize().toArray(t.values, i2);
+      }
+      const pp = item.pose.props[t.name];
+      if (pp) pp.premultiply(corr[b]);
+    }
+    item.armsFixed = true;
   }
 }
 var prof;
@@ -54851,24 +54883,38 @@ function updateCamera() {
     bokeh.uniforms.aperture.value = shot.aperture ?? 16e-4;
   }
 }
-var SIT = null;
-function applySit(a, k) {
-  if (!SIT) {
-    SIT = {};
-    for (const [key, v4] of Object.entries(a.head.poseTemplates.sitting.props)) {
-      const [b, t] = key.split(".");
-      if (t === "rotation") SIT[b] = new Quaternion().setFromEuler(new Euler(v4.x, v4.y, v4.z, "XYZ"));
-    }
+var TPL = {};
+function tpl(a, name) {
+  if (TPL[name]) return TPL[name];
+  const t = a.head.poseTemplates[name].props, q4 = {};
+  for (const [key, v4] of Object.entries(t)) {
+    const [b, ty] = key.split(".");
+    if (ty === "rotation" && !/Hand|Arm|Shoulder/.test(b)) q4[b] = new Quaternion().setFromEuler(new Euler(v4.x, v4.y, v4.z, "XYZ"));
   }
-  for (const [b, q4] of Object.entries(SIT)) {
-    if (/Hand|Arm|Shoulder/.test(b)) continue;
-    const bone = a.bone(b);
-    if (bone) bone.quaternion.slerp(q4, k);
-  }
+  const ref = a.head.poseTemplates.side.props["Hips.position"];
+  return TPL[name] = { q: q4, hy: t["Hips.position"] ? t["Hips.position"].y / ref.y : null };
+}
+var _qa = new Quaternion();
+var _qb = new Quaternion();
+function applyPoseBlend(a, A, B, u) {
   const hips = a.bone("Hips");
-  if (!a.fall.h0) a.fall.h0 = hips.position.clone();
-  hips.position.y = MathUtils.lerp(a.fall.h0.y, a.fall.h0.y * 0.16, k);
+  if (!a.h0) a.h0 = hips.position.clone();
+  const names = /* @__PURE__ */ new Set([...Object.keys(A ? A.q : {}), ...Object.keys(B ? B.q : {})]);
+  for (const n of names) {
+    const bone = a.bone(n);
+    if (!bone) continue;
+    _qa.copy(A && A.q[n] ? A.q[n] : bone.quaternion);
+    _qb.copy(B && B.q[n] ? B.q[n] : bone.quaternion);
+    bone.quaternion.slerpQuaternions(_qa, _qb, u);
+  }
+  const ya = A ? A.hy : 1, yb = B ? B.hy : 1;
+  hips.position.y = a.h0.y * MathUtils.lerp(ya, yb, u);
   a.arm.updateMatrixWorld(true);
+}
+function applySit(a, k) {
+  const S = tpl(a, "sitting");
+  if (S.hy == null || S.hy > 0.5) S.hy = 0.16;
+  applyPoseBlend(a, null, S, k);
 }
 var wetMats = [];
 function setupWet(a) {
@@ -55012,7 +55058,7 @@ function updateProps(dt) {
     const m3 = new Matrix4().makeBasis(new Vector3().crossVectors(up, zAxis), up, zAxis);
     suit.quaternion.setFromRotationMatrix(m3);
     suit.position.copy(suitWheel).add(V(0, -0.035, 0)).addScaledVector(zAxis, 0.03);
-  } else if (state.suitMode === "parked") {
+  } else if (state.suitMode === "parked" && !prof.fall) {
     const want = prof.pos.clone().addScaledVector(right, 0.45).addScaledVector(fwd, -0.05);
     suit.position.lerp(V(want.x, 0, want.z), Math.min(1, dt * 3));
     suit.quaternion.slerp(new Quaternion().setFromEuler(new Euler(0, prof.yaw, 0)), Math.min(1, dt * 3));
@@ -55081,7 +55127,11 @@ function updateActors(dt) {
     a.arm.position.copy(a.pos);
     a.arm.rotation.y = a.yaw;
     a.head.animate(dt * 1e3);
-    if (a.fall && a.fall.k > 0) applySit(a, a.fall.k);
+    if (a.fall && a.fall.up != null) {
+      const u = Math.min(1, a.fall.up / 1.9), S = tpl(a, "sitting"), K = tpl(a, "oneknee");
+      if (u < 0.45) applyPoseBlend(a, S, K, smooth(u / 0.45));
+      else applyPoseBlend(a, K, null, smooth((u - 0.45) / 0.55));
+    } else if (a.fall && a.fall.k > 0) applySit(a, a.fall.k);
     a.arm.updateMatrixWorld(true);
   }
   const earPt = (a) => {
@@ -55101,13 +55151,31 @@ function updateActors(dt) {
     if (prof.shake <= 0) prof.arm.rotation.z = 0;
   }
   if (prof.fall) {
-    prof.fall.t += dt;
-    const k = smooth(prof.fall.t / 0.42);
-    prof.fall.k = k;
-    prof.arm.rotation.x = 0.28 * k;
+    const F = prof.fall;
+    F.t += dt;
     prof.pos.y = 0;
-    const r2 = V(-Math.cos(prof.yaw), 0, Math.sin(prof.yaw));
-    prof.ikL.set(prof.pos.clone().addScaledVector(r2, -0.35).add(V(0, 1.55 + 0.5 * k, 0)), 1);
+    const r2 = V(-Math.cos(prof.yaw), 0, Math.sin(prof.yaw)), f = fwdOf(prof);
+    if (F.up == null) {
+      const k = smooth(F.t / 0.42);
+      F.k = k;
+      prof.arm.rotation.x = 0.28 * k;
+      prof.ikL.set(prof.pos.clone().addScaledVector(r2, -0.35).add(V(0, 1.55 + 0.5 * k, 0)), 1);
+    } else {
+      F.up += dt;
+      const u = Math.min(1, F.up / 1.9), lean = Math.sin(Math.PI * Math.min(1, u / 0.8));
+      prof.arm.rotation.x = 0.28 * (1 - smooth(Math.min(1, u / 0.3))) - 0.06 * lean;
+      const gh = MathUtils.lerp(2.05, 0.85, smooth(u));
+      prof.ikL.set(prof.pos.clone().addScaledVector(r2, -0.3 + 0.1 * u).addScaledVector(f, 0.1).add(V(0, gh * (u < 0.45 ? 0.75 : 1), 0)), 1 - smooth(Math.max(0, (u - 0.75) / 0.25)));
+      const kneeH = u < 0.45 ? 0.35 : MathUtils.lerp(0.55, 0.9, (u - 0.45) / 0.55);
+      prof.ikR.set(prof.pos.clone().addScaledVector(r2, 0.18).addScaledVector(f, 0.32).add(V(0, kneeH, 0)), Math.sin(Math.PI * Math.min(1, u / 0.85)));
+      if (u >= 1) {
+        prof.fall = null;
+        prof.arm.rotation.x = 0;
+        prof.ikL.release();
+        prof.ikR.release();
+        prof.head.setMood("neutral");
+      }
+    }
   }
   if (state.suitMode === "parked" && suitRoll.lengthSq() > 0) {
     suit.position.lerp(suitRoll, Math.min(1, dt * 1.6));
@@ -55187,7 +55255,7 @@ function resetWorld() {
   suitRoll.set(0, 0, 0);
   att.pos.copy(ATT_POS);
   att.yaw = att.yawGoal = ATT_YAW;
-  diniz.pos.copy(TX.driverSeat).add(V(0, 0.47, 0));
+  diniz.pos.copy(TX.driverSeat).add(V(0, 0.6, 0));
   diniz.yaw = diniz.yawGoal = -Math.PI / 2;
   leo.pos.copy(LEO_A);
   leo.yaw = leo.yawGoal = -Math.PI / 2;
@@ -55384,25 +55452,35 @@ async function scene5() {
   prof.slip = 0.45;
   sfx("squeak", 0.9);
   state.suitMode = "parked";
-  suitRoll.set(prof.pos.x - 1, 0, prof.pos.z + 0.9);
+  suitRoll.set(prof.pos.x - 0.9, 0, prof.pos.z + 1.6);
   await wait(0.35);
   prof.fall = { t: 0 };
   await wait(0.42);
   sfx("thud", 0.8);
-  cut({ p0: V(2.75, 1.05, 4), l0: () => prof.pos.clone().add(V(0, 0.7, 0)), fov: 36, focus: () => prof.pos.clone().add(V(0, 0.8, 0)), aperture: 16e-4, handheld: 4e-3 });
-  await wait(1);
+  const upK = () => prof.fall && prof.fall.up != null ? smooth(Math.min(1, prof.fall.up / 1.9)) : prof.fall ? 0 : 1;
+  const FP = prof.pos.clone();
+  cut({ p0: () => FP.clone().add(V(-1.35, 0.75 + 0.55 * upK(), -1.95)), l0: () => FP.clone().add(V(0, 0.55 + 0.85 * upK(), 0.1)), fov: 36, focus: () => prof.headPos(), aperture: 16e-4, handheld: 4e-3, smoothPos: true });
+  prof.head.setMood("sad");
+  await wait(0.9);
   look(prof, M_BAG);
-  await wait(0.7);
+  await wait(0.9);
+  prof.head.setMood("neutral");
   look(prof, totem.head);
-  await wait(0.5);
-  prof.fall = null;
-  prof.arm.rotation.x = 0;
-  prof.pos.set(0.95, 0, 3.6);
-  prof.ikL.release();
+  await wait(0.4);
+  prof.fall.up = 0;
+  look(prof, V(prof.pos.x, 0.2, prof.pos.z - 1.2));
+  await wait(1.1);
+  look(prof, totem.head);
+  await until(() => !prof.fall, 3);
+  prof.shake = 0.5;
+  await wait(0.6);
   cut({ p0: rel(att, 0.35, 1.62, 1.1), p1: rel(att, 0.3, 1.62, 0.95), l0: headOf(att, -0.06), dur: 3, fov: 28, focus: headOf(att), aperture: 24e-4 });
   look(att, V(1, 1.2, 5));
   att.head.setMood("happy");
   laugh(att, 1.7, 0.3);
+  prof.pos.set(0.95, 0, 3.6);
+  prof.yaw = prof.yawGoal = Math.PI;
+  suitRoll.set(0, 0, 0);
   await wait(2);
   look(att, prof.head);
   state.suitMode = "pull";
@@ -55694,7 +55772,7 @@ async function boot() {
   restyle(sa.arm, { outfit_top: stShirt, AvatarHead: sHead });
   setupWet(prof);
   wetHeadTex = await tex2("./avatars/prof_head_wet.jpg");
-  diniz.arm.scale.setScalar(0.97);
+  diniz.arm.scale.setScalar(1);
   leo.arm.scale.setScalar(0.99);
   motti.arm.scale.setScalar(1.02);
   sa.arm.scale.setScalar(0.995);
@@ -55806,7 +55884,7 @@ async function boot() {
   await preloadAnims(leo, ["walk", "talk1", "idle"]);
   await preloadAnims(motti, ["walk", "talk0", "idle", "laugh"]);
   await preloadAnims(sa, ["walk", "talk1", "talk2", "idle", "laugh"]);
-  [prof, att, leo, motti, sa].forEach((a, i2) => {
+  if (!Q.has("noidle")) [prof, att, leo, motti, sa].forEach((a, i2) => {
     a.idleOK = true;
     a.idlePhase = i2 * 0.37 % 1;
   });
@@ -55856,7 +55934,8 @@ async function runPreview() {
   let n = 0;
   while (vt < SIM_AT) {
     step(dt);
-    if (++n % 30 === 0) await new Promise((r2) => setTimeout(r2, 0));
+    n++;
+    await new Promise((r2) => setTimeout(r2, 0));
   }
   if (Q.has("face")) {
     const a = ACT[Q.get("face")] || prof;
@@ -55869,7 +55948,46 @@ async function runPreview() {
     shot = null;
     if (bokeh) bokeh.uniforms.focus.value = 1.1;
   }
+  const bodyCam = () => {
+    if (!Q.has("body")) return;
+    const a = ACT[Q.get("body")] || prof;
+    const ang = a.yaw + (+Q.get("ang") || 0);
+    const h = a.pos.clone().add(V(0, 1.25, 0));
+    camera.fov = 30;
+    camera.updateProjectionMatrix();
+    camera.position.copy(h).addScaledVector(V(Math.sin(ang), 0, Math.cos(ang)), 2.4).add(V(0, 0.15, 0));
+    camera.lookAt(h);
+    shot = null;
+    if (bokeh) bokeh.uniforms.focus.value = 2.4;
+  };
+  if (Q.has("lineup")) {
+    const who = (Q.get("lineup") || "prof,att,leo,motti,sa").split(",").map((k) => ACT[k]);
+    who.forEach((a, i2) => {
+      a.walk = null;
+      a.pos.set(3 + i2 * 1, 0, 6.5);
+      a.yaw = a.yawGoal = +(Q.get("ang") || 0);
+      a.look.goal = 0;
+    });
+    state.suitMode = "hidden";
+    suit.position.set(0, -5, 0);
+    state.phone = false;
+    for (let i2 = 0; i2 < 20; i2++) step(dt);
+    const cx = 3 + (who.length - 1) * 0.5, d = +(Q.get("d") || 4.2), y = +(Q.get("y") || 1);
+    camera.fov = 30;
+    camera.updateProjectionMatrix();
+    camera.position.set(cx, y + 0.25, 6.5 + d);
+    camera.lookAt(cx, y, 6.5);
+    shot = null;
+    if (bokeh) bokeh.uniforms.focus.value = d;
+  }
+  bodyCam();
   step(dt);
+  bodyCam();
+  if (Q.has("lineup")) {
+    const cx = 3 + ((Q.get("lineup") || "prof,att,leo,motti,sa").split(",").length - 1) * 0.5, d = +(Q.get("d") || 4.2), y = +(Q.get("y") || 1);
+    camera.position.set(cx, y + 0.25, 6.5 + d);
+    camera.lookAt(cx, y, 6.5);
+  }
   if (Q.has("face")) {
     const a = ACT[Q.get("face")] || prof;
     const h = a.headPos();
