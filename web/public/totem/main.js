@@ -56504,7 +56504,7 @@ async function scene13() {
   await wait(1.8);
   cut({ p0: () => prof.pos.clone().add(V(0.5, 1.68, -0.5)), l0: () => kauai.headPos().add(V(0, -0.12, 0)), fov: 30, focus: headOf(kauai), aperture: 2e-3, handheld: 3e-3 });
   await k1;
-  cut({ p0: () => kauai.headPos().add(V(0.12, -0.08, -0.05)), l0: headOf(prof, -0.05), fov: 28, focus: headOf(prof), aperture: 24e-4 });
+  cut({ p0: () => kauai.headPos().add(V(-0.42, -0.04, 0.12)), l0: headOf(prof, -0.08), fov: 34, focus: headOf(prof), aperture: 24e-4 });
   await wait(0.3);
   await say("p11");
   await wait(0.4);
@@ -56524,7 +56524,7 @@ async function scene13() {
   look(prof, zuma.head);
   cut({ p0: () => prof.pos.clone().add(V(-0.5, 1.68, -0.5)), l0: () => zuma.headPos().add(V(0, -0.12, 0)), fov: 30, focus: headOf(zuma), aperture: 2e-3, handheld: 3e-3 });
   await say("z1");
-  cut({ p0: () => zuma.headPos().add(V(-0.12, -0.08, -0.05)), l0: headOf(prof, -0.05), fov: 28, focus: headOf(prof), aperture: 24e-4 });
+  cut({ p0: () => zuma.headPos().add(V(0.42, -0.04, 0.12)), l0: headOf(prof, -0.08), fov: 34, focus: headOf(prof), aperture: 24e-4 });
   prof.head.setMood("sad");
   await wait(0.2);
   await say("p13");
@@ -56593,7 +56593,7 @@ async function scene13() {
     grade.uniforms.uFade.value = 1 - i2 / 15;
     await wait(1 / 15);
   }
-  const roll = [["ELENCO", ""], ...CREDITS, ["", ""], ["Kauai", "investidor de bordo"], ["Zuma", "aluno da USP"], ["Lopo", "DJ (atrasado)"], ["", ""], ["M\xFAsica", CFG.music || "tocada pelo Lopo"], ["", ""], ["Nenhum professor foi reprovado", ""], ["na produ\xE7\xE3o deste v\xEDdeo.", ""]];
+  const roll = [["ELENCO", ""], ...CREDITS, ["", ""], ["Kauai", "investidor de bordo"], ["Zuma", "aluno da USP"], ["Lopo", "DJ (atrasado)"], ["", ""], ["M\xFAsica", CFG.music || "tocada pelo Lopo"], ["", ""], ["Obrigado por tudo, Soussa.", ""]];
   const ROLL = 16;
   EVENTS.push({ t: vt, type: "roll", dur: ROLL, lines: roll.map(([a, b]) => b ? `${a}  \xB7  ${b}` : a) });
   showRoll(roll, ROLL);

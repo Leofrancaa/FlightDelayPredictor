@@ -1135,7 +1135,7 @@ async function scene13() {
   cut({ p0: () => prof.pos.clone().add(V(0.5, 1.68, -0.5)), l0: () => kauai.headPos().add(V(0, -0.12, 0)), fov: 30, focus: headOf(kauai), aperture: 0.002, handheld: 0.003 });
   await k1;
   // 4) Soussa, low angle from Kauai's seat
-  cut({ p0: () => kauai.headPos().add(V(0.12, -0.08, -0.05)), l0: headOf(prof, -0.05), fov: 28, focus: headOf(prof), aperture: 0.0024 });
+  cut({ p0: () => kauai.headPos().add(V(-0.42, -0.04, 0.12)), l0: headOf(prof, -0.08), fov: 34, focus: headOf(prof), aperture: 0.0024 });
   await wait(0.3);
   await say('p11');
   await wait(0.4); kauai.typing = true; look(kauai, null);
@@ -1148,7 +1148,7 @@ async function scene13() {
   // 5) Zuma, colourful shirt, smug
   cut({ p0: () => prof.pos.clone().add(V(-0.5, 1.68, -0.5)), l0: () => zuma.headPos().add(V(0, -0.12, 0)), fov: 30, focus: headOf(zuma), aperture: 0.002, handheld: 0.003 });
   await say('z1');
-  cut({ p0: () => zuma.headPos().add(V(-0.12, -0.08, -0.05)), l0: headOf(prof, -0.05), fov: 28, focus: headOf(prof), aperture: 0.0024 });
+  cut({ p0: () => zuma.headPos().add(V(0.42, -0.04, 0.12)), l0: headOf(prof, -0.08), fov: 34, focus: headOf(prof), aperture: 0.0024 });
   prof.head.setMood('sad');
   await wait(0.2);
   await say('p13');
@@ -1195,7 +1195,7 @@ async function scene13() {
   await wait(1.3);
   // the music takes over: fade to black, the final credits roll
   for (let i = 1; i <= 15; i++) { grade.uniforms.uFade.value = 1 - i / 15; await wait(1 / 15); }
-  const roll = [['ELENCO', ''], ...CREDITS, ['', ''], ['Kauai', 'investidor de bordo'], ['Zuma', 'aluno da USP'], ['Lopo', 'DJ (atrasado)'], ['', ''], ['Música', CFG.music || 'tocada pelo Lopo'], ['', ''], ['Nenhum professor foi reprovado', ''], ['na produção deste vídeo.', '']];
+  const roll = [['ELENCO', ''], ...CREDITS, ['', ''], ['Kauai', 'investidor de bordo'], ['Zuma', 'aluno da USP'], ['Lopo', 'DJ (atrasado)'], ['', ''], ['Música', CFG.music || 'tocada pelo Lopo'], ['', ''], ['Obrigado por tudo, Soussa.', '']];
   const ROLL = 16;
   EVENTS.push({ t: vt, type: 'roll', dur: ROLL, lines: roll.map(([a, b]) => (b ? `${a}  ·  ${b}` : a)) });
   showRoll(roll, ROLL);
