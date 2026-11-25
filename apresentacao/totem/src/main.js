@@ -1054,8 +1054,10 @@ async function boot() {
   restyle(leo.arm, { outfit_top: lShirt, AvatarHead: lHead });
   restyle(motti.arm, { outfit_top: stShirt, AvatarHead: mHead });
   // brown eyes for the group members whose photos we have
-  { const eb = await tex('./avatars/eyes_brown.jpg'); for (const a of [att, diniz, motti]) restyle(a.arm, { AvatarLeftEyeball: eb, AvatarRightEyeball: eb }); }
+  { const eb = await tex('./avatars/eyes_brown.jpg'); for (const a of [att, diniz, motti, sa]) restyle(a.arm, { AvatarLeftEyeball: eb, AvatarRightEyeball: eb }); }
   restyle(sa.arm, { outfit_top: stShirt, AvatarHead: sHead });
+  // Sá is tanned: match hands/arms (body texture) to his face
+  sa.arm.traverse((o) => { if (o.isMesh && o.material?.name === 'AvatarBody') { o.material = o.material.clone(); o.material.color.setRGB(0.88, 0.76, 0.66); } });
   setupWet(prof); wetHeadTex = await tex('./avatars/prof_head_wet.jpg');
   diniz.arm.scale.setScalar(1.0); leo.arm.scale.setScalar(0.99); motti.arm.scale.setScalar(1.02); sa.arm.scale.setScalar(0.995);
   // accessories: Diniz's glasses, staff badges
