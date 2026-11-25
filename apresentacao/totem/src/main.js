@@ -1053,11 +1053,12 @@ async function boot() {
   restyle(diniz.arm, { outfit_top: dShirt, AvatarHead: dHead });
   restyle(leo.arm, { outfit_top: lShirt, AvatarHead: lHead });
   restyle(motti.arm, { outfit_top: stShirt, AvatarHead: mHead });
+  // brown eyes for the group members whose photos we have
+  { const eb = await tex('./avatars/eyes_brown.jpg'); for (const a of [att, diniz, motti]) restyle(a.arm, { AvatarLeftEyeball: eb, AvatarRightEyeball: eb }); }
   restyle(sa.arm, { outfit_top: stShirt, AvatarHead: sHead });
   setupWet(prof); wetHeadTex = await tex('./avatars/prof_head_wet.jpg');
   diniz.arm.scale.setScalar(1.0); leo.arm.scale.setScalar(0.99); motti.arm.scale.setScalar(1.02); sa.arm.scale.setScalar(0.995);
   // accessories: Diniz's glasses, staff badges
-  { const g = PROPS.glasses(); g.position.set(0, 0.075, 0.095); diniz.bone('Head').add(g); diniz.glasses = g; }
   for (const a of [motti, sa]) { const b = PROPS.badge(); b.position.set(-0.09, 0.08, 0.13); b.rotation.y = 0; a.bone('Spine2').add(b); }
   // attendant: loose short-sleeve shirt (sleeve below mid upper arm painted as skin) and bell-bottom jeans
   att.arm.updateMatrixWorld(true);

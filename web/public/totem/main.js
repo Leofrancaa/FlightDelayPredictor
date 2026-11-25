@@ -14715,69 +14715,6 @@ var CapsuleGeometry = class _CapsuleGeometry extends BufferGeometry {
     return new _CapsuleGeometry(data.radius, data.height, data.capSegments, data.radialSegments, data.heightSegments);
   }
 };
-var CircleGeometry = class _CircleGeometry extends BufferGeometry {
-  /**
-   * Constructs a new circle geometry.
-   *
-   * @param {number} [radius=1] - Radius of the circle.
-   * @param {number} [segments=32] - Number of segments (triangles), minimum = `3`.
-   * @param {number} [thetaStart=0] - Start angle for first segment in radians.
-   * @param {number} [thetaLength=Math.PI*2] - The central angle, often called theta,
-   * of the circular sector in radians. The default value results in a complete circle.
-   */
-  constructor(radius = 1, segments = 32, thetaStart = 0, thetaLength = Math.PI * 2) {
-    super();
-    this.type = "CircleGeometry";
-    this.parameters = {
-      radius,
-      segments,
-      thetaStart,
-      thetaLength
-    };
-    segments = Math.max(3, segments);
-    const indices = [];
-    const vertices = [];
-    const normals = [];
-    const uvs = [];
-    const vertex2 = new Vector3();
-    const uv = new Vector2();
-    vertices.push(0, 0, 0);
-    normals.push(0, 0, 1);
-    uvs.push(0.5, 0.5);
-    for (let s = 0, i2 = 3; s <= segments; s++, i2 += 3) {
-      const segment = thetaStart + s / segments * thetaLength;
-      vertex2.x = radius * Math.cos(segment);
-      vertex2.y = radius * Math.sin(segment);
-      vertices.push(vertex2.x, vertex2.y, vertex2.z);
-      normals.push(0, 0, 1);
-      uv.x = (vertices[i2] / radius + 1) / 2;
-      uv.y = (vertices[i2 + 1] / radius + 1) / 2;
-      uvs.push(uv.x, uv.y);
-    }
-    for (let i2 = 1; i2 <= segments; i2++) {
-      indices.push(i2, i2 + 1, 0);
-    }
-    this.setIndex(indices);
-    this.setAttribute("position", new Float32BufferAttribute(vertices, 3));
-    this.setAttribute("normal", new Float32BufferAttribute(normals, 3));
-    this.setAttribute("uv", new Float32BufferAttribute(uvs, 2));
-  }
-  copy(source) {
-    super.copy(source);
-    this.parameters = Object.assign({}, source.parameters);
-    return this;
-  }
-  /**
-   * Factory method for creating an instance of this class from the given
-   * JSON object.
-   *
-   * @param {Object} data - A JSON object representing the serialized geometry.
-   * @return {CircleGeometry} A new instance.
-   */
-  static fromJSON(data) {
-    return new _CircleGeometry(data.radius, data.segments, data.thetaStart, data.thetaLength);
-  }
-};
 var CylinderGeometry = class _CylinderGeometry extends BufferGeometry {
   /**
    * Constructs a new cylinder geometry.
@@ -54086,28 +54023,6 @@ function chatPhone() {
   g.setChat([]);
   return g;
 }
-function glasses() {
-  const g = new Group();
-  const m3 = new MeshStandardMaterial({ color: 1118481, roughness: 0.4, metalness: 0.3 });
-  const lens = new MeshPhysicalMaterial({ color: 16777215, roughness: 0.02, transparent: true, opacity: 0.12, depthWrite: false });
-  for (const s of [-1, 1]) {
-    const r2 = new Mesh(new TorusGeometry(0.024, 25e-4, 6, 24), m3);
-    r2.scale.set(1.2, 0.85, 1);
-    r2.position.set(s * 0.032, 0, 0);
-    g.add(r2);
-    const l = new Mesh(new CircleGeometry(0.024, 20), lens);
-    l.scale.set(1.2, 0.85, 1);
-    l.position.set(s * 0.032, 0, 0);
-    g.add(l);
-    const arm = new Mesh(new BoxGeometry(3e-3, 3e-3, 0.1), m3);
-    arm.position.set(s * 0.062, 5e-3, -0.05);
-    g.add(arm);
-  }
-  const br = new Mesh(new BoxGeometry(0.014, 3e-3, 3e-3), m3);
-  br.position.y = 6e-3;
-  g.add(br);
-  return g;
-}
 function badge() {
   const c = document.createElement("canvas");
   c.width = 128;
@@ -55769,6 +55684,10 @@ async function boot() {
   restyle(diniz.arm, { outfit_top: dShirt, AvatarHead: dHead });
   restyle(leo.arm, { outfit_top: lShirt, AvatarHead: lHead });
   restyle(motti.arm, { outfit_top: stShirt, AvatarHead: mHead });
+  {
+    const eb = await tex2("./avatars/eyes_brown.jpg");
+    for (const a of [att, diniz, motti]) restyle(a.arm, { AvatarLeftEyeball: eb, AvatarRightEyeball: eb });
+  }
   restyle(sa.arm, { outfit_top: stShirt, AvatarHead: sHead });
   setupWet(prof);
   wetHeadTex = await tex2("./avatars/prof_head_wet.jpg");
@@ -55776,12 +55695,6 @@ async function boot() {
   leo.arm.scale.setScalar(0.99);
   motti.arm.scale.setScalar(1.02);
   sa.arm.scale.setScalar(0.995);
-  {
-    const g = glasses();
-    g.position.set(0, 0.075, 0.095);
-    diniz.bone("Head").add(g);
-    diniz.glasses = g;
-  }
   for (const a of [motti, sa]) {
     const b = badge();
     b.position.set(-0.09, 0.08, 0.13);
