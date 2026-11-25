@@ -96,8 +96,11 @@ export class HeadLook {
   update(dt) {
     this.weight += (this.goal - this.weight) * Math.min(1, dt * 3.5);
     if (this.weight < 0.01 || !this.target || !this.neck || !this.headBone) return;
-    const tgt = this.target.isVector3 ? this.target.clone() : this.target.getWorldPosition(new THREE.Vector3());
-    tgt.add(this.offset);
+    const raw = this.target.isVector3 ? this.target.clone() : this.target.getWorldPosition(new THREE.Vector3());
+    raw.add(this.offset);
+    // ease the gaze point toward the target, so a new target turns the head instead of snapping it
+    if (!this.cur) this.cur = raw.clone(); else this.cur.lerp(raw, Math.min(1, dt * 4));
+    const tgt = this.cur.clone();
     this.arm.updateMatrixWorld(true);
     if (!this.localFwd) {
       // head-local axis that points where the face points (armature +Z at rest)
@@ -117,7 +120,7 @@ export class HeadLook {
       while (yaw > Math.PI) yaw -= 2 * Math.PI; while (yaw < -Math.PI) yaw += 2 * Math.PI;
       yaw = THREE.MathUtils.clamp(yaw, -1.3, 1.3);
       let pitch = Math.asin(THREE.MathUtils.clamp(want.y, -1, 1)) - Math.asin(THREE.MathUtils.clamp(fwd.y, -1, 1));
-      pitch = THREE.MathUtils.clamp(pitch, -0.35, 0.3);
+      pitch = THREE.MathUtils.clamp(pitch, -0.35, this.maxUp ?? 0.3);
       const k = share * this.weight;
       const qy = new THREE.Quaternion().setFromAxisAngle(Y, yaw * k);
       const f2 = fwd.clone().applyQuaternion(qy);

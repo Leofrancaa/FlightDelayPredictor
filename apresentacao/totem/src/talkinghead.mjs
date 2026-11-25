@@ -2416,6 +2416,8 @@ class TalkingHead {
     }
     dt = dt / this.animSlowdownRate;
     this.animClock += dt;
+    // patched: gesture timers run on the animation clock (deterministic in virtual time / export)
+    if ( this.gestureStopAt != null && this.animClock >= this.gestureStopAt ) { const ms = this.gestureStopMs; this.gestureStopAt = null; this.stopGesture(ms); }
 
     let i,j,l,k,vol=0;
 
@@ -4374,27 +4376,30 @@ class TalkingHead {
         this.poseTarget.props[x[0]].d = 1000;
       });
 
-      // Create a new mixer
-      if (this.mixer) {
-        this.mixer.removeEventListener('finished', this._mixerHandler);
-        this.mixer.stopAllAction();
-        this.mixer.uncacheRoot(this.armature);
-        this.mixer = null;
-        this._mixerHandler = null;
+      // Reuse the mixer and cross-fade (patched: avoids snapping to the base pose between clips)
+      const xf = this.crossFade ?? 0.45;
+      if (!this.mixer) {
+        this.mixer = new THREE.AnimationMixer(this.armature);
+        this._mixerHandler = (e) => { if (e.action === this._curAction) this.stopAnimation(); };
+        this.mixer.addEventListener('finished', this._mixerHandler);
       }
-      this.mixer = new THREE.AnimationMixer(this.armature);
-      this._mixerHandler = () => {
-        this.stopAnimation();
-        this.mixer?.removeEventListener('finished', this._mixerHandler);
-      };
-      this.mixer.addEventListener('finished', this._mixerHandler);
-
-      // Play action
+      // continuous weight blending: every fade starts from the weight the action has right now
+      const fadeTo = (act, w, d) => { const now = act.getEffectiveWeight(); act.weight = 1; act.stopFading(); act._scheduleFading(Math.max(1e-3, d), now, w); };
+      const target = this.clipWeight ?? 1, keep = this.keepClip || null;
       const repeat = Math.ceil(dur / item.clip.duration);
       const action = this.mixer.clipAction(item.clip);
-      action.setLoop( THREE.LoopRepeat, repeat );
-      action.clampWhenFinished = true;
-      action.fadeIn(0.5).play();
+      for (const o of this.mixer._actions) if (o !== action && o.isRunning()) fadeTo(o, o.getClip() === keep ? 1 : 0, xf);
+      if (action.isRunning() && action.getEffectiveWeight() > 0.02) {
+        action.repetitions = Math.max(action.repetitions, Math.floor(action.time / item.clip.duration) + repeat);
+        fadeTo(action, target, xf);
+      } else {
+        action.reset();
+        action.setLoop( THREE.LoopRepeat, repeat );
+        action.clampWhenFinished = true;
+        if (this.animPhase != null) action.time = this.animPhase * item.clip.duration;
+        action.setEffectiveWeight(0); action.play(); fadeTo(action, target, xf);
+      }
+      this._curAction = action;
 
     } else {
 
@@ -4461,6 +4466,7 @@ class TalkingHead {
       this.mixer.uncacheRoot(this.armature);
       this.mixer = null;
       this._mixerHandler = null;
+      this._curAction = null;
     }
 
     // Restart gesture
@@ -4637,7 +4643,7 @@ class TalkingHead {
 
       // Timer
       if ( dur && Number.isFinite(dur) ) {
-        this.gestureTimeout = setTimeout( this.stopGesture.bind(this,ms), 1000 * dur);
+        this.gestureStopAt = this.animClock + 1000 * dur; this.gestureStopMs = ms;
       }
     }
 
@@ -4697,6 +4703,7 @@ class TalkingHead {
       clearTimeout( this.gestureTimeout );
       this.gestureTimeout = null;
     }
+    this.gestureStopAt = null;
 
     // Stop hand gesture, if any
     if ( this.gesture ) {

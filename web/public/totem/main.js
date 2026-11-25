@@ -21457,7 +21457,7 @@ var CubeCamera = class extends Object3D {
    * @param {(Renderer|WebGLRenderer)} renderer - The renderer.
    * @param {Scene} scene - The scene to render.
    */
-  update(renderer2, scene13) {
+  update(renderer2, scene14) {
     if (this.parent === null) this.updateMatrixWorld();
     const { renderTarget, activeMipmapLevel } = this;
     if (this.coordinateSystem !== renderer2.coordinateSystem) {
@@ -21480,23 +21480,23 @@ var CubeCamera = class extends Object3D {
     }
     renderer2.setRenderTarget(renderTarget, 0, activeMipmapLevel);
     if (reversedDepthBuffer && renderer2.autoClear === false) renderer2.clearDepth();
-    renderer2.render(scene13, cameraPX);
+    renderer2.render(scene14, cameraPX);
     renderer2.setRenderTarget(renderTarget, 1, activeMipmapLevel);
     if (reversedDepthBuffer && renderer2.autoClear === false) renderer2.clearDepth();
-    renderer2.render(scene13, cameraNX);
+    renderer2.render(scene14, cameraNX);
     renderer2.setRenderTarget(renderTarget, 2, activeMipmapLevel);
     if (reversedDepthBuffer && renderer2.autoClear === false) renderer2.clearDepth();
-    renderer2.render(scene13, cameraPY);
+    renderer2.render(scene14, cameraPY);
     renderer2.setRenderTarget(renderTarget, 3, activeMipmapLevel);
     if (reversedDepthBuffer && renderer2.autoClear === false) renderer2.clearDepth();
-    renderer2.render(scene13, cameraNY);
+    renderer2.render(scene14, cameraNY);
     renderer2.setRenderTarget(renderTarget, 4, activeMipmapLevel);
     if (reversedDepthBuffer && renderer2.autoClear === false) renderer2.clearDepth();
-    renderer2.render(scene13, cameraPZ);
+    renderer2.render(scene14, cameraPZ);
     renderTarget.texture.generateMipmaps = generateMipmaps;
     renderer2.setRenderTarget(renderTarget, 5, activeMipmapLevel);
     if (reversedDepthBuffer && renderer2.autoClear === false) renderer2.clearDepth();
-    renderer2.render(scene13, cameraNZ);
+    renderer2.render(scene14, cameraNZ);
     renderer2.setRenderTarget(currentRenderTarget, currentActiveCubeFace, currentActiveMipmapLevel);
     renderer2.xr.enabled = currentXrEnabled;
     renderTarget.texture.needsPMREMUpdate = true;
@@ -24711,17 +24711,17 @@ function WebGLBackground(renderer2, environments, state2, objects, alpha, premul
   let currentBackground = null;
   let currentBackgroundVersion = 0;
   let currentTonemapping = null;
-  function getBackground(scene13) {
-    let background = scene13.isScene === true ? scene13.background : null;
+  function getBackground(scene14) {
+    let background = scene14.isScene === true ? scene14.background : null;
     if (background && background.isTexture) {
-      const usePMREM = scene13.backgroundBlurriness > 0;
+      const usePMREM = scene14.backgroundBlurriness > 0;
       background = environments.get(background, usePMREM);
     }
     return background;
   }
-  function render2(scene13) {
+  function render2(scene14) {
     let forceClear = false;
-    const background = getBackground(scene13);
+    const background = getBackground(scene14);
     if (background === null) {
       setClear(clearColor, clearAlpha);
     } else if (background && background.isColor) {
@@ -24741,8 +24741,8 @@ function WebGLBackground(renderer2, environments, state2, objects, alpha, premul
       renderer2.clear(renderer2.autoClearColor, renderer2.autoClearDepth, renderer2.autoClearStencil);
     }
   }
-  function addToRenderList(renderList, scene13) {
-    const background = getBackground(scene13);
+  function addToRenderList(renderList, scene14) {
+    const background = getBackground(scene14);
     if (background && (background.isCubeTexture || background.mapping === CubeUVReflectionMapping)) {
       if (boxMesh === void 0) {
         boxMesh = new Mesh(
@@ -24761,7 +24761,7 @@ function WebGLBackground(renderer2, environments, state2, objects, alpha, premul
         );
         boxMesh.geometry.deleteAttribute("normal");
         boxMesh.geometry.deleteAttribute("uv");
-        boxMesh.onBeforeRender = function(renderer3, scene14, camera2) {
+        boxMesh.onBeforeRender = function(renderer3, scene15, camera2) {
           this.matrixWorld.copyPosition(camera2.matrixWorld);
         };
         Object.defineProperty(boxMesh.material, "envMap", {
@@ -24772,9 +24772,9 @@ function WebGLBackground(renderer2, environments, state2, objects, alpha, premul
         objects.update(boxMesh);
       }
       boxMesh.material.uniforms.envMap.value = background;
-      boxMesh.material.uniforms.backgroundBlurriness.value = scene13.backgroundBlurriness;
-      boxMesh.material.uniforms.backgroundIntensity.value = scene13.backgroundIntensity;
-      boxMesh.material.uniforms.backgroundRotation.value.setFromMatrix4(_m1$12.makeRotationFromEuler(scene13.backgroundRotation)).transpose();
+      boxMesh.material.uniforms.backgroundBlurriness.value = scene14.backgroundBlurriness;
+      boxMesh.material.uniforms.backgroundIntensity.value = scene14.backgroundIntensity;
+      boxMesh.material.uniforms.backgroundRotation.value.setFromMatrix4(_m1$12.makeRotationFromEuler(scene14.backgroundRotation)).transpose();
       if (background.isCubeTexture && background.isRenderTargetTexture === false) {
         boxMesh.material.uniforms.backgroundRotation.value.premultiply(_m$1);
       }
@@ -24812,7 +24812,7 @@ function WebGLBackground(renderer2, environments, state2, objects, alpha, premul
         objects.update(planeMesh);
       }
       planeMesh.material.uniforms.t2D.value = background;
-      planeMesh.material.uniforms.backgroundIntensity.value = scene13.backgroundIntensity;
+      planeMesh.material.uniforms.backgroundIntensity.value = scene14.backgroundIntensity;
       planeMesh.material.toneMapped = ColorManagement.getTransfer(background.colorSpace) !== SRGBTransfer;
       if (background.matrixAutoUpdate === true) {
         background.updateMatrix();
@@ -25466,7 +25466,7 @@ var PMREMGenerator = class {
    * @param {Vector3} [options.position=origin] - The position of the internal cube camera that renders the scene.
    * @return {WebGLRenderTarget} The resulting PMREM.
    */
-  fromScene(scene13, sigma = 0, near = 0.1, far = 100, options = {}) {
+  fromScene(scene14, sigma = 0, near = 0.1, far = 100, options = {}) {
     const {
       size = 256,
       position = _origin
@@ -25479,7 +25479,7 @@ var PMREMGenerator = class {
     this._setSize(size);
     const cubeUVRenderTarget = this._allocateTargets();
     cubeUVRenderTarget.depthBuffer = true;
-    this._sceneToCubeUV(scene13, near, far, cubeUVRenderTarget, position);
+    this._sceneToCubeUV(scene14, near, far, cubeUVRenderTarget, position);
     if (sigma > 0) {
       this._blur(cubeUVRenderTarget, 0, 0, sigma);
     }
@@ -25612,7 +25612,7 @@ var PMREMGenerator = class {
     const mesh = new Mesh(new BufferGeometry(), material);
     this._renderer.compile(mesh, _flatCamera);
   }
-  _sceneToCubeUV(scene13, near, far, cubeUVRenderTarget, position) {
+  _sceneToCubeUV(scene14, near, far, cubeUVRenderTarget, position) {
     const fov2 = 90;
     const aspect2 = 1;
     const cubeCamera = new PerspectiveCamera(fov2, aspect2, near, far);
@@ -25644,11 +25644,11 @@ var PMREMGenerator = class {
     const backgroundBox = this._backgroundBox;
     const backgroundMaterial = backgroundBox.material;
     let useSolidColor = false;
-    const background = scene13.background;
+    const background = scene14.background;
     if (background) {
       if (background.isColor) {
         backgroundMaterial.color.copy(background);
-        scene13.background = null;
+        scene14.background = null;
         useSolidColor = true;
       }
     } else {
@@ -25676,11 +25676,11 @@ var PMREMGenerator = class {
       if (useSolidColor) {
         renderer2.render(backgroundBox, cubeCamera);
       }
-      renderer2.render(scene13, cubeCamera);
+      renderer2.render(scene14, cubeCamera);
     }
     renderer2.toneMapping = toneMapping;
     renderer2.autoClear = originalAutoClear;
-    scene13.background = background;
+    scene14.background = background;
   }
   _textureToCubeUV(texture, cubeUVRenderTarget) {
     const renderer2 = this._renderer;
@@ -28306,10 +28306,10 @@ function WebGLPrograms(renderer2, environments, extensions, capabilities, bindin
     if (value === 0) return "uv";
     return `uv${value}`;
   }
-  function getParameters(material, lights, shadows, scene13, object, lightProbeGrids) {
-    const fog = scene13.fog;
+  function getParameters(material, lights, shadows, scene14, object, lightProbeGrids) {
+    const fog = scene14.fog;
     const geometry = object.geometry;
-    const environment = material.isMeshStandardMaterial || material.isMeshLambertMaterial || material.isMeshPhongMaterial ? scene13.environment : null;
+    const environment = material.isMeshStandardMaterial || material.isMeshLambertMaterial || material.isMeshPhongMaterial ? scene14.environment : null;
     const usePMREM = material.isMeshStandardMaterial || material.isMeshLambertMaterial && !material.envMap || material.isMeshPhongMaterial && !material.envMap;
     const envMap = environments.get(material.envMap || environment, usePMREM);
     const envMapCubeUVHeight = !!envMap && envMap.mapping === CubeUVReflectionMapping ? envMap.image.height : null;
@@ -28911,12 +28911,12 @@ function WebGLRenderList() {
 }
 function WebGLRenderLists() {
   let lists = /* @__PURE__ */ new WeakMap();
-  function get(scene13, renderCallDepth) {
-    const listArray = lists.get(scene13);
+  function get(scene14, renderCallDepth) {
+    const listArray = lists.get(scene14);
     let list;
     if (listArray === void 0) {
       list = new WebGLRenderList();
-      lists.set(scene13, [list]);
+      lists.set(scene14, [list]);
     } else {
       if (renderCallDepth >= listArray.length) {
         list = new WebGLRenderList();
@@ -29398,12 +29398,12 @@ function WebGLRenderState(extensions) {
 }
 function WebGLRenderStates(extensions) {
   let renderStates = /* @__PURE__ */ new WeakMap();
-  function get(scene13, renderCallDepth = 0) {
-    const renderStateArray = renderStates.get(scene13);
+  function get(scene14, renderCallDepth = 0) {
+    const renderStateArray = renderStates.get(scene14);
     let renderState;
     if (renderStateArray === void 0) {
       renderState = new WebGLRenderState(extensions);
-      renderStates.set(scene13, [renderState]);
+      renderStates.set(scene14, [renderState]);
     } else {
       if (renderCallDepth >= renderStateArray.length) {
         renderState = new WebGLRenderState(extensions);
@@ -29476,7 +29476,7 @@ function WebGLShadowMap(renderer2, objects, capabilities) {
   this.needsUpdate = false;
   this.type = PCFShadowMap;
   let _previousType = this.type;
-  this.render = function(lights, scene13, camera2) {
+  this.render = function(lights, scene14, camera2) {
     if (scope.enabled === false) return;
     if (scope.autoUpdate === false && scope.needsUpdate === false) return;
     if (lights.length === 0) return;
@@ -29498,7 +29498,7 @@ function WebGLShadowMap(renderer2, objects, capabilities) {
     _state.setScissorTest(false);
     const typeChanged = _previousType !== this.type;
     if (typeChanged) {
-      scene13.traverse(function(object) {
+      scene14.traverse(function(object) {
         if (object.material) {
           if (Array.isArray(object.material)) {
             object.material.forEach((mat) => mat.needsUpdate = true);
@@ -29627,7 +29627,7 @@ function WebGLShadowMap(renderer2, objects, capabilities) {
           _state.viewport(_viewport);
         }
         _frustum = shadow.getFrustum(face);
-        renderObject(scene13, camera2, shadowCamera, light, this.type);
+        renderObject(scene14, camera2, shadowCamera, light, this.type);
       }
       if (shadow.isPointLightShadow !== true && this.type === VSMShadowMap) {
         VSMPass(shadow, camera2);
@@ -34079,10 +34079,10 @@ var WebGLRenderer = class {
         }
       }
     }
-    this.renderBufferDirect = function(camera2, scene13, geometry, material, object, group) {
-      if (scene13 === null) scene13 = _emptyScene;
+    this.renderBufferDirect = function(camera2, scene14, geometry, material, object, group) {
+      if (scene14 === null) scene14 = _emptyScene;
       const frontFaceCW = object.isMesh && object.matrixWorld.determinantAffine() < 0;
-      const program = setProgram(camera2, scene13, geometry, material, object);
+      const program = setProgram(camera2, scene14, geometry, material, object);
       state2.setMaterial(material, frontFaceCW);
       let index = geometry.index;
       let rangeFactor = 1;
@@ -34163,24 +34163,24 @@ var WebGLRenderer = class {
         renderer2.render(drawStart, drawCount);
       }
     };
-    function prepareMaterial(material, scene13, camera2, object) {
+    function prepareMaterial(material, scene14, camera2, object) {
       if (_nodesHandler !== null && material.isNodeMaterial) _nodesHandler.setObject(object, material);
       if (_clippingEnabled === true) clipping.setState(material, camera2, false);
       if (material.transparent === true && material.side === DoubleSide && material.forceSinglePass === false) {
         material.side = BackSide;
         material.needsUpdate = true;
-        getProgram(material, scene13, object);
+        getProgram(material, scene14, object);
         material.side = FrontSide;
         material.needsUpdate = true;
-        getProgram(material, scene13, object);
+        getProgram(material, scene14, object);
         material.side = DoubleSide;
       } else {
-        getProgram(material, scene13, object);
+        getProgram(material, scene14, object);
       }
     }
-    this.compile = function(scene13, camera2, targetScene = null) {
-      if (targetScene === null) targetScene = scene13;
-      if (_nodesHandler !== null) _nodesHandler.renderStart(scene13, camera2, targetScene);
+    this.compile = function(scene14, camera2, targetScene = null) {
+      if (targetScene === null) targetScene = scene14;
+      if (_nodesHandler !== null) _nodesHandler.renderStart(scene14, camera2, targetScene);
       currentRenderState = renderStates.get(targetScene);
       currentRenderState.init(camera2);
       renderStateStack.push(currentRenderState);
@@ -34192,8 +34192,8 @@ var WebGLRenderer = class {
           }
         }
       });
-      if (scene13 !== targetScene) {
-        scene13.traverseVisible(function(object) {
+      if (scene14 !== targetScene) {
+        scene14.traverseVisible(function(object) {
           if (object.isLight && object.layers.test(camera2.layers)) {
             currentRenderState.pushLight(object);
             if (object.castShadow) {
@@ -34209,7 +34209,7 @@ var WebGLRenderer = class {
       if (_clippingEnabled === true) clipping.setGlobalState(this.clippingPlanes, camera2);
       if (_nodesHandler !== null) shadowMap.render(currentRenderState.state.shadowsArray, targetScene, camera2);
       const materials2 = /* @__PURE__ */ new Set();
-      scene13.traverse(function(object) {
+      scene14.traverse(function(object) {
         if (!(object.isMesh || object.isPoints || object.isLine || object.isSprite)) {
           return;
         }
@@ -34231,8 +34231,8 @@ var WebGLRenderer = class {
       if (_nodesHandler !== null) _nodesHandler.renderEnd();
       return materials2;
     };
-    this.compileAsync = function(scene13, camera2, targetScene = null) {
-      const materials2 = this.compile(scene13, camera2, targetScene);
+    this.compileAsync = function(scene14, camera2, targetScene = null) {
+      const materials2 = this.compile(scene14, camera2, targetScene);
       return new Promise((resolve) => {
         function checkMaterialsReady() {
           materials2.forEach(function(material) {
@@ -34243,7 +34243,7 @@ var WebGLRenderer = class {
             }
           });
           if (materials2.size === 0) {
-            resolve(scene13);
+            resolve(scene14);
             return;
           }
           setTimeout(checkMaterialsReady, 10);
@@ -34275,25 +34275,25 @@ var WebGLRenderer = class {
     };
     xr.addEventListener("sessionstart", onXRSessionStart);
     xr.addEventListener("sessionend", onXRSessionEnd);
-    this.render = function(scene13, camera2) {
+    this.render = function(scene14, camera2) {
       if (camera2 !== void 0 && camera2.isCamera !== true) {
         error("WebGLRenderer.render: camera is not an instance of THREE.Camera.");
         return;
       }
       if (_isContextLost === true) return;
       if (_nodesHandler !== null) {
-        _nodesHandler.renderStart(scene13, camera2);
+        _nodesHandler.renderStart(scene14, camera2);
       }
       const isXRPresenting = xr.enabled === true && xr.isPresenting === true;
       const useOutput = output !== null && (_currentRenderTarget === null || isXRPresenting) && output.begin(_this, _currentRenderTarget);
-      if (scene13.matrixWorldAutoUpdate === true) scene13.updateMatrixWorld();
+      if (scene14.matrixWorldAutoUpdate === true) scene14.updateMatrixWorld();
       if (camera2.parent === null && camera2.matrixWorldAutoUpdate === true) camera2.updateMatrixWorld();
       if (xr.enabled === true && xr.isPresenting === true && (output === null || output.isCompositing() === false)) {
         if (xr.cameraAutoUpdate === true) xr.updateCamera(camera2);
         camera2 = xr.getCamera();
       }
-      if (scene13.isScene === true) scene13.onBeforeRender(_this, scene13, camera2, _currentRenderTarget);
-      currentRenderState = renderStates.get(scene13, renderStateStack.length);
+      if (scene14.isScene === true) scene14.onBeforeRender(_this, scene14, camera2, _currentRenderTarget);
+      currentRenderState = renderStates.get(scene14, renderStateStack.length);
       currentRenderState.init(camera2);
       currentRenderState.state.textureUnits = textures.getTextureUnits();
       renderStateStack.push(currentRenderState);
@@ -34301,7 +34301,7 @@ var WebGLRenderer = class {
       _frustum.setFromProjectionMatrix(_projScreenMatrix3, WebGLCoordinateSystem, camera2.reversedDepth);
       _localClippingEnabled = this.localClippingEnabled;
       _clippingEnabled = clipping.init(this.clippingPlanes, _localClippingEnabled);
-      currentRenderList = renderLists.get(scene13, renderListStack.length);
+      currentRenderList = renderLists.get(scene14, renderListStack.length);
       currentRenderList.init();
       renderListStack.push(currentRenderList);
       if (xr.enabled === true && xr.isPresenting === true) {
@@ -34310,7 +34310,7 @@ var WebGLRenderer = class {
           projectObject(depthSensingMesh, camera2, -Infinity, _this.sortObjects);
         }
       }
-      projectObject(scene13, camera2, 0, _this.sortObjects);
+      projectObject(scene14, camera2, 0, _this.sortObjects);
       currentRenderList.finish();
       if (_nodesHandler !== null) _nodesHandler.updateLights(currentRenderState.state.lightsArray);
       if (_this.sortObjects === true) {
@@ -34318,13 +34318,13 @@ var WebGLRenderer = class {
       }
       _renderBackground = xr.enabled === false || xr.isPresenting === false || xr.hasDepthSensing() === false;
       if (_renderBackground) {
-        background.addToRenderList(currentRenderList, scene13);
+        background.addToRenderList(currentRenderList, scene14);
       }
       this.info.render.frame++;
       if (this.info.autoReset === true) this.info.reset();
       if (_clippingEnabled === true) clipping.beginShadows();
       const shadowsArray = currentRenderState.state.shadowsArray;
-      shadowMap.render(shadowsArray, scene13, camera2);
+      shadowMap.render(shadowsArray, scene14, camera2);
       if (_clippingEnabled === true) clipping.endShadows();
       const skipSceneRender = useOutput && output.hasRenderPass();
       if (skipSceneRender === false) {
@@ -34336,18 +34336,18 @@ var WebGLRenderer = class {
           if (transmissiveObjects.length > 0) {
             for (let i2 = 0, l = cameras.length; i2 < l; i2++) {
               const camera22 = cameras[i2];
-              renderTransmissionPass(opaqueObjects, transmissiveObjects, scene13, camera22);
+              renderTransmissionPass(opaqueObjects, transmissiveObjects, scene14, camera22);
             }
           }
-          if (_renderBackground) background.render(scene13);
+          if (_renderBackground) background.render(scene14);
           for (let i2 = 0, l = cameras.length; i2 < l; i2++) {
             const camera22 = cameras[i2];
-            renderScene(currentRenderList, scene13, camera22, camera22.viewport);
+            renderScene(currentRenderList, scene14, camera22, camera22.viewport);
           }
         } else {
-          if (transmissiveObjects.length > 0) renderTransmissionPass(opaqueObjects, transmissiveObjects, scene13, camera2);
-          if (_renderBackground) background.render(scene13);
-          renderScene(currentRenderList, scene13, camera2);
+          if (transmissiveObjects.length > 0) renderTransmissionPass(opaqueObjects, transmissiveObjects, scene14, camera2);
+          if (_renderBackground) background.render(scene14);
+          renderScene(currentRenderList, scene14, camera2);
         }
       }
       if (_currentRenderTarget !== null && _currentActiveMipmapLevel === 0) {
@@ -34357,7 +34357,7 @@ var WebGLRenderer = class {
       if (useOutput) {
         output.end(_this);
       }
-      if (scene13.isScene === true) scene13.onAfterRender(_this, scene13, camera2);
+      if (scene14.isScene === true) scene14.onAfterRender(_this, scene14, camera2);
       bindingStates.resetDefaultState();
       _currentMaterialId = -1;
       _currentCamera = null;
@@ -34439,21 +34439,21 @@ var WebGLRenderer = class {
         projectObject(children[i2], camera2, groupOrder, sortObjects);
       }
     }
-    function renderScene(currentRenderList2, scene13, camera2, viewport) {
+    function renderScene(currentRenderList2, scene14, camera2, viewport) {
       const { opaque: opaqueObjects, transmissive: transmissiveObjects, transparent: transparentObjects } = currentRenderList2;
       currentRenderState.setupLightsView(camera2);
       if (_clippingEnabled === true) clipping.setGlobalState(_this.clippingPlanes, camera2);
       if (viewport) state2.viewport(_currentViewport.copy(viewport));
-      if (opaqueObjects.length > 0) renderObjects(opaqueObjects, scene13, camera2);
-      if (transmissiveObjects.length > 0) renderObjects(transmissiveObjects, scene13, camera2);
-      if (transparentObjects.length > 0) renderObjects(transparentObjects, scene13, camera2);
+      if (opaqueObjects.length > 0) renderObjects(opaqueObjects, scene14, camera2);
+      if (transmissiveObjects.length > 0) renderObjects(transmissiveObjects, scene14, camera2);
+      if (transparentObjects.length > 0) renderObjects(transparentObjects, scene14, camera2);
       state2.buffers.depth.setTest(true);
       state2.buffers.depth.setMask(true);
       state2.buffers.color.setMask(true);
       state2.setPolygonOffset(false);
     }
-    function renderTransmissionPass(opaqueObjects, transmissiveObjects, scene13, camera2) {
-      const overrideMaterial = scene13.isScene === true ? scene13.overrideMaterial : null;
+    function renderTransmissionPass(opaqueObjects, transmissiveObjects, scene14, camera2) {
+      const overrideMaterial = scene14.isScene === true ? scene14.overrideMaterial : null;
       if (overrideMaterial !== null) {
         return;
       }
@@ -34484,14 +34484,14 @@ var WebGLRenderer = class {
       _currentClearAlpha = _this.getClearAlpha();
       if (_currentClearAlpha < 1) _this.setClearColor(16777215, 0.5);
       _this.clear();
-      if (_renderBackground) background.render(scene13);
+      if (_renderBackground) background.render(scene14);
       const currentToneMapping = _this.toneMapping;
       _this.toneMapping = NoToneMapping;
       const currentCameraViewport = camera2.viewport;
       if (camera2.viewport !== void 0) camera2.viewport = void 0;
       currentRenderState.setupLightsView(camera2);
       if (_clippingEnabled === true) clipping.setGlobalState(_this.clippingPlanes, camera2);
-      renderObjects(opaqueObjects, scene13, camera2);
+      renderObjects(opaqueObjects, scene14, camera2);
       textures.updateMultisampleRenderTarget(transmissionRenderTarget);
       textures.updateRenderTargetMipmap(transmissionRenderTarget);
       if (extensions.has("WEBGL_multisampled_render_to_texture") === false) {
@@ -34503,7 +34503,7 @@ var WebGLRenderer = class {
             const currentSide = material.side;
             material.side = BackSide;
             material.needsUpdate = true;
-            renderObject(object, scene13, camera2, geometry, material, group);
+            renderObject(object, scene14, camera2, geometry, material, group);
             material.side = currentSide;
             material.needsUpdate = true;
             renderTargetNeedsUpdate = true;
@@ -34519,8 +34519,8 @@ var WebGLRenderer = class {
       if (currentCameraViewport !== void 0) camera2.viewport = currentCameraViewport;
       _this.toneMapping = currentToneMapping;
     }
-    function renderObjects(renderList, scene13, camera2) {
-      const overrideMaterial = scene13.isScene === true ? scene13.overrideMaterial : null;
+    function renderObjects(renderList, scene14, camera2) {
+      const overrideMaterial = scene14.isScene === true ? scene14.overrideMaterial : null;
       for (let i2 = 0, l = renderList.length; i2 < l; i2++) {
         const renderItem = renderList[i2];
         const { object, geometry, group } = renderItem;
@@ -34529,43 +34529,43 @@ var WebGLRenderer = class {
           material = overrideMaterial;
         }
         if (object.layers.test(camera2.layers)) {
-          renderObject(object, scene13, camera2, geometry, material, group);
+          renderObject(object, scene14, camera2, geometry, material, group);
         }
       }
     }
-    function renderObject(object, scene13, camera2, geometry, material, group) {
+    function renderObject(object, scene14, camera2, geometry, material, group) {
       if (_nodesHandler !== null && material.isNodeMaterial) _nodesHandler.setObject(object, material);
-      object.onBeforeRender(_this, scene13, camera2, geometry, material, group);
+      object.onBeforeRender(_this, scene14, camera2, geometry, material, group);
       object.modelViewMatrix.multiplyMatrices(camera2.matrixWorldInverse, object.matrixWorld);
       object.normalMatrix.getNormalMatrix(object.modelViewMatrix);
-      material.onBeforeRender(_this, scene13, camera2, geometry, object, group);
+      material.onBeforeRender(_this, scene14, camera2, geometry, object, group);
       if (material.transparent === true && material.side === DoubleSide && material.forceSinglePass === false) {
         material.side = BackSide;
         material.needsUpdate = true;
-        _this.renderBufferDirect(camera2, scene13, geometry, material, object, group);
+        _this.renderBufferDirect(camera2, scene14, geometry, material, object, group);
         material.side = FrontSide;
         material.needsUpdate = true;
-        _this.renderBufferDirect(camera2, scene13, geometry, material, object, group);
+        _this.renderBufferDirect(camera2, scene14, geometry, material, object, group);
         material.side = DoubleSide;
       } else {
-        _this.renderBufferDirect(camera2, scene13, geometry, material, object, group);
+        _this.renderBufferDirect(camera2, scene14, geometry, material, object, group);
       }
-      object.onAfterRender(_this, scene13, camera2, geometry, material, group);
+      object.onAfterRender(_this, scene14, camera2, geometry, material, group);
     }
-    function getProgram(material, scene13, object) {
-      if (scene13.isScene !== true) scene13 = _emptyScene;
+    function getProgram(material, scene14, object) {
+      if (scene14.isScene !== true) scene14 = _emptyScene;
       const materialProperties = properties.get(material);
       const lights = currentRenderState.state.lights;
       const shadowsArray = currentRenderState.state.shadowsArray;
       const lightsStateVersion = lights.state.version;
-      const parameters2 = programCache.getParameters(material, lights.state, shadowsArray, scene13, object, currentRenderState.state.lightProbeGridArray);
+      const parameters2 = programCache.getParameters(material, lights.state, shadowsArray, scene14, object, currentRenderState.state.lightProbeGridArray);
       const programCacheKey = programCache.getProgramCacheKey(parameters2);
       let programs = materialProperties.programs;
-      materialProperties.environment = material.isMeshStandardMaterial || material.isMeshLambertMaterial || material.isMeshPhongMaterial ? scene13.environment : null;
-      materialProperties.fog = scene13.fog;
+      materialProperties.environment = material.isMeshStandardMaterial || material.isMeshLambertMaterial || material.isMeshPhongMaterial ? scene14.environment : null;
+      materialProperties.fog = scene14.fog;
       const usePMREM = material.isMeshStandardMaterial || material.isMeshLambertMaterial && !material.envMap || material.isMeshPhongMaterial && !material.envMap;
       materialProperties.envMap = environments.get(material.envMap || materialProperties.environment, usePMREM);
-      materialProperties.envMapRotation = materialProperties.environment !== null && material.envMap === null ? scene13.environmentRotation : material.envMapRotation;
+      materialProperties.envMapRotation = materialProperties.environment !== null && material.envMap === null ? scene14.environmentRotation : material.envMapRotation;
       if (programs === void 0) {
         material.addEventListener("dispose", onMaterialDispose);
         programs = /* @__PURE__ */ new Map();
@@ -34659,11 +34659,11 @@ var WebGLRenderer = class {
       }
       return null;
     }
-    function setProgram(camera2, scene13, geometry, material, object) {
-      if (scene13.isScene !== true) scene13 = _emptyScene;
+    function setProgram(camera2, scene14, geometry, material, object) {
+      if (scene14.isScene !== true) scene14 = _emptyScene;
       textures.resetTextureUnits();
-      const fog = scene13.fog;
-      const environment = material.isMeshStandardMaterial || material.isMeshLambertMaterial || material.isMeshPhongMaterial ? scene13.environment : null;
+      const fog = scene14.fog;
+      const environment = material.isMeshStandardMaterial || material.isMeshLambertMaterial || material.isMeshPhongMaterial ? scene14.environment : null;
       const colorSpace = _currentRenderTarget === null ? _this.outputColorSpace : _currentRenderTarget.isXRRenderTarget === true ? _currentRenderTarget.texture.colorSpace : ColorManagement.workingColorSpace;
       const usePMREM = material.isMeshStandardMaterial || material.isMeshLambertMaterial && !material.envMap || material.isMeshPhongMaterial && !material.envMap;
       const envMap = environments.get(material.envMap || environment, usePMREM);
@@ -34747,7 +34747,7 @@ var WebGLRenderer = class {
       }
       let program = materialProperties.currentProgram;
       if (needsProgramChange === true) {
-        program = getProgram(material, scene13, object);
+        program = getProgram(material, scene14, object);
         if (_nodesHandler && material.isNodeMaterial) {
           _nodesHandler.onUpdateProgram(material, program, materialProperties);
         }
@@ -34841,8 +34841,8 @@ var WebGLRenderer = class {
         materialProperties.receiveShadow = object.receiveShadow;
         p_uniforms.setValue(_gl, "receiveShadow", object.receiveShadow);
       }
-      if ((material.isMeshStandardMaterial || material.isMeshLambertMaterial || material.isMeshPhongMaterial) && material.envMap === null && scene13.environment !== null) {
-        m_uniforms.envMapIntensity.value = scene13.environmentIntensity;
+      if ((material.isMeshStandardMaterial || material.isMeshLambertMaterial || material.isMeshPhongMaterial) && material.envMap === null && scene14.environment !== null) {
+        m_uniforms.envMapIntensity.value = scene14.environmentIntensity;
       }
       if (m_uniforms.dfgLUT !== void 0) {
         m_uniforms.dfgLUT.value = getDFGLUT();
@@ -35606,9 +35606,9 @@ var MaskPass = class extends Pass {
    * @param {Scene} scene - The 3D objects in this scene will define the mask.
    * @param {Camera} camera - The camera.
    */
-  constructor(scene13, camera2) {
+  constructor(scene14, camera2) {
     super();
-    this.scene = scene13;
+    this.scene = scene14;
     this.camera = camera2;
     this.clear = true;
     this.needsSwap = false;
@@ -35883,9 +35883,9 @@ var RenderPass = class extends Pass {
    * @param {?(number|Color|string)} [clearColor=null] - The clear color of the render pass.
    * @param {?number} [clearAlpha=null] - The clear alpha of the render pass.
    */
-  constructor(scene13, camera2, overrideMaterial = null, clearColor = null, clearAlpha = null) {
+  constructor(scene14, camera2, overrideMaterial = null, clearColor = null, clearAlpha = null) {
     super();
-    this.scene = scene13;
+    this.scene = scene14;
     this.camera = camera2;
     this.overrideMaterial = overrideMaterial;
     this.clearColor = clearColor;
@@ -36960,13 +36960,13 @@ var GTAOPass = class _GTAOPass extends Pass {
    * @param {Object} [aoParameters] - The AO parameters.
    * @param {Object} [pdParameters] - The denoise parameters.
    */
-  constructor(scene13, camera2, width = 512, height = 512, parameters, aoParameters, pdParameters) {
+  constructor(scene14, camera2, width = 512, height = 512, parameters, aoParameters, pdParameters) {
     super();
     this.width = width;
     this.height = height;
     this.clear = true;
     this.camera = camera2;
-    this.scene = scene13;
+    this.scene = scene14;
     this.output = 0;
     this._renderGBuffer = true;
     this._visibilityCache = [];
@@ -37327,9 +37327,9 @@ var GTAOPass = class _GTAOPass extends Pass {
     renderer2.setClearAlpha(originalClearAlpha);
   }
   _overrideVisibility() {
-    const scene13 = this.scene;
+    const scene14 = this.scene;
     const cache = this._visibilityCache;
-    scene13.traverse(function(object) {
+    scene14.traverse(function(object) {
       if ((object.isPoints || object.isLine || object.isLine2) && object.visible) {
         object.visible = false;
         cache.push(object);
@@ -37911,9 +37911,9 @@ var BokehPass = class extends Pass {
    * @param {Camera} camera - The camera.
    * @param {BokehPass~Options} params - The pass options.
    */
-  constructor(scene13, camera2, params) {
+  constructor(scene14, camera2, params) {
     super();
-    this.scene = scene13;
+    this.scene = scene14;
     this.camera = camera2;
     const focus = params.focus !== void 0 ? params.focus : 1;
     const aperture = params.aperture !== void 0 ? params.aperture : 0.025;
@@ -39077,6 +39077,154 @@ function interceptControlUp(event) {
 }
 
 // node_modules/three/examples/jsm/utils/BufferGeometryUtils.js
+function mergeGeometries(geometries, useGroups = false) {
+  const isIndexed = geometries[0].index !== null;
+  const attributesUsed = new Set(Object.keys(geometries[0].attributes));
+  const morphAttributesUsed = new Set(Object.keys(geometries[0].morphAttributes));
+  const attributes = {};
+  const morphAttributes = {};
+  const morphTargetsRelative = geometries[0].morphTargetsRelative;
+  const mergedGeometry = new BufferGeometry();
+  let offset = 0;
+  for (let i2 = 0; i2 < geometries.length; ++i2) {
+    const geometry = geometries[i2];
+    let attributesCount = 0;
+    if (isIndexed !== (geometry.index !== null)) {
+      console.error("THREE.BufferGeometryUtils: .mergeGeometries() failed with geometry at index " + i2 + ". All geometries must have compatible attributes; make sure index attribute exists among all geometries, or in none of them.");
+      return null;
+    }
+    for (const name in geometry.attributes) {
+      if (!attributesUsed.has(name)) {
+        console.error("THREE.BufferGeometryUtils: .mergeGeometries() failed with geometry at index " + i2 + '. All geometries must have compatible attributes; make sure "' + name + '" attribute exists among all geometries, or in none of them.');
+        return null;
+      }
+      if (attributes[name] === void 0) attributes[name] = [];
+      attributes[name].push(geometry.attributes[name]);
+      attributesCount++;
+    }
+    if (attributesCount !== attributesUsed.size) {
+      console.error("THREE.BufferGeometryUtils: .mergeGeometries() failed with geometry at index " + i2 + ". Make sure all geometries have the same number of attributes.");
+      return null;
+    }
+    if (morphTargetsRelative !== geometry.morphTargetsRelative) {
+      console.error("THREE.BufferGeometryUtils: .mergeGeometries() failed with geometry at index " + i2 + ". .morphTargetsRelative must be consistent throughout all geometries.");
+      return null;
+    }
+    for (const name in geometry.morphAttributes) {
+      if (!morphAttributesUsed.has(name)) {
+        console.error("THREE.BufferGeometryUtils: .mergeGeometries() failed with geometry at index " + i2 + ".  .morphAttributes must be consistent throughout all geometries.");
+        return null;
+      }
+      if (morphAttributes[name] === void 0) morphAttributes[name] = [];
+      morphAttributes[name].push(geometry.morphAttributes[name]);
+    }
+    if (useGroups) {
+      let count;
+      if (isIndexed) {
+        count = geometry.index.count;
+      } else if (geometry.attributes.position !== void 0) {
+        count = geometry.attributes.position.count;
+      } else {
+        console.error("THREE.BufferGeometryUtils: .mergeGeometries() failed with geometry at index " + i2 + ". The geometry must have either an index or a position attribute");
+        return null;
+      }
+      mergedGeometry.addGroup(offset, count, i2);
+      offset += count;
+    }
+  }
+  if (isIndexed) {
+    let indexOffset = 0;
+    const mergedIndex = [];
+    for (let i2 = 0; i2 < geometries.length; ++i2) {
+      const index = geometries[i2].index;
+      for (let j = 0; j < index.count; ++j) {
+        mergedIndex.push(index.getX(j) + indexOffset);
+      }
+      indexOffset += geometries[i2].attributes.position.count;
+    }
+    mergedGeometry.setIndex(mergedIndex);
+  }
+  for (const name in attributes) {
+    const mergedAttribute = mergeAttributes(attributes[name]);
+    if (!mergedAttribute) {
+      console.error("THREE.BufferGeometryUtils: .mergeGeometries() failed while trying to merge the " + name + " attribute.");
+      return null;
+    }
+    mergedGeometry.setAttribute(name, mergedAttribute);
+  }
+  for (const name in morphAttributes) {
+    const numMorphTargets = morphAttributes[name][0].length;
+    if (numMorphTargets === 0) continue;
+    mergedGeometry.morphAttributes = mergedGeometry.morphAttributes || {};
+    mergedGeometry.morphAttributes[name] = [];
+    for (let i2 = 0; i2 < numMorphTargets; ++i2) {
+      const morphAttributesToMerge = [];
+      for (let j = 0; j < morphAttributes[name].length; ++j) {
+        morphAttributesToMerge.push(morphAttributes[name][j][i2]);
+      }
+      const mergedMorphAttribute = mergeAttributes(morphAttributesToMerge);
+      if (!mergedMorphAttribute) {
+        console.error("THREE.BufferGeometryUtils: .mergeGeometries() failed while trying to merge the " + name + " morphAttribute.");
+        return null;
+      }
+      mergedGeometry.morphAttributes[name].push(mergedMorphAttribute);
+    }
+  }
+  return mergedGeometry;
+}
+function mergeAttributes(attributes) {
+  let TypedArray;
+  let itemSize;
+  let normalized;
+  let gpuType = -1;
+  let arrayLength = 0;
+  for (let i2 = 0; i2 < attributes.length; ++i2) {
+    const attribute = attributes[i2];
+    if (TypedArray === void 0) TypedArray = attribute.array.constructor;
+    if (TypedArray !== attribute.array.constructor) {
+      console.error("THREE.BufferGeometryUtils: .mergeAttributes() failed. BufferAttribute.array must be of consistent array types across matching attributes.");
+      return null;
+    }
+    if (itemSize === void 0) itemSize = attribute.itemSize;
+    if (itemSize !== attribute.itemSize) {
+      console.error("THREE.BufferGeometryUtils: .mergeAttributes() failed. BufferAttribute.itemSize must be consistent across matching attributes.");
+      return null;
+    }
+    if (normalized === void 0) normalized = attribute.normalized;
+    if (normalized !== attribute.normalized) {
+      console.error("THREE.BufferGeometryUtils: .mergeAttributes() failed. BufferAttribute.normalized must be consistent across matching attributes.");
+      return null;
+    }
+    if (gpuType === -1) gpuType = attribute.gpuType;
+    if (gpuType !== attribute.gpuType) {
+      console.error("THREE.BufferGeometryUtils: .mergeAttributes() failed. BufferAttribute.gpuType must be consistent across matching attributes.");
+      return null;
+    }
+    arrayLength += attribute.count * itemSize;
+  }
+  const array = new TypedArray(arrayLength);
+  const result = new BufferAttribute(array, itemSize, normalized);
+  let offset = 0;
+  for (let i2 = 0; i2 < attributes.length; ++i2) {
+    const attribute = attributes[i2];
+    if (attribute.isInterleavedBufferAttribute) {
+      const tupleOffset = offset / itemSize;
+      for (let j = 0, l = attribute.count; j < l; j++) {
+        for (let c = 0; c < itemSize; c++) {
+          const value = attribute.getComponent(j, c);
+          result.setComponent(j + tupleOffset, c, value);
+        }
+      }
+    } else {
+      array.set(attribute.array, offset);
+    }
+    offset += attribute.count * itemSize;
+  }
+  if (gpuType !== void 0) {
+    result.gpuType = gpuType;
+  }
+  return result;
+}
 function toTrianglesDrawMode(geometry, drawMode) {
   if (drawMode === TrianglesDrawMode) {
     console.warn("THREE.BufferGeometryUtils.toTrianglesDrawMode(): Geometry already defined as triangles.");
@@ -40527,8 +40675,8 @@ var GLTFParser = class {
       return Promise.all(parser._invokeAll(function(ext) {
         return ext.afterRoot && ext.afterRoot(result);
       })).then(function() {
-        for (const scene13 of result.scenes) {
-          scene13.updateMatrixWorld();
+        for (const scene14 of result.scenes) {
+          scene14.updateMatrixWorld();
         }
         onLoad(result);
       });
@@ -41534,10 +41682,10 @@ var GLTFParser = class {
     const extensions = this.extensions;
     const sceneDef = this.json.scenes[sceneIndex];
     const parser = this;
-    const scene13 = new Group();
-    if (sceneDef.name) scene13.name = parser.createUniqueName(sceneDef.name);
-    assignExtrasToUserData(scene13, sceneDef);
-    if (sceneDef.extensions) addUnknownExtensionsToUserData(extensions, scene13, sceneDef);
+    const scene14 = new Group();
+    if (sceneDef.name) scene14.name = parser.createUniqueName(sceneDef.name);
+    assignExtrasToUserData(scene14, sceneDef);
+    if (sceneDef.extensions) addUnknownExtensionsToUserData(extensions, scene14, sceneDef);
     const nodeIds = sceneDef.nodes || [];
     const pending = [];
     for (let i2 = 0, il = nodeIds.length; i2 < il; i2++) {
@@ -41547,9 +41695,9 @@ var GLTFParser = class {
       for (let i2 = 0, il = nodes.length; i2 < il; i2++) {
         const node = nodes[i2];
         if (node.parent !== null) {
-          scene13.add(clone(node));
+          scene14.add(clone(node));
         } else {
-          scene13.add(node);
+          scene14.add(node);
         }
       }
       const reduceAssociations = (node) => {
@@ -41567,8 +41715,8 @@ var GLTFParser = class {
         });
         return reducedAssociations;
       };
-      parser.associations = reduceAssociations(scene13);
-      return scene13;
+      parser.associations = reduceAssociations(scene14);
+      return scene14;
     });
   }
   _createAnimationTracks(node, inputAccessor, outputAccessor, sampler, target) {
@@ -46333,7 +46481,7 @@ var DynamicBones = class {
   * @param {Object3D} armature Armature object
   * @param {Object[]} config Array of configuration objects
   */
-  setup(scene13, armature, config) {
+  setup(scene14, armature, config) {
     this.dispose();
     const check = (test, error2) => {
       if (!test) {
@@ -46341,8 +46489,8 @@ var DynamicBones = class {
         throw new Error(error2);
       }
     };
-    check(scene13?.isScene, "First parameter must be Scene.");
-    this.scene = scene13;
+    check(scene14?.isScene, "First parameter must be Scene.");
+    this.scene = scene14;
     check(armature?.isObject3D, "Second parameter must be the armature Object3D.");
     this.armature = armature;
     check(Array.isArray(config), "Third parameter must be an array of bone configs.");
@@ -49703,6 +49851,11 @@ var TalkingHead = class {
     }
     dt = dt / this.animSlowdownRate;
     this.animClock += dt;
+    if (this.gestureStopAt != null && this.animClock >= this.gestureStopAt) {
+      const ms = this.gestureStopMs;
+      this.gestureStopAt = null;
+      this.stopGesture(ms);
+    }
     let i2, j, l, k, vol = 0;
     if (this.stats) {
       this.stats.begin();
@@ -51348,24 +51501,37 @@ var TalkingHead = class {
         this.poseTarget.props[x2[0]].t = 0;
         this.poseTarget.props[x2[0]].d = 1e3;
       });
-      if (this.mixer) {
-        this.mixer.removeEventListener("finished", this._mixerHandler);
-        this.mixer.stopAllAction();
-        this.mixer.uncacheRoot(this.armature);
-        this.mixer = null;
-        this._mixerHandler = null;
+      const xf = this.crossFade ?? 0.45;
+      if (!this.mixer) {
+        this.mixer = new AnimationMixer(this.armature);
+        this._mixerHandler = (e3) => {
+          if (e3.action === this._curAction) this.stopAnimation();
+        };
+        this.mixer.addEventListener("finished", this._mixerHandler);
       }
-      this.mixer = new AnimationMixer(this.armature);
-      this._mixerHandler = () => {
-        this.stopAnimation();
-        this.mixer?.removeEventListener("finished", this._mixerHandler);
+      const fadeTo = (act, w4, d) => {
+        const now = act.getEffectiveWeight();
+        act.weight = 1;
+        act.stopFading();
+        act._scheduleFading(Math.max(1e-3, d), now, w4);
       };
-      this.mixer.addEventListener("finished", this._mixerHandler);
+      const target = this.clipWeight ?? 1, keep = this.keepClip || null;
       const repeat = Math.ceil(dur / item.clip.duration);
       const action = this.mixer.clipAction(item.clip);
-      action.setLoop(LoopRepeat, repeat);
-      action.clampWhenFinished = true;
-      action.fadeIn(0.5).play();
+      for (const o of this.mixer._actions) if (o !== action && o.isRunning()) fadeTo(o, o.getClip() === keep ? 1 : 0, xf);
+      if (action.isRunning() && action.getEffectiveWeight() > 0.02) {
+        action.repetitions = Math.max(action.repetitions, Math.floor(action.time / item.clip.duration) + repeat);
+        fadeTo(action, target, xf);
+      } else {
+        action.reset();
+        action.setLoop(LoopRepeat, repeat);
+        action.clampWhenFinished = true;
+        if (this.animPhase != null) action.time = this.animPhase * item.clip.duration;
+        action.setEffectiveWeight(0);
+        action.play();
+        fadeTo(action, target, xf);
+      }
+      this._curAction = action;
     } else {
       const loader = new FBXLoader();
       let fbx = await loader.loadAsync(url, onprogress);
@@ -51416,6 +51582,7 @@ var TalkingHead = class {
       this.mixer.uncacheRoot(this.armature);
       this.mixer = null;
       this._mixerHandler = null;
+      this._curAction = null;
     }
     if (this.gesture) {
       for (let [p2, v4] of Object.entries(this.gesture)) {
@@ -51547,7 +51714,8 @@ var TalkingHead = class {
         }
       }
       if (dur && Number.isFinite(dur)) {
-        this.gestureTimeout = setTimeout(this.stopGesture.bind(this, ms), 1e3 * dur);
+        this.gestureStopAt = this.animClock + 1e3 * dur;
+        this.gestureStopMs = ms;
       }
     }
     let em = this.animEmojis[name];
@@ -51590,6 +51758,7 @@ var TalkingHead = class {
       clearTimeout(this.gestureTimeout);
       this.gestureTimeout = null;
     }
+    this.gestureStopAt = null;
     if (this.gesture) {
       const gs = Object.entries(this.gesture);
       this.gesture = null;
@@ -51940,7 +52109,7 @@ var Reflector = class _Reflector extends Mesh {
     material.uniforms["color"].value = color;
     material.uniforms["textureMatrix"].value = textureMatrix;
     this.material = material;
-    this.onBeforeRender = function(renderer2, scene13, camera2) {
+    this.onBeforeRender = function(renderer2, scene14, camera2) {
       const reflectionCamera = this.getReflectionCamera(camera2);
       reflectorWorldPosition.setFromMatrixPosition(scope.matrixWorld);
       cameraWorldPosition.setFromMatrixPosition(camera2.matrixWorld);
@@ -52022,7 +52191,7 @@ var Reflector = class _Reflector extends Mesh {
       renderer2.setRenderTarget(renderTarget);
       renderer2.state.buffers.depth.setMask(true);
       if (renderer2.autoClear === false) renderer2.clear();
-      renderer2.render(scene13, reflectionCamera);
+      renderer2.render(scene14, reflectionCamera);
       renderer2.xr.enabled = currentXrEnabled;
       renderer2.shadowMap.autoUpdate = currentShadowAutoUpdate;
       renderer2.setRenderTarget(currentRenderTarget);
@@ -52389,9 +52558,9 @@ function add(parent, geo, mat, x2 = 0, y = 0, z = 0, opts = {}) {
 }
 var HALL = { x0: -34, x1: 34, z0: -22, z1: 16, h: 9.5 };
 var ENT = { x0: 4.5, x1: 11.5, h: 4.2 };
-function buildAirport(scene13, { quality = "high", flights }) {
+function buildAirport(scene14, { quality = "high", flights }) {
   const root = new Group();
-  scene13.add(root);
+  scene14.add(root);
   const out = { root, lightning: { level: 0 }, update: () => {
   } };
   const W2 = HALL.x1 - HALL.x0, D = HALL.z1 - HALL.z0;
@@ -52560,7 +52729,7 @@ function buildAirport(scene13, { quality = "high", flights }) {
   };
   sign2(["Gates A1 \u2013 A18"], 4.5, 5.6, 1.5, 4.2, 0, "right");
   sign2(["Baggage Claim"], -14, 5.6, 2.5, 3.6, 0.15, "left");
-  scene13.add(new HemisphereLight(14673648, 5918792, 0.35));
+  scene14.add(new HemisphereLight(14673648, 5918792, 0.35));
   const spots = [];
   const mkSpot = (x2, z, tx, tz2, I, shadow) => {
     const s = new SpotLight(16773597, I, 30, 0.62, 0.65, 1.6);
@@ -52646,14 +52815,14 @@ function buildPlane(root, at) {
   const white = new MeshStandardMaterial({ color: 15264751, roughness: 0.35, metalness: 0.2, fog: false });
   const tail = new MeshStandardMaterial({ color: 1715292, roughness: 0.4 });
   const win = new MeshBasicMaterial({ color: new Color(1, 0.85, 0.6).multiplyScalar(2.5) });
-  const L = 38, R = 2;
-  const body = new Mesh(new CapsuleGeometry(R, L, 8, 24), white);
+  const L = 38, R2 = 2;
+  const body = new Mesh(new CapsuleGeometry(R2, L, 8, 24), white);
   body.rotation.z = Math.PI / 2;
   body.position.y = 4.2;
   g.add(body);
   for (let i2 = 0; i2 < 34; i2++) {
     const w4 = new Mesh(new PlaneGeometry(0.28, 0.4), win);
-    w4.position.set(-15 + i2 * 0.95, 4.6, R + 0.01);
+    w4.position.set(-15 + i2 * 0.95, 4.6, R2 + 0.01);
     g.add(w4);
   }
   const wing = new Mesh(new BoxGeometry(7, 0.35, 34), white);
@@ -52757,7 +52926,7 @@ function buildCheckin(root, steel, darkSteel, white) {
   }
 }
 function buildSeating(root, steel, darkSteel) {
-  const seat = new MeshStandardMaterial({ color: 2042422, roughness: 0.5, metalness: 0.2 });
+  const seat2 = new MeshStandardMaterial({ color: 2042422, roughness: 0.5, metalness: 0.2 });
   const sGeo = new RoundedBoxGeometry(0.55, 0.08, 0.5, 2, 0.03);
   const bGeo = new RoundedBoxGeometry(0.55, 0.55, 0.06, 2, 0.03);
   for (let row = 0; row < 3; row++) {
@@ -52772,11 +52941,11 @@ function buildSeating(root, steel, darkSteel) {
       g.add(beam);
       for (let k = 0; k < 7; k++) {
         const x2 = -1.95 + k * 0.65;
-        const s = new Mesh(sGeo, seat);
+        const s = new Mesh(sGeo, seat2);
         s.position.set(x2, 0.46, 0);
         s.castShadow = s.receiveShadow = true;
         g.add(s);
-        const b = new Mesh(bGeo, seat);
+        const b = new Mesh(bGeo, seat2);
         b.position.set(x2, 0.78, -0.24);
         b.rotation.x = -0.12;
         b.castShadow = true;
@@ -52814,11 +52983,11 @@ function canvasTex(w4, h, draw) {
   t.anisotropy = 8;
   return t;
 }
-var CURB = { z: 21.6, taxi: new Vector3(8.6, 0, 22.95), canopyEdge: 27.2 };
+var CURB = { z: 21.6, taxi: new Vector3(8.6, 0, 22.95), canopyEdge: 19.6 };
 var DESK = new Vector3(-0.5, 0, 11.6);
-function buildLandside(scene13, { quality = "high" } = {}) {
+function buildLandside(scene14, { quality = "high" } = {}) {
   const root = new Group();
-  scene13.add(root);
+  scene14.add(root);
   const out = { root, update: () => {
   } };
   const zf = HALL.z1, cxE = (ENT.x0 + ENT.x1) / 2;
@@ -52896,17 +53065,17 @@ function buildLandside(scene13, { quality = "high" } = {}) {
   add2(root, new PlaneGeometry(60, 26), M2({ map: road, roughness: 0.12, metalness: 0.35, color: 10132122 }), 8, 0, CURB.z + 13, { rx: -Math.PI / 2, cast: false });
   add2(root, new BoxGeometry(48, 0.15, 1.2), M2({ map: conc, roughness: 0.4, color: 11053224 }), 8, 0.075, 26.8, { cast: false });
   const colM = M2({ color: 14474456, roughness: 0.5 });
-  for (const x2 of [-6, 2, 14.5, 22]) add2(root, new CylinderGeometry(0.28, 0.28, 5.2, 24), colM, x2, 2.6, 26.8);
+  for (const x2 of [-6, 2, 14.5, 22]) add2(root, new CylinderGeometry(0.28, 0.28, 5.2, 24), colM, x2, 2.6, 19.3);
   add2(root, new BoxGeometry(34, 0.45, CURB.canopyEdge - zf), M2({ color: 14211284, roughness: 0.6 }), 8, 5.25, (zf + CURB.canopyEdge) / 2, { cast: false });
   const strip = new MeshBasicMaterial({ color: new Color(1.3, 1.3, 1.25) });
   for (let z = zf + 1.5; z < CURB.canopyEdge; z += 2.5) add2(root, new BoxGeometry(30, 0.03, 0.18), strip, 8, 5.02, z, { cast: false, receive: false });
   for (const x2 of [3, 9, 15]) {
     const p2 = new PointLight(15922431, 3, 12, 1.6);
-    p2.position.set(x2, 4.8, 20);
+    p2.position.set(x2, 4.8, 17.8);
     root.add(p2);
   }
   const under = new SpotLight(15659775, 28, 16, 0.8, 0.6, 1.5);
-  under.position.set(8.5, 5, 19.5);
+  under.position.set(8.5, 5, 18.6);
   under.target.position.set(8.5, 0, 22.5);
   if (quality === "high") {
     under.castShadow = true;
@@ -52990,6 +53159,43 @@ function buildLandside(scene13, { quality = "high" } = {}) {
   add2(sg, new BoxGeometry(2.1, 0.55, 0.08), M2({ color: 1908514 }), 0, 0, -0.05);
   add2(sg, new PlaneGeometry(2, 0.5), new MeshBasicMaterial({ map: info, color: new Color(1.3, 1.3, 1.3) }), 0, 0, 0, { cast: false });
   add2(sg, new CylinderGeometry(0.012, 0.012, HALL.h - 2.75, 6), M2({ color: 10133670, metalness: 0.9, roughness: 0.3 }), 0, (HALL.h - 2.75) / 2, -0.05);
+  const wel = canvasTex(2048, 640, (q4, w4, h) => {
+    const gr = q4.createLinearGradient(0, 0, w4, h);
+    gr.addColorStop(0, "#0b2a66");
+    gr.addColorStop(0.55, "#1d4fa3");
+    gr.addColorStop(1, "#f08a24");
+    q4.fillStyle = gr;
+    q4.fillRect(0, 0, w4, h);
+    q4.fillStyle = "rgba(255,255,255,0.08)";
+    for (let i2 = 0; i2 < 14; i2++) {
+      q4.beginPath();
+      q4.arc(1500 + i2 * 30, 900, 300 + i2 * 60, Math.PI, 1.5 * Math.PI);
+      q4.lineWidth = 6;
+      q4.strokeStyle = "rgba(255,255,255,0.07)";
+      q4.stroke();
+    }
+    q4.fillStyle = "#fff";
+    q4.font = '300 120px "Segoe UI", Arial';
+    q4.fillText("Welcome to", 110, 250);
+    q4.font = 'bold 170px "Segoe UI", Arial';
+    q4.fillText("Dallas Fort Worth", 100, 430);
+    q4.font = '60px "Segoe UI", Arial';
+    q4.fillStyle = "rgba(255,255,255,0.8)";
+    q4.fillText("DFW International Airport", 110, 540);
+  });
+  const lb = new Group();
+  lb.position.set(-4.6, 2.6, HALL.z1 - 0.12);
+  lb.rotation.y = Math.PI;
+  root.add(lb);
+  add2(lb, new BoxGeometry(6.6, 2.15, 0.12), M2({ color: 1776671, metalness: 0.5, roughness: 0.4 }), 0, 0, 0.04);
+  add2(lb, new PlaneGeometry(6.4, 2), new MeshBasicMaterial({ map: wel, color: new Color(1.05, 1.05, 1.05) }), 0, 0, 0.11, { cast: false });
+  for (const x2 of [-3.6, 2.4]) {
+    add2(root, new RoundedBoxGeometry(0.9, 0.7, 0.9, 3, 0.05), M2({ color: 3881787, roughness: 0.6 }), x2, 0.35, 14.9);
+    for (let k = 0; k < 14; k++) {
+      const lf = add2(root, new ConeGeometry(0.1, 1.1, 4), M2({ color: 3103274, roughness: 0.7, side: DoubleSide }), x2 + Math.sin(k * 2.1) * 0.35, 1 + k % 3 * 0.12, 14.9 + Math.cos(k * 1.7) * 0.35);
+      lf.rotation.set(Math.sin(k) * 0.5, k, Math.cos(k * 1.3) * 0.5);
+    }
+  }
   out.wetSign = wetFloorSign(root, new Vector3(1.55, 0, 5.2));
   const fp = canvasTex(64, 128, (g) => {
     g.fillStyle = "rgba(0,0,0,0.55)";
@@ -53048,11 +53254,11 @@ function buildTaxi(root, at) {
   g.position.copy(at);
   g.rotation.y = Math.PI;
   root.add(g);
-  const paint = new MeshPhysicalMaterial({ color: 15314194, roughness: 0.35, metalness: 0.1, clearcoat: 0.8, clearcoatRoughness: 0.12 });
+  const paint = new MeshPhysicalMaterial({ color: 14262288, roughness: 0.4, metalness: 0.05, clearcoat: 0.5, clearcoatRoughness: 0.2, envMapIntensity: 0.7 });
   const black = M2({ color: 987154, roughness: 0.6 });
   const trim = M2({ color: 1776671, roughness: 0.45, metalness: 0.4 });
   const chrome = M2({ color: 13620184, metalness: 1, roughness: 0.22 });
-  const tint = new MeshPhysicalMaterial({ color: 1712425, roughness: 0.04, transparent: true, opacity: 0.28, side: DoubleSide, depthWrite: false, envMapIntensity: 1.4 });
+  const tint = new MeshPhysicalMaterial({ color: 1712425, roughness: 0.12, transparent: true, opacity: 0.24, side: DoubleSide, depthWrite: false, envMapIntensity: 0.35 });
   const L = 4.75, Wd = 1.84, BELT = 0.97, ROOF = 1.46;
   const xs = (x2) => x2;
   const side = new Shape();
@@ -53584,14 +53790,14 @@ function createTotem(cfg) {
     },
     result() {
       bg();
-      const f = ui.f, R = cfg.result;
+      const f = ui.f, R2 = cfg.result;
       g.fillStyle = C.dim;
       g.font = `36px ${FONT}`;
       g.fillText(`${f.code} \xB7 ${f.origin} \u2192 ${f.dest} \xB7 ${f.when}`, 60, 205);
       g.fillStyle = C.text;
       g.font = `700 66px ${FONT}`;
       g.fillText("Previs\xE3o para o seu voo", 60, 285);
-      const k0 = ease((ui.t - 0.1) / 1.3), alert = R.p >= R.threshold, col = alert ? C.red : C.green;
+      const k0 = ease((ui.t - 0.1) / 1.3), alert = R2.p >= R2.threshold, col = alert ? C.red : C.green;
       rr(g, 60, 330, W - 120, 330, 28);
       g.fillStyle = "#1a2f5c";
       g.fill();
@@ -53600,7 +53806,7 @@ function createTotem(cfg) {
       g.stroke();
       g.fillStyle = col;
       g.font = `800 190px ${FONT}`;
-      g.fillText(`${Math.round(R.p * 100 * k0)}%`, 100, 525);
+      g.fillText(`${Math.round(R2.p * 100 * k0)}%`, 100, 525);
       g.fillStyle = C.text;
       g.font = `600 42px ${FONT}`;
       g.fillText("de chance de atrasar", 100, 615);
@@ -53621,7 +53827,7 @@ function createTotem(cfg) {
       g.font = `700 46px ${FONT}`;
       g.fillText("Como a previs\xE3o mudou", 60, 745);
       const bx = 330, bw = W - 120 - bx - 130;
-      R.horizons.forEach((h, i2) => {
+      R2.horizons.forEach((h, i2) => {
         const y = 790 + i2 * 105, k = ease((ui.t - 1.3 - i2 * 0.35) / 0.9);
         g.fillStyle = C.dim;
         g.font = `600 38px ${FONT}`;
@@ -53639,7 +53845,7 @@ function createTotem(cfg) {
         g.fillText(`${Math.round(h.p * 100 * k)}%`, W - 60, y + 48);
         g.textAlign = "left";
       });
-      R.horizons.forEach((h, i2) => {
+      R2.horizons.forEach((h, i2) => {
         const y = 790 + i2 * 105, tx = bx + bw * h.t;
         g.fillStyle = "rgba(255,255,255,0.8)";
         g.fillRect(tx - 2, y + 6, 4, 54);
@@ -53816,8 +54022,11 @@ var HeadLook = class {
   update(dt) {
     this.weight += (this.goal - this.weight) * Math.min(1, dt * 3.5);
     if (this.weight < 0.01 || !this.target || !this.neck || !this.headBone) return;
-    const tgt = this.target.isVector3 ? this.target.clone() : this.target.getWorldPosition(new Vector3());
-    tgt.add(this.offset);
+    const raw = this.target.isVector3 ? this.target.clone() : this.target.getWorldPosition(new Vector3());
+    raw.add(this.offset);
+    if (!this.cur) this.cur = raw.clone();
+    else this.cur.lerp(raw, Math.min(1, dt * 4));
+    const tgt = this.cur.clone();
     this.arm.updateMatrixWorld(true);
     if (!this.localFwd) {
       const aq = this.arm.getWorldQuaternion(new Quaternion());
@@ -53836,7 +54045,7 @@ var HeadLook = class {
       while (yaw < -Math.PI) yaw += 2 * Math.PI;
       yaw = MathUtils.clamp(yaw, -1.3, 1.3);
       let pitch = Math.asin(MathUtils.clamp(want.y, -1, 1)) - Math.asin(MathUtils.clamp(fwd.y, -1, 1));
-      pitch = MathUtils.clamp(pitch, -0.35, 0.3);
+      pitch = MathUtils.clamp(pitch, -0.35, this.maxUp ?? 0.3);
       const k = share * this.weight;
       const qy = new Quaternion().setFromAxisAngle(Y, yaw * k);
       const f2 = fwd.clone().applyQuaternion(qy);
@@ -54025,28 +54234,6 @@ function chatPhone() {
   g.setChat([]);
   return g;
 }
-function glasses() {
-  const g = new Group();
-  const m3 = new MeshStandardMaterial({ color: 1118481, roughness: 0.4, metalness: 0.3 });
-  const lens = new MeshPhysicalMaterial({ color: 16777215, roughness: 0.02, transparent: true, opacity: 0.12, depthWrite: false });
-  for (const s of [-1, 1]) {
-    const r2 = new Mesh(new TorusGeometry(0.024, 25e-4, 6, 24), m3);
-    r2.scale.set(1.2, 0.85, 1);
-    r2.position.set(s * 0.032, 0, 0);
-    g.add(r2);
-    const l = new Mesh(new CircleGeometry(0.024, 20), lens);
-    l.scale.set(1.2, 0.85, 1);
-    l.position.set(s * 0.032, 0, 0);
-    g.add(l);
-    const arm = new Mesh(new BoxGeometry(3e-3, 3e-3, 0.1), m3);
-    arm.position.set(s * 0.062, 5e-3, -0.05);
-    g.add(arm);
-  }
-  const br = new Mesh(new BoxGeometry(0.014, 3e-3, 3e-3), m3);
-  br.position.y = 6e-3;
-  g.add(br);
-  return g;
-}
 function badge() {
   const c = document.createElement("canvas");
   c.width = 128;
@@ -54142,9 +54329,16 @@ var LINES = {
   p8: { who: "prof", audio: "p8.mp3", text: "Se eu soubesse que existia isso, podia ter visto e sa\xEDdo de casa sem essa pressa toda." },
   p6: { who: "prof", audio: "p6.mp3", text: "Amor\u2026 o voo vai atrasar uns quarenta minutos. N\xE3o, n\xE3o fui eu, foi o avi\xE3o!" },
   p7: { who: "prof", audio: "p7.mp3", text: "Mas fala pro seu pai que o presente vai chegar sequinho." },
-  p9: { who: "prof", audio: "p9.mp3", text: "Se eu tivesse alunos bons na minha \xE9poca, esse preditor de atraso de voos daria um bom projeto de inicia\xE7\xE3o cient\xEDfica." }
+  p9: { who: "prof", audio: "p9.mp3", text: "Se eu tivesse alunos bons na minha \xE9poca, esse preditor de atraso de voos daria um bom projeto de inicia\xE7\xE3o cient\xEDfica." },
+  // pós-crédito: no avião
+  k1: { who: "kauai", audio: "k1.mp3", text: "Professor Soussa?! Rapaz\u2026 me passa seu CPF a\xED que eu fa\xE7o a moeda agora, aqui no avi\xE3ozinho mesmo." },
+  p11: { who: "prof", audio: "p11.mp3", text: "\u2026Kauai. Como \xE9 que t\xE1 l\xE1 em Canc\xFAn?" },
+  z1: { who: "zuma", audio: "z1.mp3", text: "Professor! Larguei voc\xEAs pela USP e n\xE3o me arrependo." },
+  p13: { who: "prof", audio: "p13.mp3", text: "\u2026T\xE1 sentado na econ\xF4mica do mesmo jeito, Zuma." },
+  lp1: { who: "lopo", audio: "lp1.mp3", text: "\xD4 professor! Cheguei!" },
+  p12: { who: "prof", audio: "p12.mp3", text: "Consegue se atrasar mais que o avi\xE3o." }
 };
-var NAMES = { prof: "Soussa", att: "Guis", diniz: "Diniz", leo: "Leo", motti: "Motti", sa: "S\xE1" };
+var NAMES = { prof: "Soussa", att: "Guis", diniz: "Diniz", leo: "Leo", motti: "Motti", sa: "S\xE1", kauai: "Kauai", zuma: "Zuma", lopo: "Lopo" };
 var CREDITS = [
   ["Soussa", "ele mesmo"],
   ["Guis", "atendente do totem"],
@@ -54152,6 +54346,442 @@ var CREDITS = [
   ["Leo \u201CRatito\u201D", "passageiro ao telefone"],
   ["Motti e S\xE1", "portaria"]
 ];
+
+// src/cabin.js
+var mergeGeometries2 = (list) => mergeGeometries(list.map((g) => g.index ? g.toNonIndexed() : g));
+var CAB = new Vector3(0, 0, -200);
+var ROWS = 14;
+var PITCH = 0.84;
+var ROW1 = -0.9;
+var rowZ = (r2) => ROW1 - (r2 - 1) * PITCH;
+var SEAT_X = { A: -1.56, B: -1.06, C: -0.55, D: 0.55, E: 1.06, F: 1.56 };
+var R = 1.98;
+var CY = 0.95;
+var LEN = 16;
+var Z_FRONT = 2.4;
+var Z_BACK = Z_FRONT - LEN;
+function canvasTex2(w4, h, draw, repeat) {
+  const c = document.createElement("canvas");
+  c.width = w4;
+  c.height = h;
+  draw(c.getContext("2d"), w4, h);
+  const t = new CanvasTexture(c);
+  t.colorSpace = SRGBColorSpace;
+  t.anisotropy = 8;
+  if (repeat) {
+    t.wrapS = t.wrapT = RepeatWrapping;
+    t.repeat.set(...repeat);
+  }
+  return t;
+}
+function buildCabin(scene14) {
+  const root = new Group();
+  root.position.copy(CAB);
+  scene14.add(root);
+  root.visible = false;
+  const M3 = (o) => new MeshStandardMaterial(o);
+  const add3 = (geo, mat, x2, y, z, rot) => {
+    const m3 = new Mesh(geo, mat);
+    m3.position.set(x2, y, z);
+    if (rot) m3.rotation.set(rot[0] || 0, rot[1] || 0, rot[2] || 0);
+    root.add(m3);
+    m3.receiveShadow = true;
+    return m3;
+  };
+  const wallTex = canvasTex2(512, 512, (g, w4, h) => {
+    g.fillStyle = "#d9d6cf";
+    g.fillRect(0, 0, w4, h);
+    for (let i2 = 0; i2 < 4e3; i2++) {
+      g.fillStyle = `rgba(0,0,0,${Math.random() * 0.03})`;
+      g.fillRect(Math.random() * w4, Math.random() * h, 2, 2);
+    }
+    g.strokeStyle = "rgba(0,0,0,0.10)";
+    g.lineWidth = 2;
+    for (let x2 = 0; x2 < w4; x2 += 128) {
+      g.beginPath();
+      g.moveTo(x2, 0);
+      g.lineTo(x2, h);
+      g.stroke();
+    }
+  }, [LEN / 2, 3]);
+  const wallM = M3({ map: wallTex, color: 12894650, roughness: 0.7, side: BackSide });
+  const shell = add3(new CylinderGeometry(R, R, LEN, 72, 1, true), wallM, 0, CY, (Z_FRONT + Z_BACK) / 2, [Math.PI / 2, 0, 0]);
+  shell.receiveShadow = false;
+  const carpet = canvasTex2(256, 256, (g, w4, h) => {
+    g.fillStyle = "#1d2a44";
+    g.fillRect(0, 0, w4, h);
+    for (let y = 0; y < h; y += 16) for (let x2 = 0; x2 < w4; x2 += 16) {
+      g.fillStyle = (x2 + y) % 32 ? "#22314f" : "#19243a";
+      g.fillRect(x2 + 2, y + 2, 12, 12);
+    }
+    for (let i2 = 0; i2 < 3e3; i2++) {
+      g.fillStyle = `rgba(255,255,255,${Math.random() * 0.04})`;
+      g.fillRect(Math.random() * w4, Math.random() * h, 1, 1);
+    }
+  }, [8, 36]);
+  add3(new PlaneGeometry(3.6, LEN), M3({ map: carpet, roughness: 0.95 }), 0, 1e-3, (Z_FRONT + Z_BACK) / 2, [-Math.PI / 2, 0, 0]);
+  const runner = canvasTex2(64, 256, (g, w4, h) => {
+    g.fillStyle = "#2b3b5e";
+    g.fillRect(0, 0, w4, h);
+    g.fillStyle = "#8a98b8";
+    g.fillRect(0, 0, 3, h);
+    g.fillRect(w4 - 3, 0, 3, h);
+    for (let y = 0; y < h; y += 32) {
+      g.fillStyle = "#34476f";
+      g.fillRect(8, y, w4 - 16, 14);
+    }
+  }, [1, 30]);
+  add3(new PlaneGeometry(0.62, LEN - 0.4), M3({ map: runner, roughness: 0.9 }), 0, 3e-3, (Z_FRONT + Z_BACK) / 2, [-Math.PI / 2, 0, 0]);
+  const pathM = M3({ color: 0, emissive: 16773328, emissiveIntensity: 1.2 });
+  for (let r2 = 1; r2 <= ROWS; r2++) for (const s of [-1, 1]) add3(new BoxGeometry(0.03, 0.01, 0.12), pathM, s * 0.33, 0.012, rowZ(r2) + 0.3);
+  const binM = M3({ color: 13618374, roughness: 0.55 });
+  const binShape = new Shape([new Vector2(1.08, 1.86), new Vector2(1.84, 1.62), new Vector2(1.84, 2.4), new Vector2(1.1, 2.28)]);
+  const binGeo = new ExtrudeGeometry(binShape, { depth: LEN - 1.2, bevelEnabled: true, bevelThickness: 0.02, bevelSize: 0.02, bevelSegments: 2 });
+  for (const s of [-1, 1]) {
+    const b = add3(binGeo, binM, 0, 0, Z_BACK + 0.4);
+    if (s < 0) b.scale.x = -1;
+  }
+  const seamM = M3({ color: 9407880, roughness: 0.5 });
+  for (let z = Z_BACK + 0.4; z < Z_FRONT - 0.8; z += PITCH * 2) for (const s of [-1, 1]) {
+    add3(new BoxGeometry(0.012, 0.42, 0.012), seamM, s * 1.1, 2.06, z, [0, 0, s * 0.03]);
+    add3(new RoundedBoxGeometry(0.2, 0.03, 0.04, 2, 0.01), seamM, s * 1.09, 1.92, z + PITCH, [0, 0, -s * 0.3]);
+  }
+  add3(new PlaneGeometry(2.25, LEN - 1.2), M3({ color: 12171186, roughness: 0.8 }), 0, 2.34, (Z_FRONT + Z_BACK) / 2 + 0.2, [Math.PI / 2, 0, 0]);
+  const coveM = M3({ color: 0, emissive: 16769725, emissiveIntensity: 2.2 });
+  for (const s of [-1, 1]) add3(new BoxGeometry(0.05, 0.02, LEN - 1.4), coveM, s * 1.08, 2.32, (Z_FRONT + Z_BACK) / 2 + 0.2);
+  const psuM = M3({ color: 13816010, roughness: 0.5 }), readM = M3({ color: 1118481, emissive: 16774108, emissiveIntensity: 0 });
+  const signM = M3({ color: 1118481, emissive: 16777215, emissiveIntensity: 0.9, map: canvasTex2(128, 64, (g) => {
+    g.fillStyle = "#0d0f13";
+    g.fillRect(0, 0, 128, 64);
+    g.fillStyle = "#fff";
+    g.font = "bold 34px sans-serif";
+    g.textAlign = "center";
+    g.fillText("\u{1F6AD}  \u26D3", 64, 44);
+  }) });
+  const readLights = [];
+  for (let r2 = 1; r2 <= ROWS; r2++) for (const s of [-1, 1]) {
+    const z = rowZ(r2) + 0.1;
+    for (const k of [0, 1, 2]) {
+      const x2 = 1.2 + k * 0.15, y = 1.86 - (x2 - 1.08) * 0.316 - 0.012;
+      const l = add3(new CylinderGeometry(0.02, 0.02, 0.01, 12), readM, s * x2, y, z);
+      l.rotation.z = s * 0.306;
+      readLights.push(l);
+    }
+    add3(new BoxGeometry(0.1, 8e-3, 0.05), signM, s * 1.66, 1.86 - (1.66 - 1.08) * 0.316 - 0.012, z - 0.18, [0, 0, s * 0.306]);
+  }
+  const night = canvasTex2(256, 384, (g, w4, h) => {
+    const gr = g.createLinearGradient(0, 0, 0, h);
+    gr.addColorStop(0, "#0b1424");
+    gr.addColorStop(0.62, "#152238");
+    gr.addColorStop(0.64, "#0a0d14");
+    gr.addColorStop(1, "#06080c");
+    g.fillStyle = gr;
+    g.fillRect(0, 0, w4, h);
+    for (let i2 = 0; i2 < 9; i2++) {
+      g.fillStyle = ["#ffb36b", "#ffd9a0", "#9fc3ff"][i2 % 3];
+      g.beginPath();
+      g.arc(Math.random() * w4, h * 0.6 + Math.random() * 14, 2 + Math.random() * 2.5, 0, 7);
+      g.fill();
+    }
+    g.strokeStyle = "rgba(190,210,240,0.25)";
+    g.lineWidth = 1.5;
+    for (let i2 = 0; i2 < 40; i2++) {
+      const x2 = Math.random() * w4, y = Math.random() * h;
+      g.beginPath();
+      g.moveTo(x2, y);
+      g.lineTo(x2 + 3, y + 20 + Math.random() * 30);
+      g.stroke();
+    }
+  });
+  const glassM = M3({ map: night, emissive: 16777215, emissiveMap: night, emissiveIntensity: 0.55, roughness: 0.15 });
+  const frameM = M3({ color: 13618373, roughness: 0.5 }), shadeM = M3({ color: 15855852, roughness: 0.8 });
+  const winGeo = new RoundedBoxGeometry(0.27, 0.38, 0.02, 3, 0.09), frameGeo = new RoundedBoxGeometry(0.36, 0.48, 0.03, 3, 0.12);
+  for (let r2 = 1; r2 <= ROWS; r2++) for (const s of [-1, 1]) {
+    const y = 1.18, dx = Math.sqrt(R * R - (y - CY) ** 2) - 0.04, z = rowZ(r2) + 0.12;
+    const tilt = Math.asin((y - CY) / R);
+    add3(frameGeo, frameM, s * dx, y, z, [0, s * Math.PI / 2, -s * tilt]);
+    add3(winGeo, glassM, s * (dx - 0.012), y, z, [0, -s * Math.PI / 2, s * tilt]);
+    if ((r2 * 7 + (s > 0 ? 3 : 0)) % 5 === 0) add3(new BoxGeometry(0.02, 0.18, 0.27), shadeM, s * (dx - 0.02), y + 0.1, z, [0, 0, -s * tilt]);
+  }
+  const leather = M3({ color: 1844792, roughness: 0.55 }), cover = M3({ color: 13618112, roughness: 0.9 }), shellM = M3({ color: 4869976, roughness: 0.4 }), armM = M3({ color: 2895928, roughness: 0.5 });
+  const screenTex = canvasTex2(128, 80, (g) => {
+    const gr = g.createLinearGradient(0, 0, 128, 80);
+    gr.addColorStop(0, "#0e2f5c");
+    gr.addColorStop(1, "#0a1630");
+    g.fillStyle = gr;
+    g.fillRect(0, 0, 128, 80);
+    g.strokeStyle = "#6fa8ff";
+    g.lineWidth = 2;
+    g.beginPath();
+    g.moveTo(14, 60);
+    g.quadraticCurveTo(64, 10, 114, 40);
+    g.stroke();
+    g.fillStyle = "#fff";
+    g.font = "10px sans-serif";
+    g.fillText("DFW \u2192 LAS", 40, 74);
+  });
+  const screenM = M3({ color: 0, emissive: 16777215, emissiveMap: screenTex, emissiveIntensity: 0.9 });
+  const parts = {
+    cushion: [mergeGeometries2([new RoundedBoxGeometry(0.46, 0.13, 0.48, 2, 0.05).translate(0, 0.43, 0.02), new RoundedBoxGeometry(0.46, 0.68, 0.12, 2, 0.05).rotateX(-0.16).translate(0, 0.82, -0.25)]), leather],
+    cover: [new RoundedBoxGeometry(0.3, 0.13, 0.015, 2, 6e-3).rotateX(-0.16).translate(0, 1.08, -0.185), cover],
+    shell: [mergeGeometries2([new RoundedBoxGeometry(0.47, 0.74, 0.06, 2, 0.025).rotateX(-0.16).translate(0, 0.8, -0.33), new BoxGeometry(0.05, 0.36, 0.05).translate(0, 0.18, -0.05), new BoxGeometry(0.4, 0.04, 0.5).translate(0, 0.33, 0)]), shellM],
+    arm: [new RoundedBoxGeometry(0.05, 0.05, 0.42, 2, 0.02).translate(0.25, 0.62, -0.02), armM],
+    screen: [new PlaneGeometry(0.2, 0.125).rotateY(Math.PI).rotateX(0.16).translate(0, 0.95, -0.37), screenM]
+  };
+  const seatList = [];
+  for (let r2 = 1; r2 <= ROWS; r2++) for (const k of Object.keys(SEAT_X)) seatList.push(new Vector3(SEAT_X[k], 0, rowZ(r2)));
+  const mtx = new Matrix4();
+  for (const [geo, mat] of Object.values(parts)) {
+    const im = new InstancedMesh(geo, mat, seatList.length);
+    seatList.forEach((p2, i2) => im.setMatrixAt(i2, mtx.makeTranslation(p2.x, p2.y, p2.z)));
+    im.receiveShadow = true;
+    root.add(im);
+  }
+  const outer = new InstancedMesh(parts.arm[0].clone().translate(-0.5, 0, 0), armM, ROWS * 2);
+  for (let r2 = 1; r2 <= ROWS; r2++) {
+    outer.setMatrixAt((r2 - 1) * 2, mtx.makeTranslation(SEAT_X.D, 0, rowZ(r2)));
+    outer.setMatrixAt((r2 - 1) * 2 + 1, mtx.makeTranslation(SEAT_X.A, 0, rowZ(r2)));
+  }
+  root.add(outer);
+  const galleyM = M3({ color: 13223615, roughness: 0.4, metalness: 0.15 });
+  add3(new BoxGeometry(2.4, 2.3, 0.08), galleyM, 0.5, 1.15, Z_FRONT - 0.05);
+  add3(new BoxGeometry(3.6, 2.4, 0.1), M3({ color: 14605268, roughness: 0.6 }), 0, 1.2, Z_BACK + 0.05);
+  const curtain = canvasTex2(64, 128, (g) => {
+    g.fillStyle = "#29395c";
+    g.fillRect(0, 0, 64, 128);
+    for (let x2 = 0; x2 < 64; x2 += 8) {
+      g.fillStyle = "rgba(0,0,0,0.25)";
+      g.fillRect(x2, 0, 3, 128);
+    }
+  });
+  add3(new PlaneGeometry(1.1, 1.9), M3({ map: curtain, roughness: 0.9, side: DoubleSide }), 0.15, 1, Z_BACK + 0.3);
+  const doorZ = 1.35, doorX = -Math.sqrt(R * R - 0.15) + 0.02;
+  add3(new BoxGeometry(0.06, 1.95, 1), M3({ color: 855826, emissive: 3811864, emissiveIntensity: 0.6 }), doorX - 0.05, 0.98, doorZ);
+  for (const dz of [-0.53, 0.53]) add3(new BoxGeometry(0.14, 2, 0.06), frameM, doorX + 0.05, 1, doorZ + dz);
+  add3(new BoxGeometry(0.14, 0.08, 1.12), frameM, doorX + 0.05, 2, doorZ);
+  const door = add3(new RoundedBoxGeometry(0.1, 1.9, 1.02, 3, 0.06), M3({ color: 14210510, roughness: 0.45 }), doorX + 0.1, 0.98, doorZ + 1.05);
+  const doorWin = add3(new CircleGeometry(0.11, 24), glassM, doorX + 0.16, 1.35, doorZ + 1.05, [0, Math.PI / 2, 0]);
+  door.add(doorWin);
+  doorWin.position.set(0.06, 0.37, 0);
+  doorWin.rotation.set(0, Math.PI / 2, 0);
+  let doorOpen = 1, doorGoal = 1;
+  const lights = [];
+  for (const z of [1.2, -2.2, -5.6, -9]) {
+    const L = new PointLight(16770760, 1.1, 5, 1.8);
+    L.position.set(0, 2.1, z);
+    root.add(L);
+    lights.push(L);
+  }
+  const doorL = new PointLight(16761466, 2.2, 3.5, 1.8);
+  doorL.position.set(doorX + 0.3, 1.7, doorZ);
+  root.add(doorL);
+  const base = new Color(16770760), baseCove = new Color(16769725), tmp5 = new Color();
+  const party = [new Color(16727240), new Color(3526911), new Color(16756768), new Color(9198847)];
+  let partyK = 0;
+  const out = {
+    root,
+    lights,
+    toWorld: (x2, y, z) => new Vector3(x2, y, z).add(CAB),
+    seat: (row, letter) => new Vector3(SEAT_X[letter], 0, rowZ(row)).add(CAB),
+    aisle: (z) => new Vector3(0, 0, z).add(CAB),
+    door: { pos: new Vector3(doorX + 0.25, 0, doorZ).add(CAB), set: (o) => doorGoal = o ? 1 : 0 },
+    setParty: (k) => {
+      partyK = k;
+    },
+    setReading: (on) => {
+      readM.emissiveIntensity = on ? 1.4 : 0;
+    },
+    update: (dt, beat) => {
+      doorOpen += (doorGoal - doorOpen) * Math.min(1, dt * 3);
+      door.position.z = doorZ + 1.05 * doorOpen + 0;
+      const b = beat ?? 0, flash = Math.exp(-(b % 1 * 6)), bar = Math.floor(b / 2) % party.length;
+      tmp5.copy(baseCove).lerp(party[bar], partyK);
+      coveM.emissive.copy(tmp5);
+      coveM.emissiveIntensity = 0.9 + partyK * (0.8 + 2.2 * flash);
+      for (const [i2, L] of lights.entries()) {
+        L.color.copy(base).lerp(party[(bar + i2) % party.length], partyK * 0.75);
+        L.intensity = 1.1 * (1 - partyK * 0.35) + partyK * 1.6 * flash;
+      }
+    }
+  };
+  return out;
+}
+function laptop() {
+  const g = new Group();
+  const alu = new MeshStandardMaterial({ color: 10330792, metalness: 0.8, roughness: 0.35 });
+  const key = new MeshStandardMaterial({ color: 1710878, roughness: 0.7 });
+  const base = new Mesh(new RoundedBoxGeometry(0.32, 0.016, 0.22, 2, 6e-3), alu);
+  base.position.y = 8e-3;
+  g.add(base);
+  const kb = new Mesh(new PlaneGeometry(0.27, 0.1), key);
+  kb.rotation.x = -Math.PI / 2;
+  kb.position.set(0, 0.0165, -0.025);
+  g.add(kb);
+  const c = document.createElement("canvas");
+  c.width = 512;
+  c.height = 330;
+  const q4 = c.getContext("2d");
+  q4.fillStyle = "#0d1117";
+  q4.fillRect(0, 0, 512, 330);
+  q4.fillStyle = "#161b22";
+  q4.fillRect(0, 0, 512, 34);
+  q4.fillStyle = "#f0b429";
+  q4.font = "bold 20px sans-serif";
+  q4.fillText("\u{1FA99} $SOUSSA \u2014 lan\xE7amento", 14, 24);
+  q4.strokeStyle = "#3fb950";
+  q4.lineWidth = 4;
+  q4.beginPath();
+  q4.moveTo(20, 230);
+  for (let i2 = 1; i2 <= 12; i2++) q4.lineTo(20 + i2 * 22, 230 - i2 * i2 * 1.2 + i2 % 3 * 10);
+  q4.stroke();
+  q4.fillStyle = "#3fb950";
+  q4.font = "bold 26px monospace";
+  q4.fillText("+4.200%", 30, 280);
+  q4.fillStyle = "#c9d1d9";
+  q4.font = "17px sans-serif";
+  q4.fillText("Cadastro do investidor", 316, 80);
+  ["Nome: Prof. Soussa", "CPF: ___.___.___-__", "Chave Pix: _________"].forEach((t2, i2) => {
+    q4.fillStyle = "#21262d";
+    q4.fillRect(310, 98 + i2 * 50, 186, 36);
+    q4.fillStyle = "#c9d1d9";
+    q4.font = "15px monospace";
+    q4.fillText(t2, 318, 121 + i2 * 50);
+  });
+  q4.fillStyle = "#f0b429";
+  q4.fillRect(310, 255, 186, 40);
+  q4.fillStyle = "#111";
+  q4.font = "bold 17px sans-serif";
+  q4.fillText("CRIAR MOEDA", 345, 281);
+  const t = new CanvasTexture(c);
+  t.colorSpace = SRGBColorSpace;
+  const hinge = new Group();
+  hinge.position.set(0, 0.016, -0.11);
+  hinge.rotation.x = -0.32;
+  g.add(hinge);
+  const lid = new Mesh(new RoundedBoxGeometry(0.32, 0.21, 8e-3, 2, 4e-3), alu);
+  lid.position.set(0, 0.105, -4e-3);
+  hinge.add(lid);
+  const scr = new Mesh(new PlaneGeometry(0.3, 0.19), new MeshStandardMaterial({ color: 0, emissive: 16777215, emissiveMap: t, emissiveIntensity: 1.1 }));
+  scr.position.set(0, 0.105, 5e-4);
+  hinge.add(scr);
+  const glow = new PointLight(10469631, 0.25, 0.9, 2);
+  glow.position.set(0, 0.12, 0.08);
+  hinge.add(glow);
+  g.traverse((o) => {
+    if (o.isMesh) o.castShadow = true;
+  });
+  return g;
+}
+function djDeck() {
+  const g = new Group();
+  const black = new MeshStandardMaterial({ color: 1316120, roughness: 0.45, metalness: 0.2 });
+  const silver = new MeshStandardMaterial({ color: 13159634, metalness: 0.9, roughness: 0.25 });
+  const vinyl = new MeshStandardMaterial({ color: 723724, roughness: 0.3, metalness: 0.4 });
+  const body = new Mesh(new RoundedBoxGeometry(0.56, 0.05, 0.3, 3, 0.015), black);
+  body.position.y = 0.025;
+  g.add(body);
+  const platters = [];
+  for (const x2 of [-0.17, 0.17]) {
+    const ring = new Mesh(new CylinderGeometry(0.095, 0.095, 8e-3, 40), silver);
+    ring.position.set(x2, 0.054, 0.01);
+    g.add(ring);
+    const p2 = new Group();
+    p2.position.set(x2, 0.06, 0.01);
+    g.add(p2);
+    platters.push(p2);
+    const disc = new Mesh(new CylinderGeometry(0.085, 0.085, 6e-3, 40), vinyl);
+    p2.add(disc);
+    const mark = new Mesh(new BoxGeometry(0.01, 7e-3, 0.07), silver);
+    mark.position.set(0, 2e-3, 0.04);
+    p2.add(mark);
+  }
+  for (let i2 = 0; i2 < 3; i2++) for (const x2 of [-0.035, 0.035]) {
+    const k = new Mesh(new CylinderGeometry(9e-3, 9e-3, 0.014, 12), silver);
+    k.position.set(x2, 0.057, -0.08 + i2 * 0.04);
+    g.add(k);
+  }
+  const xf = new Mesh(new BoxGeometry(0.03, 0.014, 0.014), silver);
+  xf.position.set(0, 0.057, 0.11);
+  g.add(xf);
+  const pads = [];
+  const cols = [16727240, 3526911, 16756768, 7143260];
+  for (const x0 of [-0.23, 0.11]) for (let i2 = 0; i2 < 4; i2++) {
+    const m3 = new MeshStandardMaterial({ color: 328965, emissive: cols[i2], emissiveIntensity: 0.6 });
+    const pad = new Mesh(new RoundedBoxGeometry(0.026, 8e-3, 0.026, 1, 4e-3), m3);
+    pad.position.set(x0 + i2 * 0.034, 0.054, 0.12);
+    g.add(pad);
+    pads.push(m3);
+  }
+  const ledStrip = new MeshStandardMaterial({ color: 0, emissive: 3526911, emissiveIntensity: 1.5 });
+  const strip = new Mesh(new BoxGeometry(0.54, 6e-3, 6e-3), ledStrip);
+  strip.position.set(0, 0.026, 0.152);
+  g.add(strip);
+  const glow = new PointLight(16727240, 0, 1.6, 2);
+  glow.position.set(0, 0.25, 0.1);
+  g.add(glow);
+  g.traverse((o) => {
+    if (o.isMesh) o.castShadow = true;
+  });
+  g.userData.update = (dt, beat, on) => {
+    for (const p2 of platters) p2.rotation.y -= dt * (on ? 3.5 : 0);
+    const f = on ? Math.exp(-(beat % 1 * 5)) : 0, step2 = Math.floor(beat) % 4;
+    pads.forEach((m3, i2) => {
+      m3.emissiveIntensity = on ? 0.4 + (i2 % 4 === step2 ? 3.5 * f + 0.8 : 0) : 0.15;
+    });
+    ledStrip.emissive.setHSL(beat / 8 % 1, 0.9, 0.55);
+    ledStrip.emissiveIntensity = on ? 1.5 + 2 * f : 0.3;
+    glow.color.copy(ledStrip.emissive);
+    glow.intensity = on ? 0.12 + 0.3 * f : 0;
+  };
+  return g;
+}
+function printShirt() {
+  return canvasTex2(1024, 1024, (g, w4, h) => {
+    g.fillStyle = "#f2a516";
+    g.fillRect(0, 0, w4, h);
+    const C2 = ["#d7263d", "#1b998b", "#2e294e", "#f46036", "#c5d86d", "#0b4f6c"];
+    for (let y = -64, row = 0; y < h + 64; y += 96, row++) for (let x2 = -64, col = 0; x2 < w4 + 64; x2 += 96, col++) {
+      const cx = x2 + row % 2 * 48, cy = y;
+      g.fillStyle = C2[(row + col) % C2.length];
+      g.beginPath();
+      g.moveTo(cx, cy - 42);
+      g.lineTo(cx + 42, cy);
+      g.lineTo(cx, cy + 42);
+      g.lineTo(cx - 42, cy);
+      g.closePath();
+      g.fill();
+      g.fillStyle = "#fbe7c6";
+      g.beginPath();
+      g.moveTo(cx, cy - 18);
+      g.lineTo(cx + 18, cy);
+      g.lineTo(cx, cy + 18);
+      g.lineTo(cx - 18, cy);
+      g.closePath();
+      g.fill();
+      g.fillStyle = C2[(row + col + 3) % C2.length];
+      g.beginPath();
+      g.arc(cx, cy, 7, 0, 7);
+      g.fill();
+    }
+    g.strokeStyle = "#1a1a1a";
+    g.lineWidth = 6;
+    for (let y = 0; y < h; y += 96) {
+      g.beginPath();
+      for (let x2 = 0; x2 <= w4; x2 += 24) g.lineTo(x2, y + 48 + (x2 / 24 % 2 ? 10 : -10));
+      g.stroke();
+    }
+  });
+}
+function plainShirt(hex, noise = 0.05) {
+  return canvasTex2(512, 512, (g, w4, h) => {
+    g.fillStyle = hex;
+    g.fillRect(0, 0, w4, h);
+    for (let i2 = 0; i2 < 9e3; i2++) {
+      g.fillStyle = `rgba(0,0,0,${Math.random() * noise})`;
+      g.fillRect(Math.random() * w4, Math.random() * h, 2, 2);
+    }
+  });
+}
 
 // src/main.js
 var Q = new URLSearchParams(location.search);
@@ -54188,6 +54818,17 @@ var airport = buildAirport(scene, { quality: QUALITY, flights: CFG.board });
 var land = buildLandside(scene, { quality: QUALITY });
 var totem = createTotem(CFG);
 scene.add(totem.group);
+var cabin = buildCabin(scene);
+function setWorld(w4) {
+  const inPlane = w4 === "cabin";
+  airport.root.visible = !inPlane;
+  land.root.visible = !inPlane;
+  totem.group.visible = !inPlane;
+  cabin.root.visible = inPlane;
+  for (const a of [att, diniz, leo, motti, sa]) a.arm.visible = !inPlane;
+  for (const a of [kauai, zuma, lopo]) a.arm.visible = inPlane;
+  state.world = w4;
+}
 var composer = new EffectComposer(renderer);
 composer.addPass(new RenderPass(scene, camera));
 var gtao = null;
@@ -54296,6 +54937,7 @@ function thunder(delay = 0.6) {
   s.start(t0);
 }
 var EVENTS = window.__events = [];
+window.__st = () => ({ vt: +vt.toFixed(2), z: +prof.pos.z.toFixed(2), walk: !!prof.walk, slip: +(prof.slip || 0).toFixed(2), fall: prof.fall ? +prof.fall.t.toFixed(2) : null, k: prof.fall ? +(prof.fall.k || 0).toFixed(2) : null });
 function sfx(name, vol = 1) {
   EVENTS.push({ t: vt, type: "sfx", file: name + ".mp3", vol });
   const b = audioBuffers["sfx_" + name];
@@ -54308,6 +54950,86 @@ function sfx(name, vol = 1) {
   s.start();
   return { s, g };
 }
+var BEAT = 0.5803;
+var BEAT0 = 0.4;
+var musicT0 = null;
+var musicLive = null;
+function music(file, keys) {
+  musicT0 = vt;
+  keys = keys.map((k) => k.slice());
+  keys.push([600, ...keys[keys.length - 1].slice(1)]);
+  musicEv = { t: vt, type: "music", file, keys };
+  EVENTS.push(musicEv);
+  const b = audioBuffers["sfx_" + file.replace(/\.mp3$/, "")];
+  if (!b || SIM || audioCtx.state !== "running") return;
+  const mk = (muf) => {
+    const s = audioCtx.createBufferSource();
+    s.buffer = b;
+    const g = audioCtx.createGain();
+    g.gain.value = 0;
+    let n = s;
+    if (muf) {
+      const lp = audioCtx.createBiquadFilter();
+      lp.type = "lowpass";
+      lp.frequency.value = 520;
+      n.connect(lp);
+      n = lp;
+    }
+    n.connect(g).connect(master);
+    return { s, g };
+  };
+  const A = mk(true), B = mk(false), now = audioCtx.currentTime;
+  for (const [t, m3, c] of keys) {
+    A.g.gain.linearRampToValueAtTime(m3, now + t);
+    B.g.gain.linearRampToValueAtTime(c, now + t);
+  }
+  A.s.start();
+  B.s.start();
+  musicLive = [A, B];
+}
+var musicEv = null;
+function musicAt(rel2) {
+  const k = musicEv.keys;
+  let p2 = k[0];
+  for (const q4 of k) {
+    if (q4[0] >= rel2) {
+      const u = q4[0] > p2[0] ? (rel2 - p2[0]) / (q4[0] - p2[0]) : 1;
+      return [p2[1] + (q4[1] - p2[1]) * u, p2[2] + (q4[2] - p2[2]) * u];
+    }
+    p2 = q4;
+  }
+  return [p2[1], p2[2]];
+}
+function musicTo(muf, clr, ramp = 0.3) {
+  if (!musicEv) return;
+  const rel2 = vt - musicT0, [m3, c] = musicAt(rel2);
+  musicEv.keys = musicEv.keys.filter((q4) => q4[0] < rel2);
+  musicEv.keys.push([rel2, m3, c], [rel2 + ramp, muf, clr], [rel2 + 600, muf, clr]);
+  if (musicLive) {
+    const now = audioCtx.currentTime;
+    musicLive[0].g.gain.cancelScheduledValues(now);
+    musicLive[1].g.gain.cancelScheduledValues(now);
+    musicLive[0].g.gain.setValueAtTime(m3, now);
+    musicLive[1].g.gain.setValueAtTime(c, now);
+    musicLive[0].g.gain.linearRampToValueAtTime(muf, now + ramp);
+    musicLive[1].g.gain.linearRampToValueAtTime(clr, now + ramp);
+  }
+}
+function musicStop() {
+  EVENTS.push({ t: vt, type: "musicStop" });
+  if (musicLive) {
+    musicLive.forEach((x2) => {
+      try {
+        x2.s.stop();
+      } catch {
+      }
+    });
+    musicLive = null;
+  }
+  musicT0 = null;
+  musicEv = null;
+}
+var beatNow = () => musicT0 == null ? 0 : Math.max(0, (vt - musicT0 - BEAT0) / BEAT);
 airport.onStrike = () => {
   const d = 0.5 + Math.random() * 0.8;
   EVENTS.push({ t: vt + d, type: "thunder" });
@@ -54396,7 +55118,8 @@ async function makeActor(cfg) {
   return a;
 }
 var AV_DIR = "./avatars/";
-var ANIM = { walk: "./anim/walking.json", talk0: "./anim/Talking_0.json", talk1: "./anim/Talking_1.json" };
+var ANIM = { walk: "./anim/walking.json", talk0: "./anim/Talking_0.json", talk1: "./anim/Talking_1.json", talk2: "./anim/Talking_2.json", idle: "./anim/Idle.json", laugh: "./anim/Laughing.json" };
+var TALKS = { prof: ["talk1", "talk2"], att: ["talk0", "talk2"], leo: ["talk1"], motti: ["talk0"], sa: ["talk2"], diniz: [] };
 var WALK_SPEED = 1.25;
 async function preloadAnims(a, keys) {
   for (const k of keys) {
@@ -54440,6 +55163,37 @@ async function preloadAnims(a, keys) {
       }
     }
   }
+  calibrateArms(a);
+}
+var ARM_BONES = ["Shoulder", "Arm", "ForeArm", "Hand"].flatMap((b) => ["Left" + b, "Right" + b]);
+function calibrateArms(a) {
+  if (!a.restArms) {
+    a.restArms = {};
+    for (const b of ARM_BONES) a.restArms[b] = a.bone(b).quaternion.clone();
+  }
+  const idle = a.head.animClips.find((x2) => x2.url === ANIM.idle + "-0");
+  if (!idle) return;
+  const corr = {};
+  for (const b of ARM_BONES) {
+    const t = idle.clip.tracks.find((x2) => x2.name === b + ".quaternion");
+    if (!t) continue;
+    const q0 = new Quaternion().fromArray(t.values, 0);
+    corr[b] = a.restArms[b].clone().multiply(q0.invert());
+  }
+  const q4 = new Quaternion();
+  for (const item of a.head.animClips) {
+    if (item.url === ANIM.walk + "-0" || item.armsFixed) continue;
+    for (const t of item.clip.tracks) {
+      const b = t.name.split(".")[0];
+      if (!corr[b] || !t.name.endsWith("quaternion")) continue;
+      for (let i2 = 0; i2 < t.values.length; i2 += 4) {
+        q4.fromArray(t.values, i2).premultiply(corr[b]).normalize().toArray(t.values, i2);
+      }
+      const pp = item.pose.props[t.name];
+      if (pp) pp.premultiply(corr[b]);
+    }
+    item.armsFixed = true;
+  }
 }
 var prof;
 var att;
@@ -54447,6 +55201,9 @@ var diniz;
 var leo;
 var motti;
 var sa;
+var kauai;
+var zuma;
+var lopo;
 var actors = [];
 var ACT = {};
 var vt = 0;
@@ -54470,43 +55227,131 @@ function flushWaiters() {
     }
   }
 }
-function walkTo(a, pts, speed = WALK_SPEED, rate = 1) {
+function walkTo(a, pts, speed = WALK_SPEED, rate = null) {
+  let path = pts.map((p2) => p2.clone());
+  const start = a.pos.clone();
+  start.y = 0;
+  if (path.length > 1) {
+    const curve = new CatmullRomCurve3([start, ...path], false, "centripetal", 0.5);
+    const n = Math.max(4, Math.ceil(curve.getLength() / 0.12));
+    path = curve.getSpacedPoints(n).slice(1);
+    path[path.length - 1].copy(pts[pts.length - 1]);
+  }
+  let total = 0;
+  {
+    let q4 = start;
+    for (const p2 of path) {
+      total += p2.distanceTo(q4);
+      q4 = p2;
+    }
+  }
   return new Promise((res) => {
-    a.walk = { pts: pts.map((p2) => p2.clone()), i: 0, speed, res, rate };
+    a.walk = { pts: path, i: 0, speed, res, total, done: 0, v: 0 };
     play(a, ANIM.walk, 120);
   });
 }
 function updateWalk(a, dt) {
   const w4 = a.walk;
   if (!w4) return;
-  if (a.head.mixer) a.head.mixer.timeScale = w4.rate;
-  const tgt = w4.pts[w4.i];
-  const d = tgt.clone().sub(a.pos);
-  d.y = 0;
-  const dist = d.length(), step2 = w4.speed * dt;
-  if (dist <= step2) {
-    a.pos.copy(tgt);
-    w4.i++;
-    if (w4.i >= w4.pts.length) {
-      a.walk = null;
-      if (a.head.mixer) a.head.mixer.timeScale = 1;
-      softStop(a, 0.35);
-      w4.res();
-      return;
+  const left = w4.total - w4.done;
+  const vWant = w4.speed * Math.max(0.35, Math.min(1, left / 0.6));
+  w4.v += (vWant - w4.v) * Math.min(1, dt * (w4.v < vWant ? 2.4 : 6));
+  w4.v = Math.max(w4.v, 0.25);
+  if (a.head.mixer) a.head.mixer.timeScale = Math.max(0.45, w4.v / WALK_SPEED);
+  let step2 = w4.v * dt;
+  while (step2 > 0 && w4.i < w4.pts.length) {
+    const tgt = w4.pts[w4.i];
+    const d = tgt.clone().sub(a.pos);
+    d.y = 0;
+    const dist = d.length();
+    if (dist > 1e-4) a.yawGoal = Math.atan2(d.x, d.z);
+    if (dist <= step2) {
+      a.pos.copy(tgt);
+      step2 -= dist;
+      w4.done += dist;
+      w4.i++;
+    } else {
+      a.pos.add(d.multiplyScalar(step2 / dist));
+      w4.done += step2;
+      step2 = 0;
     }
-  } else {
-    a.pos.add(d.multiplyScalar(step2 / dist));
-    a.yawGoal = Math.atan2(d.x, d.z);
+  }
+  if (w4.i >= w4.pts.length) {
+    a.walk = null;
+    if (a.head.mixer) a.head.mixer.timeScale = 1;
+    softStop(a, 0.4);
+    w4.res();
   }
 }
 function turnTo(a, yaw) {
   a.yawGoal = yaw;
 }
+function fadeAll(m3, t) {
+  for (const act of m3._actions) {
+    if (!act.isRunning()) continue;
+    const w4 = act.getEffectiveWeight();
+    act.weight = 1;
+    act.stopFading();
+    act._scheduleFading(t, w4, 0);
+  }
+}
+function playTalk(a, name) {
+  const h = a.head, idle = a.idleOK && h.animClips.find((x2) => x2.url === ANIM.idle + "-0");
+  h.crossFade = 0.5;
+  h.keepClip = idle ? idle.clip : null;
+  h.clipWeight = idle ? 1.3 : 0.8;
+  if (idle && !(h.mixer && h.mixer.existingAction(idle.clip)?.isRunning())) {
+    h.animPhase = a.idlePhase;
+    play(a, ANIM.idle, 600);
+    h.animPhase = null;
+  }
+  play(a, ANIM[name], 30);
+  h.crossFade = null;
+  h.keepClip = null;
+  h.clipWeight = null;
+}
+function canIdle(a) {
+  return a.idleOK && !a.walk && !a.fall && !(a.slip > 0) && vt >= (a.holdIdle || 0);
+}
 function softStop(a, t = 0.4) {
+  if (canIdle(a)) {
+    a.head.crossFade = t;
+    a.head.animPhase = a.idlePhase;
+    play(a, ANIM.idle, 600);
+    a.head.animPhase = null;
+    a.head.crossFade = null;
+    return;
+  }
   const m3 = a.head.mixer;
   if (!m3) return;
-  for (const act of m3._actions) act.fadeOut(t);
+  fadeAll(m3, t);
   a.fadeStopAt = vt + t;
+}
+function laugh(a, dur = 1.5, phase = 0.2) {
+  a.holdIdle = vt + dur;
+  a.head.crossFade = 0.3;
+  a.head.animPhase = phase;
+  play(a, ANIM.laugh, 20);
+  a.head.animPhase = null;
+  a.head.crossFade = null;
+  wait(dur).then(() => {
+    a.holdIdle = 0;
+    softStop(a, 0.5);
+  }).catch(() => {
+  });
+}
+function gesture(a, name, dur = 2.5, mirror = false) {
+  a.holdIdle = vt + dur + 0.5;
+  const m3 = a.head.mixer;
+  if (m3) {
+    fadeAll(m3, 0.3);
+    a.fadeStopAt = vt + 0.3;
+  }
+  a.head.playGesture(name, dur, mirror);
+  wait(dur + 0.5).then(() => {
+    if (!a.head.mixer && !a.walk) softStop(a, 0.6);
+  }).catch(() => {
+  });
 }
 function play(a, url, dur) {
   a.fadeStopAt = null;
@@ -54595,12 +55440,17 @@ function showSub(who, text) {
   el.innerHTML = `<span class="who">${NAMES[who] || who}</span>${text}`;
   el.classList.add("on");
 }
-async function say(id, { gesture = null, anim = null } = {}) {
+var gesture_ = (...x2) => gesture(...x2);
+async function say(id, { gesture: gesture2 = null, anim = null } = {}) {
   const L = LINES[id], a = ACT[L.who];
   showSub(L.who, L.text);
   const t0 = vt;
-  if (anim && !a.walk) play(a, ANIM[anim], 30);
-  if (gesture) setTimeout(() => a.head.playGesture(gesture[0], gesture[1] || 2.5, gesture[2] || false), 250);
+  const tl = TALKS[L.who] || [];
+  if (anim === null && !gesture2) anim = tl.length && !a.noTalkAnim ? tl[(a.lineN = (a.lineN || 0) + 1) % tl.length] : null;
+  if (anim === false) anim = null;
+  if (anim && !a.walk && !a.fall && !a.seated) playTalk(a, anim);
+  if (gesture2) wait(0.25).then(() => gesture_(a, gesture2[0], gesture2[1] || 2.5, gesture2[2] || false)).catch(() => {
+  });
   let durMs;
   if (SIM) {
     durMs = estimateMs(L.text);
@@ -54696,10 +55546,117 @@ function updateCamera() {
     bokeh.uniforms.aperture.value = shot.aperture ?? 16e-4;
   }
 }
+var TPL = {};
+function tpl(a, name) {
+  if (TPL[name]) return TPL[name];
+  const t = a.head.poseTemplates[name].props, q4 = {};
+  for (const [key, v4] of Object.entries(t)) {
+    const [b, ty] = key.split(".");
+    if (ty === "rotation" && !/Hand|Arm|Shoulder/.test(b)) q4[b] = new Quaternion().setFromEuler(new Euler(v4.x, v4.y, v4.z, "XYZ"));
+  }
+  const ref = a.head.poseTemplates.side.props["Hips.position"];
+  return TPL[name] = { q: q4, hy: t["Hips.position"] ? t["Hips.position"].y / ref.y : null };
+}
+var _qa = new Quaternion();
+var _qb = new Quaternion();
+function applyPoseBlend(a, A, B, u) {
+  const hips = a.bone("Hips");
+  if (!a.h0) a.h0 = hips.position.clone();
+  const names = /* @__PURE__ */ new Set([...Object.keys(A ? A.q : {}), ...Object.keys(B ? B.q : {})]);
+  for (const n of names) {
+    const bone = a.bone(n);
+    if (!bone) continue;
+    _qa.copy(A && A.q[n] ? A.q[n] : bone.quaternion);
+    _qb.copy(B && B.q[n] ? B.q[n] : bone.quaternion);
+    bone.quaternion.slerpQuaternions(_qa, _qb, u);
+  }
+  const ya = A ? A.hy : 1, yb = B ? B.hy : 1;
+  hips.position.y = a.h0.y * MathUtils.lerp(ya, yb, u);
+  a.arm.updateMatrixWorld(true);
+}
+function applySit(a, k) {
+  const S = tpl(a, "sitting");
+  if (S.hy == null || S.hy > 0.5) S.hy = 0.16;
+  applyPoseBlend(a, null, S, k);
+}
+var wetMats = [];
+function setupWet(a) {
+  a.arm.traverse((o) => {
+    if (o.isMesh && o.material?.name === "AvatarHead" && !headMat) {
+      headMat = o.material;
+      headRough = o.material.roughness ?? 0.6;
+      dryHeadTex = o.material.map;
+    }
+  });
+  a.arm.traverse((o) => {
+    if (!o.isMesh || !/outfit/.test(o.material?.name || "")) return;
+    const old = o.material;
+    const m3 = new MeshPhysicalMaterial();
+    MeshStandardMaterial.prototype.copy.call(m3, old);
+    m3.name = old.name;
+    m3.clearcoat = 0;
+    m3.clearcoatRoughness = 0.6;
+    o.material = m3;
+    wetMats.push({ m: m3, c: m3.color.clone(), r: m3.roughness });
+  });
+}
+function applyWet(w4) {
+  for (const x2 of wetMats) {
+    x2.m.color.copy(x2.c).multiplyScalar(1 - 0.55 * w4);
+    x2.m.roughness = Math.max(0.42, x2.r * (1 - 0.45 * w4));
+    x2.m.envMapIntensity = 1 + 0.6 * w4;
+    x2.m.clearcoat = 0.18 * w4;
+  }
+  if (headMat) {
+    const want = w4 > 0.55 ? wetHeadTex : dryHeadTex;
+    if (want && headMat.map !== want) {
+      headMat.map = want;
+      headMat.needsUpdate = true;
+    }
+    headMat.roughness = headRough * (1 - 0.35 * w4);
+  }
+}
+var headMat = null;
+var headRough = 0.6;
+var wetHeadTex = null;
+var dryHeadTex = null;
+var DRIPS = 80;
+var dripMesh = new InstancedMesh(new SphereGeometry(45e-4, 8, 6), new MeshPhysicalMaterial({ color: 13623538, roughness: 0.02, metalness: 0, transparent: true, opacity: 0.55, envMapIntensity: 2.5 }), DRIPS);
+dripMesh.frustumCulled = false;
+scene.add(dripMesh);
+var drips = Array.from({ length: DRIPS }, () => ({ p: new Vector3(0, -9, 0), v: 0, life: 0 }));
+var DRIP_BONES = ["LeftHand", "RightHand", "LeftForeArm", "RightForeArm", "Hips", "LeftHand", "RightHand"];
+var _dm = new Object3D();
+function updateDrips(dt) {
+  const w4 = (prof.wet || 0) > 0.55 ? prof.wet : 0;
+  for (const d of drips) {
+    d.life -= dt;
+    if (d.life <= 0 || d.p.y < 0.01) {
+      if (Math.random() < (w4 * 14 + (prof.shake > 0 ? 160 : 0)) * dt) {
+        const b = prof.bone(DRIP_BONES[Math.random() * DRIP_BONES.length | 0]);
+        b.getWorldPosition(d.p);
+        d.p.add(V((Math.random() - 0.5) * 0.12, -0.05, (Math.random() - 0.5) * 0.12));
+        d.v = 0;
+        d.life = 1.5;
+      } else {
+        d.p.y = -9;
+      }
+    } else {
+      d.v += 9.8 * dt;
+      d.p.y -= d.v * dt;
+    }
+    _dm.position.copy(d.p);
+    _dm.scale.set(1, 1 + Math.min(3, d.v * 0.6), 1);
+    _dm.updateMatrix();
+    dripMesh.setMatrixAt(drips.indexOf(d), _dm.matrix);
+  }
+  dripMesh.instanceMatrix.needsUpdate = true;
+}
 var hand = new Vector3();
 var tmp4 = new Vector3();
 var state = { suitMode: "pull", bagHand: "Left", phone: false, typing: false, passMode: "hidden", passOwner: null };
 var suitWheel = new Vector3(6, 0, 9);
+var suitRoll = new Vector3();
 function gripPoint(a, side, v4 = new Vector3()) {
   const w4 = a.bone(side + "Hand").getWorldPosition(new Vector3());
   const k = a.bone(side + "HandMiddle1")?.getWorldPosition(new Vector3()) || w4;
@@ -54734,7 +55691,16 @@ function placeAtEar(ph, a) {
   ph.quaternion.setFromRotationMatrix(_m4.makeBasis(_bx, _by, _bz));
   ph.position.copy(p2).addScaledVector(r2, 0.012);
 }
+var _pq2 = new Quaternion();
+var _pp = new Vector3();
+var _gy = new Vector3();
+function snapToGrip(ph, grip, t) {
+  _gy.set(0, 1, 0).applyQuaternion(ph.quaternion);
+  const want = grip.clone().addScaledVector(_gy, 0.045);
+  ph.position.lerp(want, 0.85 * Math.min(1, t * 1.5));
+}
 function updateProps(dt) {
+  prof.phoneT = Math.max(0, Math.min(1, (prof.phoneT || 0) + (state.phone === "ear" ? dt : -dt) / 0.9));
   curlFingers(prof, "Left", 1);
   if (state.suitMode === "pull" || state.phone) curlFingers(prof, "Right", state.phone ? 0.6 : 1);
   gripPoint(prof, state.bagHand, hand);
@@ -54755,7 +55721,7 @@ function updateProps(dt) {
     const m3 = new Matrix4().makeBasis(new Vector3().crossVectors(up, zAxis), up, zAxis);
     suit.quaternion.setFromRotationMatrix(m3);
     suit.position.copy(suitWheel).add(V(0, -0.035, 0)).addScaledVector(zAxis, 0.03);
-  } else if (state.suitMode === "parked") {
+  } else if (state.suitMode === "parked" && !prof.fall) {
     const want = prof.pos.clone().addScaledVector(right, 0.45).addScaledVector(fwd, -0.05);
     suit.position.lerp(V(want.x, 0, want.z), Math.min(1, dt * 3));
     suit.quaternion.slerp(new Quaternion().setFromEuler(new Euler(0, prof.yaw, 0)), Math.min(1, dt * 3));
@@ -54765,10 +55731,16 @@ function updateProps(dt) {
   if (state.phone) {
     gripPoint(prof, "Right", hand);
     const face = prof.headPos();
-    if (state.phone === "ear") placeAtEar(phone2, prof);
-    else {
-      phone2.position.copy(hand).add(V(0, 0.075, 0)).add(face.clone().sub(hand).normalize().multiplyScalar(0.03));
-      phone2.lookAt(face);
+    phone2.position.copy(hand).add(V(0, 0.075, 0)).add(face.clone().sub(hand).normalize().multiplyScalar(0.03));
+    phone2.lookAt(face);
+    if (prof.phoneT > 1e-3) {
+      _pq2.copy(phone2.quaternion);
+      _pp.copy(phone2.position);
+      placeAtEar(phone2, prof);
+      snapToGrip(phone2, hand, prof.phoneT);
+      const k = smooth(prof.phoneT);
+      phone2.position.lerpVectors(_pp, phone2.position, k);
+      phone2.quaternion.slerpQuaternions(_pq2, phone2.quaternion, k);
     }
     M_PHONE.position.copy(phone2.position);
   }
@@ -54812,34 +55784,84 @@ function updateActors(dt) {
       a.fadeStopAt = null;
       a.head.stopAnimation();
     }
+    if (a.fadeStopAt == null && !a.head.mixer && canIdle(a)) softStop(a, 0.6);
     updateWalk(a, dt);
     a.yaw = angleLerp(a.yaw, a.yawGoal, Math.min(1, dt * 5));
     a.arm.position.copy(a.pos);
     a.arm.rotation.y = a.yaw;
     a.head.animate(dt * 1e3);
+    if (a.seated) chairPose(a);
+    if (a.fall && a.fall.up != null) {
+      const u = Math.min(1, a.fall.up / 1.9), S = tpl(a, "sitting"), K = tpl(a, "oneknee");
+      if (u < 0.45) applyPoseBlend(a, S, K, smooth(u / 0.45));
+      else applyPoseBlend(a, K, null, smooth((u - 0.45) / 0.55));
+    } else if (a.fall && a.fall.k > 0) applySit(a, a.fall.k);
     a.arm.updateMatrixWorld(true);
   }
+  nodToBeat();
   const earPt = (a) => {
     const r2 = V(-Math.cos(a.yaw), 0, Math.sin(a.yaw)), f = V(Math.sin(a.yaw), 0, Math.cos(a.yaw));
-    return earPos(a).addScaledVector(r2, 0.04).addScaledVector(f, 0.03).add(V(0, -0.1, 0));
+    return earPos(a).addScaledVector(r2, 0.06).addScaledVector(f, 0.035).add(V(0, -0.055, 0));
   };
-  if (state.phone === "ear") prof.ikR.set(earPt(prof), 1);
-  if (state.phone === "hand" && !state.typing) {
+  if (state.phone === "hand" && !state.typing || state.phone === "ear") {
     const f = fwdOf(prof), r2 = V(-Math.cos(prof.yaw), 0, Math.sin(prof.yaw));
-    prof.ikR.set(prof.pos.clone().addScaledVector(f, 0.42).addScaledVector(r2, 0.05).add(V(0, 1.18, 0)), 1);
+    const hold = prof.pos.clone().addScaledVector(f, 0.42).addScaledVector(r2, 0.05).add(V(0, 1.18, 0));
+    prof.ikR.set(hold.lerp(earPt(prof), smooth(prof.phoneT || 0)), 1);
   }
   if (leo.onPhone) leo.ikR.set(earPt(leo), 1);
+  if (prof.shake > 0) {
+    prof.shake -= dt;
+    const k = Math.max(0, prof.shake) / 0.8;
+    prof.arm.rotation.z = Math.sin(prof.shake * 38) * 0.05 * k;
+    if (prof.shake <= 0) prof.arm.rotation.z = 0;
+  }
+  if (prof.fall) {
+    const F = prof.fall;
+    F.t += dt;
+    prof.pos.y = 0;
+    const r2 = V(-Math.cos(prof.yaw), 0, Math.sin(prof.yaw)), f = fwdOf(prof);
+    if (F.up == null) {
+      const k = smooth(F.t / 0.42);
+      F.k = k;
+      prof.arm.rotation.x = 0.28 * k;
+      prof.ikL.set(prof.pos.clone().addScaledVector(r2, -0.35).add(V(0, 1.55 + 0.5 * k, 0)), 1);
+    } else {
+      F.up += dt;
+      const u = Math.min(1, F.up / 1.9), lean = Math.sin(Math.PI * Math.min(1, u / 0.8));
+      prof.arm.rotation.x = 0.28 * (1 - smooth(Math.min(1, u / 0.3))) - 0.06 * lean;
+      const gh = MathUtils.lerp(2.05, 0.85, smooth(u));
+      prof.ikL.set(prof.pos.clone().addScaledVector(r2, -0.3 + 0.1 * u).addScaledVector(f, 0.1).add(V(0, gh * (u < 0.45 ? 0.75 : 1), 0)), 1 - smooth(Math.max(0, (u - 0.75) / 0.25)));
+      const kneeH = u < 0.45 ? 0.35 : MathUtils.lerp(0.55, 0.9, (u - 0.45) / 0.55);
+      prof.ikR.set(prof.pos.clone().addScaledVector(r2, 0.18).addScaledVector(f, 0.32).add(V(0, kneeH, 0)), Math.sin(Math.PI * Math.min(1, u / 0.85)));
+      if (u >= 1) {
+        prof.fall = null;
+        prof.arm.rotation.x = 0;
+        prof.ikL.release();
+        prof.ikR.release();
+        prof.head.setMood("neutral");
+      }
+    }
+  }
+  if (state.suitMode === "parked" && suitRoll.lengthSq() > 0) {
+    suit.position.lerp(suitRoll, Math.min(1, dt * 1.6));
+    if (suit.position.distanceTo(suitRoll) < 0.02) suitRoll.set(0, 0, 0);
+  }
   for (const a of actors) {
     if (a.slip > 0) {
       a.slip -= dt;
-      const k = Math.max(0, a.slip) / 0.9;
-      a.arm.rotation.z = Math.sin((0.9 - a.slip) * 14) * 0.16 * k;
-      a.arm.rotation.x = -Math.sin((0.9 - a.slip) * 9) * 0.08 * k;
+      const k = Math.max(0, a.slip) / 0.45;
+      a.arm.rotation.z = Math.sin((0.45 - a.slip) * 22) * 0.2 * k;
+      if (!a.fall) a.arm.rotation.x = -(1 - k) * 0.25;
+      a.ikL.set(a.pos.clone().addScaledVector(V(-Math.cos(a.yaw), 0, Math.sin(a.yaw)), -0.55).add(V(0, 1.5, 0)), 1);
       const r2 = V(-Math.cos(a.yaw), 0, Math.sin(a.yaw)), f = V(Math.sin(a.yaw), 0, Math.cos(a.yaw));
       a.ikR.set(a.pos.clone().addScaledVector(r2, 0.55).addScaledVector(f, 0.1).add(V(0, 1.45, 0)), k);
       if (a.slip <= 0) {
         a.ikR.release();
-        a.arm.rotation.z = a.arm.rotation.x = 0;
+        a.arm.rotation.z = 0;
+        if (!a.fall) {
+          a.arm.rotation.x = 0;
+          a.ikL.release();
+        }
       }
     }
   }
@@ -54850,6 +55872,7 @@ function updateActors(dt) {
     prof.ikR.set(p2, 1);
   }
   if (diniz.head.poseName !== "sitting") diniz.head.playPose("sitting", null, 1e6);
+  updatePlane(dt);
   for (const a of actors) {
     guardArms(a);
     a.look.update(dt);
@@ -54857,6 +55880,87 @@ function updateActors(dt) {
     a.ikR.update(dt);
   }
   updateProps(dt);
+  const want = prof.pos.z > 19.6 && prof.pos.z < 22.5 ? 1 : null;
+  if (want) prof.wet = Math.min(1, (prof.wet || 0) + dt * 0.5);
+  else if (prof.pos.z < 16) prof.wet = Math.max(0.35, (prof.wet || 0) - dt * 4e-3);
+  applyWet(prof.wet || 0);
+  updateDrips(dt);
+}
+var lap = laptop();
+scene.add(lap);
+var deck = djDeck();
+scene.add(deck);
+var _l = new Vector3();
+var _k1 = new Vector3();
+var _k2 = new Vector3();
+function lapPoint(a, out) {
+  a.bone("Hips").getWorldPosition(out);
+  a.bone("LeftLeg").getWorldPosition(_k1);
+  a.bone("RightLeg").getWorldPosition(_k2);
+  _k1.add(_k2).multiplyScalar(0.5);
+  out.lerp(_k1, 0.62);
+  out.y += 0.1;
+  return out;
+}
+var CH = { up: +(Q.get("chU") || 1.5), knee: +(Q.get("chK") || -1.45), spine: +(Q.get("chS") || -0.06), drop: +(Q.get("chD") || 0.5) };
+var _q2 = new Quaternion();
+var _ax = new Vector3(1, 0, 0);
+function chairPose(a) {
+  for (const sd of ["Left", "Right"]) {
+    a.bone(sd + "UpLeg")?.quaternion.multiply(_q2.setFromAxisAngle(_ax, CH.up));
+    a.bone(sd + "Leg")?.quaternion.multiply(_q2.setFromAxisAngle(_ax, CH.knee));
+  }
+  a.bone("Spine")?.quaternion.multiply(_q2.setFromAxisAngle(_ax, CH.spine));
+  a.arm.updateMatrixWorld(true);
+}
+function seat(a, row, letter, yaw = 0) {
+  a.seated = true;
+  a.walk = null;
+  a.head.stopAnimation();
+  a.idleOK = false;
+  a.pos.copy(cabin.seat(row, letter)).add(V(0, 0.06 - CH.drop, 0.06));
+  a.yaw = a.yawGoal = yaw;
+}
+function updatePlane(dt) {
+  if (state.world !== "cabin") {
+    lap.visible = deck.visible = false;
+    return;
+  }
+  const beat = beatNow(), on = musicT0 != null && (state.party || 0) > 0.05;
+  state.partyK = (state.partyK || 0) + ((state.party || 0) - (state.partyK || 0)) * Math.min(1, dt * 2.5);
+  cabin.setParty(state.partyK);
+  cabin.update(dt, beat);
+  lap.visible = true;
+  lapPoint(kauai, lap.position);
+  lap.rotation.set(0, kauai.yaw + Math.PI, 0);
+  const f = V(Math.sin(kauai.yaw), 0, Math.cos(kauai.yaw)), r2 = V(-Math.cos(kauai.yaw), 0, Math.sin(kauai.yaw));
+  const kb = lap.position.clone().addScaledVector(f, -0.02).add(V(0, 0.03, 0));
+  const tap = (ph) => kauai.typing ? Math.max(0, Math.sin(vt * 17 + ph)) * 0.012 : 0;
+  kauai.ikL.set(kb.clone().addScaledVector(r2, 0.08).add(V(0, tap(0), 0)), 1);
+  kauai.ikR.set(kb.clone().addScaledVector(r2, -0.08).add(V(0, tap(1.7), 0)), 1);
+  lapPoint(zuma, _l);
+  const fz = V(Math.sin(zuma.yaw), 0, Math.cos(zuma.yaw)), rz = V(-Math.cos(zuma.yaw), 0, Math.sin(zuma.yaw));
+  zuma.ikL.set(_l.clone().addScaledVector(rz, 0.13).addScaledVector(fz, 0.02), 0.8);
+  zuma.ikR.set(_l.clone().addScaledVector(rz, -0.13).addScaledVector(fz, 0.02), 0.8);
+  deck.visible = !!lopo.carry;
+  if (lopo.carry) {
+    const fl2 = V(Math.sin(lopo.yaw), 0, Math.cos(lopo.yaw)), rl = V(-Math.cos(lopo.yaw), 0, Math.sin(lopo.yaw));
+    const bob = lopo.walk ? Math.abs(Math.sin(vt * 9)) * 0.03 : 0;
+    deck.position.copy(lopo.pos).addScaledVector(fl2, 0.36).add(V(0, (lopo.liftDeck ? 1.2 : 1.04) + bob, 0));
+    deck.rotation.set(-0.25, lopo.yaw, 0);
+    lopo.ikL.set(deck.position.clone().addScaledVector(rl, -0.25).add(V(0, 0.03, 0)), 1);
+    lopo.ikR.set(deck.position.clone().addScaledVector(rl, 0.25).add(V(0, 0.03, 0)), 1);
+  }
+  deck.userData.update(dt, beat, on);
+}
+function nodToBeat() {
+  if (state.world !== "cabin") return;
+  if (musicT0 == null) return;
+  const b = beatNow(), dip = Math.pow(Math.max(0, Math.cos(b * Math.PI * 2)), 3);
+  for (const [a, amp] of [[kauai, 0.16], [zuma, 0.2], [lopo, 0.1]]) {
+    if (!a.nod) continue;
+    a.bone("Neck")?.rotateX(amp * dip * (state.partyK || 0));
+  }
 }
 function setTotem(s) {
   totem.setState(s);
@@ -54872,8 +55976,8 @@ var BOARD2_SPOT = V(11.5, 0, 12.3);
 var DESK_STOP = V(0.65, 0, 11.75);
 var MOTTI_POS = V(-1.25, 0, 11.05);
 var SA_POS = V(-1.25, 0, 12.15);
-var LEO_A = V(10.4, 0, 14.4);
-var LEO_B = V(12.9, 0, 14);
+var LEO_A = V(9.9, 0, 14.4);
+var LEO_B = V(7.4, 0, 14.1);
 var M_BOARD2 = marker(BOARD2);
 var M_FEET = marker(V(0, 0.1, 0));
 var rainOut = null;
@@ -54883,12 +55987,20 @@ function resetWorld() {
   prof.walk = null;
   prof.head.stopAnimation();
   prof.slip = 0;
+  prof.fall = null;
+  actors.forEach((a) => {
+    a.holdIdle = 0;
+    a.lineN = 0;
+  });
+  prof.wet = 0.25;
+  prof.phoneT = 0;
+  suitRoll.set(0, 0, 0);
   att.pos.copy(ATT_POS);
   att.yaw = att.yawGoal = ATT_YAW;
-  diniz.pos.copy(TX.driverSeat).add(V(0, 0.47, 0));
+  diniz.pos.copy(TX.driverSeat).add(V(0, 0.6, 0));
   diniz.yaw = diniz.yawGoal = -Math.PI / 2;
   leo.pos.copy(LEO_A);
-  leo.yaw = leo.yawGoal = Math.PI / 2;
+  leo.yaw = leo.yawGoal = -Math.PI / 2;
   leo.onPhone = true;
   leo.walk = null;
   motti.pos.copy(MOTTI_POS);
@@ -54912,6 +56024,13 @@ function resetWorld() {
   airport.setDelayed(false);
   land.doors(false);
   TX.setDoor(true);
+  hideRoll();
+  eyeContact(prof, false);
+  setWorld("airport");
+  prof.seated = false;
+  lopo.carry = false;
+  musicT0 = null;
+  state.party = 0;
   setTotem("idle");
   grade.uniforms.uFade.value = 1;
   $("endcard").classList.remove("on");
@@ -54949,14 +56068,14 @@ async function scene1() {
   await say("m1");
   cut({ p0: V(8.05, 1.62, 18.4), p1: V(8.15, 1.62, 18.9), l0: headOf(prof, -0.12), dur: 4, fov: 30, focus: headOf(prof), aperture: 2e-3 });
   look(prof, diniz.head);
-  const p10 = say("p10");
+  const p10 = say("p10", { anim: false });
   await wait(0.3);
-  prof.head.playGesture("handup", 1.4, true);
+  gesture(prof, "handup", 1.4, true);
   await p10;
   await wait(0.3);
   look(prof, null);
   state.suitMode = "pull";
-  const go = walkTo(prof, [V(8.8, 0, 19.6), DOOR_OUT], 1.35);
+  const go = walkTo(prof, [V(8.8, 0, 19.6), DOOR_OUT], 1.45);
   await wait(1.2);
   cut({ p0: () => V(7.3, 1.2, 20.1), l0: headOf(diniz, -0.05), fov: 22, focus: headOf(diniz), aperture: 2e-3, handheld: 4e-3 });
   look(diniz, prof.head);
@@ -54969,7 +56088,7 @@ async function scene2() {
   land.doors(true);
   sfx("door", 0.7);
   await wait(0.5);
-  const inn = walkTo(prof, [V(8.3, 0, 15.6), DOOR_IN], 1.25);
+  const inn = walkTo(prof, [V(8.3, 0, 15.6), DOOR_IN], 1.35);
   await until(() => prof.pos.z < 15.2);
   if (rainOut) rainOut.g.gain.setTargetAtTime(0.35, audioCtx.currentTime, 0.4);
   EVENTS.push({ t: vt, type: "rainDuck" });
@@ -54977,6 +56096,10 @@ async function scene2() {
   land.doors(false);
   sfx("door", 0.5);
   turnTo(prof, Math.PI + 0.35);
+  cut({ p0: () => prof.pos.clone().add(V(-0.9, 1.6, -1.9)), p1: () => prof.pos.clone().add(V(-0.8, 1.6, -1.7)), l0: headOf(prof, -0.25), dur: 2, fov: 32, focus: headOf(prof), aperture: 16e-4 });
+  prof.shake = 0.8;
+  gesture(prof, "shrug", 0.9);
+  await wait(1.2);
   sfx("buzz", 0.8);
   phone2.setChat([{ me: false, text: "J\xE1 t\xE1 no aeroporto? Papai t\xE1 de roupa nova desde as 7h." }]);
   state.phone = "hand";
@@ -54998,7 +56121,7 @@ async function scene3() {
   look(prof, M_BOARD2);
   leo.onPhone = true;
   cut({ p0: V(9.4, 1.6, 15.2), l0: headOf(prof, -0.2), fov: 34, focus: headOf(prof), aperture: 12e-4, smoothPos: true });
-  await walkTo(prof, [V(10.2, 0, 13.2), BOARD2_SPOT], 1.2);
+  await walkTo(prof, [V(10.2, 0, 13.2), BOARD2_SPOT], 1.35);
   turnTo(prof, yawTo(prof.pos, BOARD2));
   state.suitMode = "parked";
   prof.ikR.release();
@@ -55006,7 +56129,7 @@ async function scene3() {
   await wait(3.6);
   cut({ p0: rel(prof, 0.1, 1.58, 1.55), l0: headOf(prof, -0.05), fov: 28, focus: headOf(prof), aperture: 16e-4 });
   prof.head.setMood("happy");
-  walkTo(leo, [LEO_B], 0.9);
+  walkTo(leo, [LEO_B], 1.1).then(() => turnTo(leo, yawTo(leo.pos, prof.pos) - 0.5));
   await wait(1.1);
   airport.strikeNow();
   await wait(0.9);
@@ -55018,7 +56141,7 @@ async function scene3() {
   look(prof, leo.head);
   turnTo(prof, yawTo(prof.pos, leo.pos) - 0.6);
   await l1;
-  walkTo(leo, [LEO_A, V(9.2, 0, 15)], 0.9);
+  walkTo(leo, [LEO_A, V(11.5, 0, 14.8)], 1.1);
   cut({ p0: rel(prof, -0.2, 1.6, 1.3), l0: headOf(prof, -0.06), fov: 26, focus: headOf(prof), aperture: 2e-3 });
   look(prof, M_BOARD2);
   prof.head.setMood("sad");
@@ -55029,7 +56152,7 @@ async function scene4() {
   look(prof, null);
   state.suitMode = "pull";
   cut({ p0: V(3.5, 1.62, 9.3), l0: V(0, 1.3, 11.7), fov: 34, focus: () => V(-0.4, 1.4, 11.6), aperture: 12e-4 });
-  const go = walkTo(prof, [V(8, 0, 12), V(3.5, 0, 11.9), DESK_STOP], 1.3);
+  const go = walkTo(prof, [V(8, 0, 12), V(3.5, 0, 11.9), DESK_STOP], 1.45);
   look(motti, prof.head);
   look(sa, prof.head);
   await wait(1.6);
@@ -55045,7 +56168,14 @@ async function scene4() {
   cut({ p0: () => V(0.1, 1.5, 14.2), l0: () => mid(headOf(motti), headOf(sa))(), fov: 30, focus: headOf(motti), aperture: 15e-4 });
   look(motti, sa.head);
   look(sa, motti.head);
-  await wait(1.4);
+  motti.head.setMood("happy");
+  sa.head.setMood("happy");
+  laugh(motti, 1.5, 0.15);
+  await wait(0.15);
+  laugh(sa, 1.4, 0.55);
+  await wait(1.55);
+  motti.head.setMood("neutral");
+  sa.head.setMood("neutral");
   look(sa, totem.head);
   turnTo(sa, yawTo(sa.pos, KIOSK) + 0.5);
   const sp = say("sa1", { gesture: ["index", 2.6] });
@@ -55055,7 +56185,7 @@ async function scene4() {
   await sp;
   cut({ p0: rel(motti, -0.3, 1.62, -0.55), l0: headOf(prof, -0.08), fov: 28, focus: headOf(prof), aperture: 22e-4 });
   look(prof, sa.head);
-  prof.head.playGesture("thumbup", 1.2, true);
+  gesture(prof, "thumbup", 1.2, true);
   await wait(1.3);
 }
 async function scene5() {
@@ -55063,15 +56193,48 @@ async function scene5() {
   state.suitMode = "pull";
   look(motti, prof.head);
   look(sa, prof.head);
-  const run2 = walkTo(prof, [V(0.85, 0, 7.8), V(1.05, 0, 5), V(0.95, 0, 2.6), PROF_STOP], 2, 1.55);
+  walkTo(prof, [V(0.85, 0, 7.8), V(1.05, 0, 5), V(0.95, 0, 2.6), PROF_STOP], 2.3);
   cut({ p0: V(2.35, 0.32, 3.7), l0: V(1.2, 0.35, 5.5), fov: 38, focus: () => V(1.3, 0.3, 5.2), aperture: 12e-4, handheld: 3e-3 });
-  await until(() => prof.pos.z < 5.5);
-  prof.slip = 0.9;
+  await until(() => prof.pos.z < 5.6);
+  prof.walk = null;
+  prof.head.stopAnimation();
+  prof.slip = 0.45;
   sfx("squeak", 0.9);
-  await wait(0.7);
-  cut({ p0: V(2.4, 1.55, 3.2), p1: V(2.2, 1.5, 2.8), l0: () => prof.headPos().add(V(0, -0.35, 0)), dur: 3, fov: 32, focus: headOf(prof), smoothPos: true });
+  state.suitMode = "parked";
+  suitRoll.set(prof.pos.x - 0.9, 0, prof.pos.z + 1.6);
+  await wait(0.35);
+  prof.fall = { t: 0 };
+  await wait(0.42);
+  sfx("thud", 0.8);
+  const upK = () => prof.fall && prof.fall.up != null ? smooth(Math.min(1, prof.fall.up / 1.9)) : prof.fall ? 0 : 1;
+  const FP = prof.pos.clone();
+  cut({ p0: () => FP.clone().add(V(-1.35, 0.75 + 0.55 * upK(), -1.95)), l0: () => FP.clone().add(V(0, 0.55 + 0.85 * upK(), 0.1)), fov: 36, focus: () => prof.headPos(), aperture: 16e-4, handheld: 4e-3, smoothPos: true });
+  prof.head.setMood("sad");
+  await wait(0.9);
+  look(prof, M_BAG);
+  await wait(0.9);
+  prof.head.setMood("neutral");
+  look(prof, totem.head);
+  await wait(0.4);
+  prof.fall.up = 0;
+  look(prof, V(prof.pos.x, 0.2, prof.pos.z - 1.2));
+  await wait(1.1);
+  look(prof, totem.head);
+  await until(() => !prof.fall, 3);
+  prof.shake = 0.5;
+  await wait(0.6);
+  cut({ p0: rel(att, 0.35, 1.62, 1.1), p1: rel(att, 0.3, 1.62, 0.95), l0: headOf(att, -0.06), dur: 3, fov: 28, focus: headOf(att), aperture: 24e-4 });
+  look(att, V(1, 1.2, 5));
+  att.head.setMood("happy");
+  laugh(att, 1.7, 0.3);
+  prof.pos.set(0.95, 0, 3.6);
+  prof.yaw = prof.yawGoal = Math.PI;
+  suitRoll.set(0, 0, 0);
+  await wait(2);
   look(att, prof.head);
-  await run2;
+  state.suitMode = "pull";
+  cut({ p0: V(2.4, 1.55, 3.2), p1: V(2.2, 1.5, 2.8), l0: () => prof.headPos().add(V(0, -0.35, 0)), dur: 3, fov: 32, focus: headOf(prof), smoothPos: true });
+  await walkTo(prof, [PROF_STOP], 1.2);
   turnTo(prof, PROF_YAW);
   state.suitMode = "parked";
   prof.ikR.release();
@@ -55137,6 +56300,7 @@ async function scene7() {
   await wait(3.5);
 }
 async function scene8() {
+  prof.wet = Math.min(prof.wet, 0.3);
   att.ikR.set(screenPt(0.5, 0.78), 1);
   await wait(0.5);
   att.ikR.release();
@@ -55163,8 +56327,8 @@ async function scene8() {
   await say("a3");
   cut({ p0: rel(att, -0.38, 1.62, -0.62), l0: headOf(prof, -0.06), fov: 25, focus: headOf(prof), aperture: 28e-4 });
   look(prof, att.head);
-  prof.head.playGesture("shrug", 2);
-  await say("p3");
+  gesture(prof, "shrug", 1.6);
+  await say("p3", { anim: false });
   cut({ p0: () => att.pos.clone().add(V(0.9, 1.5, 1.35)), p1: () => att.pos.clone().add(V(0.75, 1.5, 1.15)), l0: headOf(att, -0.15), dur: 9, fov: 32, focus: headOf(att), aperture: 18e-4 });
   look(prof, att.head);
   const s = say("a4", { anim: "talk0" });
@@ -55183,7 +56347,9 @@ async function scene8() {
   look(prof, M_FEET);
   await wait(1);
   look(prof, att.head);
+  prof.head.setMood("happy");
   await say("p8", { anim: "talk1" });
+  prof.head.setMood("neutral");
 }
 async function scene9() {
   cut({ p0: rel(prof, 0.5, 1.56, 1.25), p1: rel(prof, 0.42, 1.57, 1.1), l0: headOf(prof, -0.12), dur: 10, fov: 26, focus: headOf(prof), aperture: 3e-3 });
@@ -55201,14 +56367,18 @@ async function scene9() {
 async function scene10() {
   turnTo(prof, PROF_YAW + 0.7);
   look(prof, null);
-  state.phone = "ear";
-  phone2.setChat([]);
+  phone2.setChat([{ me: false, text: "Amor \u2764 chamando\u2026" }]);
+  state.phone = "hand";
+  look(prof, M_PHONE);
   sfx("buzz", 0.4);
   cut({ p0: rel(prof, 0.35, 1.58, 1.5), p1: rel(prof, 0.3, 1.58, 1.3), l0: headOf(prof, -0.1), dur: 10, fov: 28, focus: headOf(prof), aperture: 26e-4 });
-  await wait(1.2);
-  await say("p6", { anim: "talk1" });
+  await wait(1.1);
+  state.phone = "ear";
+  look(prof, null);
+  await wait(1);
+  await say("p6", { anim: false });
   look(prof, M_BAG);
-  await say("p7");
+  await say("p7", { anim: false });
 }
 async function scene11() {
   state.phone = false;
@@ -55229,7 +56399,7 @@ async function scene11() {
   await wait(0.9);
   look(prof, att.head);
   await wait(0.7);
-  look(prof, null);
+  look(prof, att.head);
   await say("p9", { anim: "talk1" });
   grade.uniforms.uFade.value = 0;
   await wait(0.8);
@@ -55238,11 +56408,203 @@ async function scene12() {
   grade.uniforms.uFade.value = 0;
   const cr = CREDITS.map(([n, r2]) => `${n} \xB7 ${r2}`).join("<br>");
   $("realcase").innerHTML = `Voo real: ${CFG.flight.airline} ${CFG.flight.code}, ${CFG.flight.origin} \u2192 ${CFG.flight.dest}, ${CFG.flight.date}<br>Previs\xE3o 1 h antes: ${Math.round(CFG.result.p * 100)}% \xB7 ${CFG.result.actual}<br><br><span style="font-size:.8em;opacity:.8">${cr}</span>`;
-  EVENTS.push({ t: vt, type: "end", title: "Como esse totem funciona?", sub: [`Voo real: ${CFG.flight.airline} ${CFG.flight.code}, ${CFG.flight.origin} \u2192 ${CFG.flight.dest}, ${CFG.flight.date}`, `Previs\xE3o 1 h antes: ${Math.round(CFG.result.p * 100)}% \xB7 ${CFG.result.actual}`, "", ...CREDITS.map(([n, r2]) => `${n} \xB7 ${r2}`)] });
+  EVENTS.push({ t: vt, type: "end", title: "", sub: [`Voo real: ${CFG.flight.airline} ${CFG.flight.code}, ${CFG.flight.origin} \u2192 ${CFG.flight.dest}, ${CFG.flight.date}`, `Previs\xE3o 1 h antes: ${Math.round(CFG.result.p * 100)}% \xB7 ${CFG.result.actual}`, "", ...CREDITS.map(([n, r2]) => `${n} \xB7 ${r2}`)] });
+  $("endcard").querySelector("h2").style.display = "none";
   $("endcard").classList.add("on");
   await wait(8);
+  EVENTS.push({ t: vt, type: "endOff" });
 }
-var SCENES = [scene1, scene2, scene3, scene4, scene5, scene6, scene7, scene8, scene9, scene10, scene11, scene12];
+function showRoll(lines, dur) {
+  let el = $("roll");
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "roll";
+    document.body.appendChild(el);
+  }
+  el.style.cssText = "position:fixed;inset:0;overflow:hidden;pointer-events:none;z-index:30;font-family:Segoe UI,system-ui,sans-serif;color:#fff;text-align:center";
+  el.innerHTML = '<div id="rollin" style="position:absolute;left:0;right:0;top:100%;font-size:clamp(16px,2.2vw,34px);line-height:2.1">' + lines.map(([a, b]) => b ? `<div><b style="font-weight:600">${a}</b><span style="opacity:.65"> \xB7 ${b}</span></div>` : `<div style="${a === "ELENCO" ? "letter-spacing:.3em;opacity:.8" : ""}">${a || "&nbsp;"}</div>`).join("") + "</div>";
+  const inner = $("rollin");
+  inner.style.transition = `transform ${dur}s linear`;
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    inner.style.transform = `translateY(calc(-100vh - 100%))`;
+  }));
+}
+function hideRoll() {
+  $("roll")?.remove();
+}
+function eyeContact(a, on) {
+  const av = a.head.avatar;
+  av.avatarSpeakingEyeContact = on ? 1 : 0;
+  av.avatarIdleEyeContact = on ? 1 : 0;
+  av.avatarSpeakingHeadMove = on ? 0.08 : 0.45;
+  av.avatarIgnoreCamera = !on;
+}
+async function scene13() {
+  const W2 = (x2, y, z) => cabin.toWorld(x2, y, z);
+  $("endcard").classList.remove("on");
+  grade.uniforms.uFade.value = 0;
+  setWorld("cabin");
+  musicT0 = null;
+  state.party = 0;
+  state.partyK = 0;
+  prof.seated = false;
+  prof.fall = null;
+  prof.slip = 0;
+  prof.head.setMood("neutral");
+  prof.wet = Math.min(prof.wet || 0.3, 0.3);
+  state.phone = false;
+  state.passMode = "hidden";
+  prof.ikR.release();
+  prof.ikL.release();
+  seat(kauai, 5, "C");
+  seat(zuma, 8, "D");
+  kauai.typing = true;
+  kauai.nod = true;
+  zuma.nod = true;
+  look(kauai, null);
+  look(zuma, null);
+  lopo.carry = false;
+  lopo.pos.copy(W2(-2.6, 0, 1.35));
+  lopo.yaw = lopo.yawGoal = Math.PI / 2;
+  lopo.idleOK = false;
+  lopo.nod = false;
+  cabin.door.set(true);
+  cabin.setReading(false);
+  prof.pos.copy(W2(-1.55, 0, 1.35));
+  prof.yaw = prof.yawGoal = Math.PI / 2;
+  prof.head.stopAnimation();
+  state.suitMode = "pull";
+  look(prof, null);
+  sfx("cabin_hum", 0.35);
+  await wait(0.6);
+  sfx("chime", 0.6);
+  await wait(0.5);
+  sfx("an1", 0.55);
+  cut({ p0: W2(0.25, 1.6, -5.6), p1: W2(0.2, 1.58, -5.2), l0: W2(-0.7, 1.25, 0.9), l1: W2(-0.3, 1.3, 0.2), dur: 6, fov: 34, focus: () => prof.headPos(), aperture: 12e-4 });
+  for (let i2 = 1; i2 <= 12; i2++) {
+    grade.uniforms.uFade.value = i2 / 12;
+    await wait(1 / 12);
+  }
+  const go = walkTo(prof, [W2(-0.9, 0, 1), W2(-0.15, 0, 0.45), W2(0.05, 0, -1.2), W2(0.1, 0, rowZ(5) + 0.08)], 1.05);
+  await until(() => prof.pos.z < W2(0, 0, -0.6).z);
+  cut({ p0: () => prof.pos.clone().add(V(0.12, 1.6, -2.1)), l0: headOf(prof, -0.08), fov: 30, focus: headOf(prof), aperture: 18e-4, smoothPos: true, handheld: 4e-3 });
+  look(prof, V(0, 0, 0).copy(W2(0, 1.1, rowZ(7))));
+  await wait(1.2);
+  kauai.typing = false;
+  look(kauai, prof.head);
+  await go;
+  turnTo(prof, yawTo(prof.pos, kauai.pos));
+  state.suitMode = "parked";
+  prof.ikR.release();
+  look(prof, kauai.head);
+  cut({ p0: () => prof.pos.clone().add(V(0.5, 1.68, -0.5)), l0: () => kauai.headPos().add(V(0, -0.12, 0)), fov: 30, focus: headOf(kauai), aperture: 2e-3, handheld: 3e-3 });
+  const k1 = say("k1");
+  await wait(2.4);
+  cut({ p0: () => lap.position.clone().add(V(0.34, 0.5, -0.26)), l0: () => lap.position.clone().add(V(0, 0.09, 0.04)), fov: 32, focus: () => lap.position.clone().add(V(0, 0.09, 0.04)), aperture: 16e-4, handheld: 2e-3 });
+  await wait(1.8);
+  cut({ p0: () => prof.pos.clone().add(V(0.5, 1.68, -0.5)), l0: () => kauai.headPos().add(V(0, -0.12, 0)), fov: 30, focus: headOf(kauai), aperture: 2e-3, handheld: 3e-3 });
+  await k1;
+  cut({ p0: () => kauai.headPos().add(V(-0.42, -0.04, 0.12)), l0: headOf(prof, -0.08), fov: 34, focus: headOf(prof), aperture: 24e-4 });
+  await wait(0.3);
+  await say("p11");
+  await wait(0.4);
+  kauai.typing = true;
+  look(kauai, null);
+  state.suitMode = "pull";
+  look(prof, null);
+  const go2 = walkTo(prof, [W2(0.02, 0, rowZ(8) + 0.08)], 1);
+  cut({ p0: () => prof.pos.clone().add(V(-0.1, 1.6, -2)), l0: headOf(prof, -0.08), fov: 30, focus: headOf(prof), aperture: 18e-4, smoothPos: true, handheld: 4e-3 });
+  await wait(0.8);
+  look(zuma, prof.head);
+  zuma.head.setMood("happy");
+  await go2;
+  turnTo(prof, yawTo(prof.pos, zuma.pos));
+  state.suitMode = "parked";
+  prof.ikR.release();
+  look(prof, zuma.head);
+  cut({ p0: () => prof.pos.clone().add(V(-0.5, 1.68, -0.5)), l0: () => zuma.headPos().add(V(0, -0.12, 0)), fov: 30, focus: headOf(zuma), aperture: 2e-3, handheld: 3e-3 });
+  await say("z1");
+  cut({ p0: () => zuma.headPos().add(V(0.42, -0.04, 0.12)), l0: headOf(prof, -0.08), fov: 34, focus: headOf(prof), aperture: 24e-4 });
+  prof.head.setMood("sad");
+  await wait(0.2);
+  await say("p13");
+  prof.head.setMood("neutral");
+  look(zuma, null);
+  state.suitMode = "pull";
+  look(prof, null);
+  const go3 = walkTo(prof, [W2(0.06, 0, rowZ(11) + 0.45)], 1.05);
+  cut({ p0: W2(-0.35, 1.55, rowZ(13)), l0: () => prof.headPos().add(V(0, -0.15, 0)), fov: 30, focus: headOf(prof), aperture: 16e-4 });
+  await go3;
+  turnTo(prof, Math.PI / 2 + 0.6);
+  await wait(0.6);
+  state.suitMode = "hidden";
+  suit.position.set(0, -10, 0);
+  prof.ikR.release();
+  seat(prof, 11, "D");
+  prof.seated = true;
+  cut({ p0: () => prof.headPos().add(V(-0.22, -0.02, 1.15)), p1: () => prof.headPos().add(V(-0.2, -0.02, 0.95)), l0: headOf(prof, -0.06), dur: 7, fov: 26, focus: headOf(prof), aperture: 3e-3 });
+  look(prof, W2(0.6, 1.3, rowZ(9)));
+  await wait(0.6);
+  prof.head.setMood("happy");
+  await wait(1.4);
+  cabin.door.set(false);
+  sfx("doorclose", 0.5);
+  music("lopo_music.mp3", [[0, 0, 0], [1.5, 0.35, 0], [3.6, 0.8, 0]]);
+  await wait(1.2);
+  look(prof, W2(-0.4, 1.4, 1.2));
+  prof.head.setMood("neutral");
+  await wait(1);
+  cut({ p0: W2(0.35, 1.5, -2.2), l0: W2(-1.2, 1.25, 1.25), fov: 34, focus: () => lopo.headPos(), aperture: 14e-4, handheld: 5e-3 });
+  await wait(0.6);
+  cabin.door.set(true);
+  sfx("door", 0.5);
+  musicTo(0.04, 0.9, 0.35);
+  lopo.carry = true;
+  lopo.nod = true;
+  state.party = 1;
+  cabin.setReading(true);
+  const run2 = walkTo(lopo, [W2(-1, 0, 1.25), W2(-0.2, 0, 0.7), W2(0, 0, -0.6), W2(-0.05, 0, rowZ(10) + 0.1)], 2.5);
+  await wait(0.9);
+  cabin.door.set(false);
+  look(kauai, lopo.head);
+  look(zuma, lopo.head);
+  kauai.typing = false;
+  cut({ p0: () => prof.headPos().add(V(0.25, 0.12, -0.55)), l0: () => lopo.headPos().add(V(0, -0.25, 0)), fov: 30, focus: () => lopo.headPos(), aperture: 16e-4, handheld: 6e-3 });
+  look(prof, lopo.head);
+  await run2;
+  turnTo(lopo, Math.PI - 0.15);
+  lopo.liftDeck = true;
+  look(lopo, prof.head);
+  musicTo(0.03, 0.22, 0.3);
+  await wait(0.35);
+  await say("lp1");
+  musicTo(0.03, 0.85, 0.4);
+  await wait(0.5);
+  cut({ p0: () => prof.headPos().add(V(-0.04, -0.03, 1)), l0: headOf(prof, -0.03), fov: 24, focus: headOf(prof), aperture: 32e-4 });
+  look(prof, lopo.head);
+  await wait(0.9);
+  look(prof, camera);
+  eyeContact(prof, true);
+  musicTo(0.03, 0.28, 0.4);
+  await say("p12");
+  musicTo(0.03, 1, 0.25);
+  await wait(1.3);
+  for (let i2 = 1; i2 <= 15; i2++) {
+    grade.uniforms.uFade.value = 1 - i2 / 15;
+    await wait(1 / 15);
+  }
+  const roll = [["ELENCO", ""], ...CREDITS, ["", ""], ["Kauai", "investidor de bordo"], ["Zuma", "aluno da USP"], ["Lopo", "DJ (atrasado)"], ["", ""], ["M\xFAsica", CFG.music || "tocada pelo Lopo"], ["", ""], ["Obrigado por tudo, Soussa.", ""]];
+  const ROLL = 16;
+  EVENTS.push({ t: vt, type: "roll", dur: ROLL, lines: roll.map(([a, b]) => b ? `${a}  \xB7  ${b}` : a) });
+  showRoll(roll, ROLL);
+  await wait(ROLL - 3);
+  musicTo(0, 0, 3);
+  await wait(3.2);
+  musicStop();
+  hideRoll();
+  await wait(0.4);
+}
+var SCENES = [scene1, scene2, scene3, scene4, scene5, scene6, scene7, scene8, scene9, scene10, scene11, scene12, scene13];
 async function run(from = 1) {
   const id = ++runId;
   resetWorld();
@@ -55251,6 +56613,7 @@ async function run(from = 1) {
     prof.yaw = prof.yawGoal = Math.PI;
     TX.setDoor(false);
   }
+  if (from >= 2) prof.wet = 1;
   if (from >= 3) {
     prof.pos.copy(DOOR_IN);
   }
@@ -55263,8 +56626,14 @@ async function run(from = 1) {
     leo.onPhone = false;
   }
   if (from >= 6) placeAtKiosk();
-  if (from >= 8) setTotem("auto");
+  if (from >= 8) {
+    setTotem("auto");
+    prof.wet = 0.3;
+  }
   if (from >= 9) setTotem("result");
+  if (from >= 13) {
+    prof.wet = 0.3;
+  }
   try {
     for (let i2 = from; i2 <= SCENES.length; i2++) {
       $("scenelabel").textContent = `Cena ${i2}`;
@@ -55304,18 +56673,21 @@ async function boot() {
   $("loading").textContent = "Carregando personagens\u2026";
   audioBuffers.murmur = await loadBuffer("./audio/murmur.mp3");
   const RT = { Neck: { z: -0.01, rx: 0.02 }, Neck1: { z: -0.01, rx: 0.02 }, Neck2: { z: -0.01, rx: 0.02 }, LeftShoulder: { rz: -0.3 }, RightShoulder: { rz: 0.3 }, scaleToEyesLevel: 1, origin: { y: -0.1 } };
-  const BL = { headRotateX: -0.08, eyeBlinkLeft: 0.05, eyeBlinkRight: 0.05 };
+  const BL = { headRotateX: -0.04, eyeBlinkLeft: 0, eyeBlinkRight: 0, eyeWideLeft: 0.4, eyeWideRight: 0.4 };
   const mk = (name, pos, yaw, mood = "neutral") => makeActor({ name, pos, yaw, avatar: { url: AV_DIR + "avatarsdk", body: "M", avatarMood: mood, retarget: RT, baseline: BL } });
-  [prof, att, diniz, leo, motti, sa] = await Promise.all([
+  [prof, att, diniz, leo, motti, sa, kauai, zuma, lopo] = await Promise.all([
     mk("prof", V(8.5, 0, 9.2), -2.1),
     mk("att", ATT_POS, ATT_YAW, "happy"),
     mk("diniz", V(8, 0, 23), -Math.PI / 2),
     mk("leo", V(10, 0, 14), 0),
     mk("motti", V(2.15, 0, 11), Math.PI / 2, "happy"),
-    mk("sa", V(2.15, 0, 12), Math.PI / 2, "happy")
+    mk("sa", V(2.15, 0, 12), Math.PI / 2, "happy"),
+    mk("kauai", V(0, 0, -204), 0, "happy"),
+    mk("zuma", V(1, 0, -206), 0, "happy"),
+    mk("lopo", V(-1, 0, -199), Math.PI, "happy")
   ]);
-  Object.assign(ACT, { prof, att, diniz, leo, motti, sa });
-  actors.push(prof, att, diniz, leo, motti, sa);
+  Object.assign(ACT, { prof, att, diniz, leo, motti, sa, kauai, zuma, lopo });
+  actors.push(prof, att, diniz, leo, motti, sa, kauai, zuma, lopo);
   for (let i2 = 0; i2 < 20; i2++) for (const a of actors) {
     a.arm.position.copy(a.pos);
     a.arm.rotation.y = a.yaw;
@@ -55344,17 +56716,40 @@ async function boot() {
   restyle(diniz.arm, { outfit_top: dShirt, AvatarHead: dHead });
   restyle(leo.arm, { outfit_top: lShirt, AvatarHead: lHead });
   restyle(motti.arm, { outfit_top: stShirt, AvatarHead: mHead });
+  {
+    const eb = await tex2("./avatars/eyes_brown.jpg");
+    for (const a of [prof, att, diniz, motti, sa, kauai, zuma, lopo]) restyle(a.arm, { AvatarLeftEyeball: eb, AvatarRightEyeball: eb });
+  }
   restyle(sa.arm, { outfit_top: stShirt, AvatarHead: sHead });
-  diniz.arm.scale.setScalar(0.97);
+  for (const [a, c] of [[sa, [0.88, 0.76, 0.66]], [prof, [0.9, 0.8, 0.72]]]) a.arm.traverse((o) => {
+    if (o.isMesh && o.material?.name === "AvatarBody") {
+      o.material = o.material.clone();
+      o.material.color.setRGB(...c);
+    }
+  });
+  {
+    const [kH, zH, lH] = await Promise.all(["kauai_head", "zuma_head", "lopo_head"].map((n) => tex2("./avatars/" + n + ".jpg")));
+    const flip = (t) => {
+      t.flipY = false;
+      return t;
+    };
+    restyle(kauai.arm, { AvatarHead: kH, outfit_top: flip(plainShirt("#c8b48e", 0.08)) });
+    restyle(zuma.arm, { AvatarHead: zH, outfit_top: flip(printShirt()) });
+    restyle(lopo.arm, { AvatarHead: lH, outfit_top: flip(plainShirt("#d6d4cd", 0.05)) });
+    for (const [a, c] of [[zuma, [0.72, 0.58, 0.48]], [kauai, [0.84, 0.72, 0.62]]]) a.arm.traverse((o) => {
+      if (o.isMesh && o.material?.name === "AvatarBody") {
+        o.material = o.material.clone();
+        o.material.color.setRGB(...c);
+      }
+    });
+  }
+  setupWet(prof);
+  wetHeadTex = await tex2("./avatars/prof_head_wet.jpg");
+  setWorld("airport");
+  diniz.arm.scale.setScalar(1);
   leo.arm.scale.setScalar(0.99);
   motti.arm.scale.setScalar(1.02);
   sa.arm.scale.setScalar(0.995);
-  {
-    const g = glasses();
-    g.position.set(0, 0.075, 0.095);
-    diniz.bone("Head").add(g);
-    diniz.glasses = g;
-  }
   for (const a of [motti, sa]) {
     const b = badge();
     b.position.set(-0.09, 0.08, 0.13);
@@ -55451,14 +56846,21 @@ async function boot() {
     geo.computeBoundingSphere();
   });
   $("loading").textContent = "Carregando anima\xE7\xF5es\u2026";
-  await preloadAnims(prof, ["walk", "talk1"]);
-  await preloadAnims(att, ["walk", "talk0"]);
+  await preloadAnims(prof, ["walk", "talk1", "talk2", "idle"]);
+  await preloadAnims(att, ["walk", "talk0", "talk2", "idle", "laugh"]);
   await preloadAnims(diniz, ["walk", "talk0"]);
-  await preloadAnims(leo, ["walk", "talk1"]);
-  await preloadAnims(motti, ["walk", "talk0"]);
-  await preloadAnims(sa, ["walk", "talk1"]);
+  await preloadAnims(leo, ["walk", "talk1", "idle"]);
+  await preloadAnims(motti, ["walk", "talk0", "idle", "laugh"]);
+  await preloadAnims(sa, ["walk", "talk1", "talk2", "idle", "laugh"]);
+  await preloadAnims(lopo, ["walk"]);
+  for (const a of [kauai, zuma]) a.seated = true;
+  for (const a of [kauai, zuma, prof]) a.look.maxUp = 0.6;
+  if (!Q.has("noidle")) [prof, att, leo, motti, sa].forEach((a, i2) => {
+    a.idleOK = true;
+    a.idlePhase = i2 * 0.37 % 1;
+  });
   diniz.head.playPose("sitting", null, 1e6);
-  for (const n of ["rain_out", "door", "buzz", "squeak", "carDoor"]) audioBuffers["sfx_" + n] = await loadBuffer("./audio/" + n + ".mp3");
+  for (const n of ["rain_out", "door", "buzz", "squeak", "carDoor", "thud", "chime", "an1", "cabin_hum", "doorclose", "lopo_music"]) audioBuffers["sfx_" + n] = await loadBuffer("./audio/" + n + ".mp3");
   for (const id of Object.keys(LINES)) audioBuffers[id] = await loadBuffer("./audio/" + LINES[id].audio) || await loadBuffer("./audio/" + LINES[id].audio.replace(/\.mp3$/, ".wav"));
   const got = Object.keys(LINES).filter((k) => audioBuffers[k]).length;
   $("audiostatus").textContent = got ? `${got}/${Object.keys(LINES).length} falas com \xE1udio gravado` : "Vozes: sintetizadas pelo navegador (placeholder)";
@@ -55503,13 +56905,80 @@ async function runPreview() {
   let n = 0;
   while (vt < SIM_AT) {
     step(dt);
-    if (++n % 30 === 0) await new Promise((r2) => setTimeout(r2, 0));
+    n++;
+    await new Promise((r2) => setTimeout(r2, 0));
   }
+  if (Q.has("face")) {
+    const a = ACT[Q.get("face")] || prof;
+    const h = a.headPos();
+    const fw = V(Math.sin(a.yaw), 0, Math.cos(a.yaw));
+    camera.fov = 14;
+    camera.updateProjectionMatrix();
+    camera.position.copy(h).addScaledVector(fw, 1.1).add(V(0, -0.02, 0));
+    camera.lookAt(h.add(V(0, -0.04, 0)));
+    shot = null;
+    if (bokeh) bokeh.uniforms.focus.value = 1.1;
+  }
+  const bodyCam = () => {
+    if (!Q.has("body")) return;
+    const a = ACT[Q.get("body")] || prof;
+    const ang = a.yaw + (+Q.get("ang") || 0);
+    const h = a.pos.clone().add(V(0, 1.25, 0));
+    camera.fov = 30;
+    camera.updateProjectionMatrix();
+    camera.position.copy(h).addScaledVector(V(Math.sin(ang), 0, Math.cos(ang)), 2.4).add(V(0, 0.15, 0));
+    camera.lookAt(h);
+    shot = null;
+    if (bokeh) bokeh.uniforms.focus.value = 2.4;
+  };
+  if (Q.has("lineup")) {
+    const who = (Q.get("lineup") || "prof,att,leo,motti,sa").split(",").map((k) => ACT[k]);
+    who.forEach((a, i2) => {
+      a.walk = null;
+      a.seated = Q.has("chair");
+      a.pos.set(3 + i2 * 1, Q.has("chair") ? -CH.drop + 0.45 : 0, 6.5);
+      a.yaw = a.yawGoal = +(Q.get("ang") || 0);
+      a.look.goal = 0;
+    });
+    state.suitMode = "hidden";
+    suit.position.set(0, -5, 0);
+    state.phone = false;
+    for (let i2 = 0; i2 < 20; i2++) step(dt);
+    const cx = 3 + (who.length - 1) * 0.5, d = +(Q.get("d") || 4.2), y = +(Q.get("y") || 1);
+    camera.fov = 30;
+    camera.updateProjectionMatrix();
+    camera.position.set(cx, y + 0.25, 6.5 + d);
+    camera.lookAt(cx, y, 6.5);
+    shot = null;
+    if (bokeh) bokeh.uniforms.focus.value = d;
+  }
+  bodyCam();
   step(dt);
+  bodyCam();
+  if (Q.has("lineup")) {
+    const cx = 3 + ((Q.get("lineup") || "prof,att,leo,motti,sa").split(",").length - 1) * 0.5, d = +(Q.get("d") || 4.2), y = +(Q.get("y") || 1);
+    camera.position.set(cx, y + 0.25, 6.5 + d);
+    camera.lookAt(cx, y, 6.5);
+  }
+  if (Q.has("face")) {
+    const a = ACT[Q.get("face")] || prof;
+    const h = a.headPos();
+    const fw = V(Math.sin(a.yaw), 0, Math.cos(a.yaw));
+    camera.position.copy(h).addScaledVector(fw, 1.1);
+    camera.lookAt(h.add(V(0, -0.04, 0)));
+  }
   render();
   const f = (v4) => v4.toArray().map((x2) => x2.toFixed(2)).join(",");
   console.log("DBG ikR", prof.ikR.weight.toFixed(2), prof.ikR.goal, prof.ikR.auto, "target", f(prof.ikR.target), "hand", f(prof.bone("RightHand").getWorldPosition(new Vector3())), "phone", phone2.visible, f(phone2.position), "typing", state.typing);
-  console.log("DBG diniz head", f(diniz.headPos()), "hips", f(diniz.bone("Hips").getWorldPosition(new Vector3())));
+  {
+    const K = kauai.look;
+    console.log("DBG klook", K.target && (K.target.isVector3 ? "vec" : K.target.name), "w", K.weight.toFixed(2), "goal", K.goal, "cur", K.cur && f(K.cur), "khead", f(kauai.headPos()), "maxUp", K.maxUp);
+  }
+  {
+    const L = prof.look;
+    console.log("DBG look", L.target && (L.target.isVector3 ? "vec " + f(L.target) : L.target.name), "w", L.weight.toFixed(2), "cur", L.cur && f(L.cur), "head", f(prof.headPos()), "cam", f(camera.position), "yaw", prof.yaw.toFixed(2), "seated", !!prof.seated);
+  }
+  console.log("DBG pose", prof.head.poseName, JSON.stringify(Object.keys(prof.head.poseCurrentTemplate || {})), prof.head.poseCurrentTemplate === prof.head.poseTemplates.sitting, "mixer", !!prof.head.mixer);
   console.log("DBG prof pos", f(prof.pos), "yaw", prof.yaw.toFixed(2), "head", f(prof.headPos()), "hips", f(prof.bone("Hips").getWorldPosition(new Vector3())), "| att head", f(att.headPos()), "cam", f(camera.position));
   window.__ready = true;
 }

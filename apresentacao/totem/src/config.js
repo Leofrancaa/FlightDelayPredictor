@@ -89,9 +89,16 @@ export const LINES = {
   p6: { who: 'prof', audio: 'p6.mp3', text: 'Amor… o voo vai atrasar uns quarenta minutos. Não, não fui eu, foi o avião!' },
   p7: { who: 'prof', audio: 'p7.mp3', text: 'Mas fala pro seu pai que o presente vai chegar sequinho.' },
   p9: { who: 'prof', audio: 'p9.mp3', text: 'Se eu tivesse alunos bons na minha época, esse preditor de atraso de voos daria um bom projeto de iniciação científica.' },
+  // pós-crédito: no avião
+  k1: { who: 'kauai', audio: 'k1.mp3', text: 'Professor Soussa?! Rapaz… me passa seu CPF aí que eu faço a moeda agora, aqui no aviãozinho mesmo.' },
+  p11: { who: 'prof', audio: 'p11.mp3', text: '…Kauai. Como é que tá lá em Cancún?' },
+  z1: { who: 'zuma', audio: 'z1.mp3', text: 'Professor! Larguei vocês pela USP e não me arrependo.' },
+  p13: { who: 'prof', audio: 'p13.mp3', text: '…Tá sentado na econômica do mesmo jeito, Zuma.' },
+  lp1: { who: 'lopo', audio: 'lp1.mp3', text: 'Ô professor! Cheguei!' },
+  p12: { who: 'prof', audio: 'p12.mp3', text: 'Consegue se atrasar mais que o avião.' },
 };
 
-export const NAMES = { prof: 'Soussa', att: 'Guis', diniz: 'Diniz', leo: 'Leo', motti: 'Motti', sa: 'Sá' };
+export const NAMES = { prof: 'Soussa', att: 'Guis', diniz: 'Diniz', leo: 'Leo', motti: 'Motti', sa: 'Sá', kauai: 'Kauai', zuma: 'Zuma', lopo: 'Lopo' };
 
 export const CREDITS = [
   ['Soussa', 'ele mesmo'], ['Guis', 'atendente do totem'], ['Diniz', 'motorista'],

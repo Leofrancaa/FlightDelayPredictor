@@ -12,7 +12,7 @@ function add(parent, geo, mat, x = 0, y = 0, z = 0, o = {}) {
 }
 function canvasTex(w, h, draw) { const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; return t; }
 
-export const CURB = { z: 21.6, taxi: new THREE.Vector3(8.6, 0, 22.95), canopyEdge: 27.2 };
+export const CURB = { z: 21.6, taxi: new THREE.Vector3(8.6, 0, 22.95), canopyEdge: 19.6 };
 export const DESK = new THREE.Vector3(-0.5, 0, 11.6);
 
 export function buildLandside(scene, { quality = 'high' } = {}) {
@@ -62,13 +62,13 @@ export function buildLandside(scene, { quality = 'high' } = {}) {
   // island + canopy columns
   add(root, new THREE.BoxGeometry(48, 0.15, 1.2), M({ map: conc, roughness: 0.4, color: 0xa8a8a8 }), 8, 0.075, 26.8, { cast: false });
   const colM = M({ color: 0xdcdcd8, roughness: 0.5 });
-  for (const x of [-6, 2, 14.5, 22]) add(root, new THREE.CylinderGeometry(0.28, 0.28, 5.2, 24), colM, x, 2.6, 26.8);
+  for (const x of [-6, 2, 14.5, 22]) add(root, new THREE.CylinderGeometry(0.28, 0.28, 5.2, 24), colM, x, 2.6, 19.3);
   // canopy slab with light strips
   add(root, new THREE.BoxGeometry(34, 0.45, CURB.canopyEdge - zf), M({ color: 0xd8d8d4, roughness: 0.6 }), 8, 5.25, (zf + CURB.canopyEdge) / 2, { cast: false });
   const strip = new THREE.MeshBasicMaterial({ color: new THREE.Color(1.3, 1.3, 1.25) });
   for (let z = zf + 1.5; z < CURB.canopyEdge; z += 2.5) add(root, new THREE.BoxGeometry(30, 0.03, 0.18), strip, 8, 5.02, z, { cast: false, receive: false });
-  for (const x of [3, 9, 15]) { const p = new THREE.PointLight(0xf2f4ff, 3, 12, 1.6); p.position.set(x, 4.8, 20); root.add(p); }
-  const under = new THREE.SpotLight(0xeef2ff, 28, 16, 0.8, 0.6, 1.5); under.position.set(8.5, 5, 19.5); under.target.position.set(8.5, 0, 22.5);
+  for (const x of [3, 9, 15]) { const p = new THREE.PointLight(0xf2f4ff, 3, 12, 1.6); p.position.set(x, 4.8, 17.8); root.add(p); }
+  const under = new THREE.SpotLight(0xeef2ff, 28, 16, 0.8, 0.6, 1.5); under.position.set(8.5, 5, 18.6); under.target.position.set(8.5, 0, 22.5);
   if (quality === 'high') { under.castShadow = true; under.shadow.mapSize.set(1024, 1024); under.shadow.bias = -0.0003; }
   root.add(under, under.target);
 
@@ -115,6 +115,18 @@ export function buildLandside(scene, { quality = 'high' } = {}) {
   add(sg, new THREE.PlaneGeometry(2.0, 0.5), new THREE.MeshBasicMaterial({ map: info, color: new THREE.Color(1.3, 1.3, 1.3) }), 0, 0, 0.0, { cast: false });
   add(sg, new THREE.CylinderGeometry(0.012, 0.012, HALL.h - 2.75, 6), M({ color: 0x9aa0a6, metalness: 0.9, roughness: 0.3 }), 0, (HALL.h - 2.75) / 2, -0.05);
 
+  // ---------- welcome lightbox behind the information desk
+  const wel = canvasTex(2048, 640, (q, w, h) => {
+    const gr = q.createLinearGradient(0, 0, w, h); gr.addColorStop(0, '#0b2a66'); gr.addColorStop(0.55, '#1d4fa3'); gr.addColorStop(1, '#f08a24'); q.fillStyle = gr; q.fillRect(0, 0, w, h);
+    q.fillStyle = 'rgba(255,255,255,0.08)'; for (let i = 0; i < 14; i++) { q.beginPath(); q.arc(1500 + i * 30, 900, 300 + i * 60, Math.PI, 1.5 * Math.PI); q.lineWidth = 6; q.strokeStyle = 'rgba(255,255,255,0.07)'; q.stroke(); }
+    q.fillStyle = '#fff'; q.font = '300 120px "Segoe UI", Arial'; q.fillText('Welcome to', 110, 250); q.font = 'bold 170px "Segoe UI", Arial'; q.fillText('Dallas Fort Worth', 100, 430);
+    q.font = '60px "Segoe UI", Arial'; q.fillStyle = 'rgba(255,255,255,0.8)'; q.fillText('DFW International Airport', 110, 540);
+  });
+  const lb = new THREE.Group(); lb.position.set(-4.6, 2.6, HALL.z1 - 0.12); lb.rotation.y = Math.PI; root.add(lb);
+  add(lb, new THREE.BoxGeometry(6.6, 2.15, 0.12), M({ color: 0x1b1c1f, metalness: 0.5, roughness: 0.4 }), 0, 0, 0.04);
+  add(lb, new THREE.PlaneGeometry(6.4, 2.0), new THREE.MeshBasicMaterial({ map: wel, color: new THREE.Color(1.05, 1.05, 1.05) }), 0, 0, 0.11, { cast: false });
+  for (const x of [-3.6, 2.4]) { add(root, new RoundedBoxGeometry(0.9, 0.7, 0.9, 3, 0.05), M({ color: 0x3b3b3b, roughness: 0.6 }), x, 0.35, 14.9); for (let k = 0; k < 14; k++) { const lf = add(root, new THREE.ConeGeometry(0.1, 1.1, 4), M({ color: 0x2f5a2a, roughness: 0.7, side: THREE.DoubleSide }), x + (Math.sin(k * 2.1) * 0.35), 1.0 + (k % 3) * 0.12, 14.9 + Math.cos(k * 1.7) * 0.35); lf.rotation.set(Math.sin(k) * 0.5, k, Math.cos(k * 1.3) * 0.5); } }
+
   // ---------- wet-floor sign (A-frame)
   out.wetSign = wetFloorSign(root, new THREE.Vector3(1.55, 0, 5.2));
 
@@ -141,11 +153,11 @@ export function buildLandside(scene, { quality = 'high' } = {}) {
 function buildTaxi(root, at) {
   // sedan built from a side profile. heading -x (group rotated π); local +x = front, -z = left (driver), +z = right (curb)
   const g = new THREE.Group(); g.position.copy(at); g.rotation.y = Math.PI; root.add(g);
-  const paint = new THREE.MeshPhysicalMaterial({ color: 0xe9ad12, roughness: 0.35, metalness: 0.1, clearcoat: 0.8, clearcoatRoughness: 0.12 });
+  const paint = new THREE.MeshPhysicalMaterial({ color: 0xd9a010, roughness: 0.4, metalness: 0.05, clearcoat: 0.5, clearcoatRoughness: 0.2, envMapIntensity: 0.7 });
   const black = M({ color: 0x0f1012, roughness: 0.6 });
   const trim = M({ color: 0x1b1c1f, roughness: 0.45, metalness: 0.4 });
   const chrome = M({ color: 0xcfd3d8, metalness: 1, roughness: 0.22 });
-  const tint = new THREE.MeshPhysicalMaterial({ color: 0x1a2129, roughness: 0.04, transparent: true, opacity: 0.28, side: THREE.DoubleSide, depthWrite: false, envMapIntensity: 1.4 });
+  const tint = new THREE.MeshPhysicalMaterial({ color: 0x1a2129, roughness: 0.12, transparent: true, opacity: 0.24, side: THREE.DoubleSide, depthWrite: false, envMapIntensity: 0.35 });
   const L = 4.75, Wd = 1.84, BELT = 0.97, ROOF = 1.46;
   const xs = (x) => x;   // profile coordinates already local
   // --- side profile (with wheel arches)
