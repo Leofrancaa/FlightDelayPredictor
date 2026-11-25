@@ -58,6 +58,7 @@ const browser = await puppeteer.launch({ executablePath: browserPath, headless: 
 const page = await browser.newPage();
 await page.setViewport({ width: W, height: H, deviceScaleFactor: 1 });
 page.on('pageerror', (e) => console.log('ERRO NA PÁGINA:', e.message));
+page.on('console', (m) => { if (m.text().startsWith('FALTA ÁUDIO')) console.log('AVISO:', m.text(), '(essa fala vai ficar muda; rode git status e restaure o arquivo)'); });
 console.log('navegador:', browserPath);
 await page.goto(`http://localhost:${PORT}/animacao.html?export=1&q=high&fps=${FPS}`, { waitUntil: 'load', timeout: 0 });
 await page.waitForFunction('window.__ready===true', { timeout: 0, polling: 300 });
@@ -74,6 +75,8 @@ for (;;) {
   if (fim || n >= MAX) break;
 }
 const events = await page.evaluate(() => window.__events);
+const mudas = events.filter((e) => e.type === 'line' && !e.file).map((e) => e.id);
+if (mudas.length) console.log('\nAVISO: falas sem áudio gravado no vídeo:', mudas.join(', '));
 await browser.close(); server.close();
 const DUR = n / FPS;
 console.log(`\n${n} frames (${DUR.toFixed(1)} s)`);

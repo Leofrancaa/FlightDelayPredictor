@@ -55452,8 +55452,9 @@ async function say(id, { gesture: gesture2 = null, anim = null } = {}) {
   if (gesture2) wait(0.25).then(() => gesture_(a, gesture2[0], gesture2[1] || 2.5, gesture2[2] || false)).catch(() => {
   });
   let durMs;
-  if (SIM) {
+  if (SIM || EXPORT && !audioBuffers[id]) {
     durMs = estimateMs(L.text);
+    if (EXPORT) console.warn("FALTA \xC1UDIO: " + L.audio);
   } else if (audioBuffers[id]) {
     const buf = audioBuffers[id];
     const [s, e3] = voicedSpan(buf);
