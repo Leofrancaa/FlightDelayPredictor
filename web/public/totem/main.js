@@ -55686,13 +55686,13 @@ async function boot() {
   restyle(motti.arm, { outfit_top: stShirt, AvatarHead: mHead });
   {
     const eb = await tex2("./avatars/eyes_brown.jpg");
-    for (const a of [att, diniz, motti, sa]) restyle(a.arm, { AvatarLeftEyeball: eb, AvatarRightEyeball: eb });
+    for (const a of [prof, att, diniz, motti, sa]) restyle(a.arm, { AvatarLeftEyeball: eb, AvatarRightEyeball: eb });
   }
   restyle(sa.arm, { outfit_top: stShirt, AvatarHead: sHead });
-  sa.arm.traverse((o) => {
+  for (const [a, c] of [[sa, [0.88, 0.76, 0.66]], [prof, [0.9, 0.8, 0.72]]]) a.arm.traverse((o) => {
     if (o.isMesh && o.material?.name === "AvatarBody") {
       o.material = o.material.clone();
-      o.material.color.setRGB(0.88, 0.76, 0.66);
+      o.material.color.setRGB(...c);
     }
   });
   setupWet(prof);
