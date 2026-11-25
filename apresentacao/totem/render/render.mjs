@@ -130,8 +130,8 @@ if (LEGENDA) for (const e of events.filter((e) => e.type === 'line')) {
 const fim = events.find((e) => e.type === 'end'), fimOff = events.find((e) => e.type === 'endOff');
 if (fim) {
   const ate = fimOff ? fimOff.t : DUR;
-  ass += `Dialogue: 1,${ts(fim.t + 0.4)},${ts(ate)},Titulo,,0,0,0,,{\\fad(1000,300)}${fim.title}\n`;
-  ass += `Dialogue: 1,${ts(fim.t + 1.6)},${ts(ate)},Sub,,0,0,0,,{\\fad(1000,300)}${fim.sub.join('\\N')}\n`;
+  if (fim.title) ass += `Dialogue: 1,${ts(fim.t + 0.4)},${ts(ate)},Titulo,,0,0,0,,{\\fad(1000,300)}${fim.title}\n`;
+  ass += `Dialogue: 1,${ts(fim.t + (fim.title ? 1.6 : 0.4))},${ts(ate)},Sub,,0,0,0,,{${fim.title ? '' : `\\an5\\pos(${W / 2},${H / 2})`}\\fad(1000,300)}${fim.sub.join('\\N')}\n`;
 }
 // créditos finais subindo (pós-crédito)
 for (const r of events.filter((e) => e.type === 'roll')) {

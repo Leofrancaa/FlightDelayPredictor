@@ -1081,7 +1081,8 @@ async function scene12() {
   grade.uniforms.uFade.value = 0;
   const cr = CREDITS.map(([n, r]) => `${n} · ${r}`).join('<br>');
   $('realcase').innerHTML = `Voo real: ${CFG.flight.airline} ${CFG.flight.code}, ${CFG.flight.origin} → ${CFG.flight.dest}, ${CFG.flight.date}<br>Previsão 1 h antes: ${Math.round(CFG.result.p * 100)}% · ${CFG.result.actual}<br><br><span style="font-size:.8em;opacity:.8">${cr}</span>`;
-  EVENTS.push({ t: vt, type: 'end', title: 'Como esse totem funciona?', sub: [`Voo real: ${CFG.flight.airline} ${CFG.flight.code}, ${CFG.flight.origin} → ${CFG.flight.dest}, ${CFG.flight.date}`, `Previsão 1 h antes: ${Math.round(CFG.result.p * 100)}% · ${CFG.result.actual}`, '', ...CREDITS.map(([n, r]) => `${n} · ${r}`)] });
+  EVENTS.push({ t: vt, type: 'end', title: '', sub: [`Voo real: ${CFG.flight.airline} ${CFG.flight.code}, ${CFG.flight.origin} → ${CFG.flight.dest}, ${CFG.flight.date}`, `Previsão 1 h antes: ${Math.round(CFG.result.p * 100)}% · ${CFG.result.actual}`, '', ...CREDITS.map(([n, r]) => `${n} · ${r}`)] });
+  $('endcard').querySelector('h2').style.display = 'none';
   $('endcard').classList.add('on');
   await wait(8);
   EVENTS.push({ t: vt, type: 'endOff' });
@@ -1179,8 +1180,10 @@ async function scene13() {
   cut({ p0: () => prof.headPos().add(V(0.25, 0.12, -0.55)), l0: () => lopo.headPos().add(V(0, -0.25, 0)), fov: 30, focus: () => lopo.headPos(), aperture: 0.0016, handheld: 0.006 });
   look(prof, lopo.head);
   await run; turnTo(lopo, Math.PI - 0.15); lopo.liftDeck = true; look(lopo, prof.head);
+  musicTo(0.03, 0.22, 0.3);   // music down so we hear him
   await wait(0.35);
   await say('lp1');
+  musicTo(0.03, 0.85, 0.4);
   await wait(0.5);
   // 9) Soussa, to camera
   cut({ p0: () => prof.headPos().add(V(-0.04, -0.03, 1.0)), l0: headOf(prof, -0.03), fov: 24, focus: headOf(prof), aperture: 0.0032 });

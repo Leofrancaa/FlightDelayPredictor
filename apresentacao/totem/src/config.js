@@ -92,8 +92,8 @@ export const LINES = {
   // pós-crédito: no avião
   k1: { who: 'kauai', audio: 'k1.mp3', text: 'Professor Soussa?! Rapaz… me passa seu CPF aí que eu faço a moeda agora, aqui no aviãozinho mesmo.' },
   p11: { who: 'prof', audio: 'p11.mp3', text: '…Kauai. Como é que tá lá em Cancún?' },
-  z1: { who: 'zuma', audio: 'z1.mp3', text: 'Professor! Se o senhor tivesse ido pra USP comigo, não tava pegando voo atrasado.' },
-  p13: { who: 'prof', audio: 'p13.mp3', text: '…Zuma. Você tá no mesmo voo.' },
+  z1: { who: 'zuma', audio: 'z1.mp3', text: 'Professor! Larguei vocês pela USP e não me arrependo.' },
+  p13: { who: 'prof', audio: 'p13.mp3', text: '…Tá sentado na econômica do mesmo jeito, Zuma.' },
   lp1: { who: 'lopo', audio: 'lp1.mp3', text: 'Ô professor! Cheguei!' },
   p12: { who: 'prof', audio: 'p12.mp3', text: 'Consegue se atrasar mais que o avião.' },
 };

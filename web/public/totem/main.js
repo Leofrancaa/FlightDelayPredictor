@@ -54333,8 +54333,8 @@ var LINES = {
   // pós-crédito: no avião
   k1: { who: "kauai", audio: "k1.mp3", text: "Professor Soussa?! Rapaz\u2026 me passa seu CPF a\xED que eu fa\xE7o a moeda agora, aqui no avi\xE3ozinho mesmo." },
   p11: { who: "prof", audio: "p11.mp3", text: "\u2026Kauai. Como \xE9 que t\xE1 l\xE1 em Canc\xFAn?" },
-  z1: { who: "zuma", audio: "z1.mp3", text: "Professor! Se o senhor tivesse ido pra USP comigo, n\xE3o tava pegando voo atrasado." },
-  p13: { who: "prof", audio: "p13.mp3", text: "\u2026Zuma. Voc\xEA t\xE1 no mesmo voo." },
+  z1: { who: "zuma", audio: "z1.mp3", text: "Professor! Larguei voc\xEAs pela USP e n\xE3o me arrependo." },
+  p13: { who: "prof", audio: "p13.mp3", text: "\u2026T\xE1 sentado na econ\xF4mica do mesmo jeito, Zuma." },
   lp1: { who: "lopo", audio: "lp1.mp3", text: "\xD4 professor! Cheguei!" },
   p12: { who: "prof", audio: "p12.mp3", text: "Consegue se atrasar mais que o avi\xE3o." }
 };
@@ -56408,7 +56408,8 @@ async function scene12() {
   grade.uniforms.uFade.value = 0;
   const cr = CREDITS.map(([n, r2]) => `${n} \xB7 ${r2}`).join("<br>");
   $("realcase").innerHTML = `Voo real: ${CFG.flight.airline} ${CFG.flight.code}, ${CFG.flight.origin} \u2192 ${CFG.flight.dest}, ${CFG.flight.date}<br>Previs\xE3o 1 h antes: ${Math.round(CFG.result.p * 100)}% \xB7 ${CFG.result.actual}<br><br><span style="font-size:.8em;opacity:.8">${cr}</span>`;
-  EVENTS.push({ t: vt, type: "end", title: "Como esse totem funciona?", sub: [`Voo real: ${CFG.flight.airline} ${CFG.flight.code}, ${CFG.flight.origin} \u2192 ${CFG.flight.dest}, ${CFG.flight.date}`, `Previs\xE3o 1 h antes: ${Math.round(CFG.result.p * 100)}% \xB7 ${CFG.result.actual}`, "", ...CREDITS.map(([n, r2]) => `${n} \xB7 ${r2}`)] });
+  EVENTS.push({ t: vt, type: "end", title: "", sub: [`Voo real: ${CFG.flight.airline} ${CFG.flight.code}, ${CFG.flight.origin} \u2192 ${CFG.flight.dest}, ${CFG.flight.date}`, `Previs\xE3o 1 h antes: ${Math.round(CFG.result.p * 100)}% \xB7 ${CFG.result.actual}`, "", ...CREDITS.map(([n, r2]) => `${n} \xB7 ${r2}`)] });
+  $("endcard").querySelector("h2").style.display = "none";
   $("endcard").classList.add("on");
   await wait(8);
   EVENTS.push({ t: vt, type: "endOff" });
@@ -56574,8 +56575,10 @@ async function scene13() {
   turnTo(lopo, Math.PI - 0.15);
   lopo.liftDeck = true;
   look(lopo, prof.head);
+  musicTo(0.03, 0.22, 0.3);
   await wait(0.35);
   await say("lp1");
+  musicTo(0.03, 0.85, 0.4);
   await wait(0.5);
   cut({ p0: () => prof.headPos().add(V(-0.04, -0.03, 1)), l0: headOf(prof, -0.03), fov: 24, focus: headOf(prof), aperture: 32e-4 });
   look(prof, lopo.head);
