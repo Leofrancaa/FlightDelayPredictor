@@ -87,7 +87,8 @@ const run = (args) => { const r = spawnSync(ffmpegPath, ['-hide_banner', '-logle
 run(['-f', 'lavfi', '-i', 'anoisesrc=color=brown:amplitude=0.9:duration=5', '-af', 'lowpass=f=220,afade=t=in:d=0.12,afade=t=out:st=0.6:d=4.2,volume=3', 'trovao.wav']);
 const ins = [], fil = [];
 const add = (inputArgs, filter) => { ins.push(...inputArgs); fil.push(`[${fil.length}:a]${filter}[a${fil.length}]`); };
-add(['-stream_loop', '-1', '-i', path.join(SITE, 'audio/murmur.mp3')], `atrim=0:${DUR},volume=0.22`);
+const mOff = events.find((e) => e.type === 'murmurOff');   // no airport crowd inside the plane
+add(['-stream_loop', '-1', '-i', path.join(SITE, 'audio/murmur.mp3')], `atrim=0:${DUR},volume=0.22${mOff ? `,afade=t=out:st=${Math.max(0, mOff.t - 0.4).toFixed(2)}:d=0.6` : ''}`);
 add(['-f', 'lavfi', '-i', `anoisesrc=color=white:amplitude=1:duration=${DUR}`], 'lowpass=f=1400,volume=0.012');
 for (const e of events.filter((e) => e.type === 'line' && e.file && e.t < DUR)) {
   const ms = Math.round(e.t * 1000);
@@ -98,7 +99,8 @@ for (const e of events.filter((e) => e.type === 'sfx' && e.t < DUR && e.vol > 0)
   const ms = Math.round(e.t * 1000);
   // chuva de fora: abaixa quando ele entra no terminal
   const vol = e.file === 'rain_out.mp3' && duck ? `volume='if(lt(t,${(duck.t - e.t).toFixed(2)}),${e.vol},${(e.vol * 0.35).toFixed(2)})':eval=frame` : `volume=${e.vol}`;
-  add(['-i', path.join(SITE, 'audio', e.file)], `${vol},adelay=${ms}|${ms}`);
+  const pa = e.file === 'an1.mp3' ? 'highpass=f=300,lowpass=f=3400,aecho=0.8:0.6:35:0.2,' : '';   // som de alto-falante do avião
+  add(['-i', path.join(SITE, 'audio', e.file)], `${pa}${vol},adelay=${ms}|${ms}`);
 }
 // música do pós-crédito: camada abafada (atrás da porta) + camada limpa, com envelope de volume
 const pw = (keys, i) => {   // envelope linear por partes -> expressão do ffmpeg (t = tempo desde o início da música)
@@ -124,7 +126,8 @@ const fs_ = Math.round(H / 22);
 let ass = `[Script Info]\nScriptType: v4.00+\nPlayResX: ${W}\nPlayResY: ${H}\n\n[V4+ Styles]\nFormat: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\n`;
 ass += `Style: Fala,Segoe UI,${fs_},&H00FFFFFF,&H00FFFFFF,&H00000000,&H80000000,0,0,0,0,100,100,0,0,1,${Math.max(2, fs_ / 14)},1,2,${W * 0.14},${W * 0.14},${H * 0.05},1\n`;
 ass += `Style: Titulo,Segoe UI Light,${Math.round(H / 11)},&H00FFFFFF,&H00FFFFFF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,0,0,5,10,10,0,1\n`;
-ass += `Style: Rolo,Segoe UI,${Math.round(H / 26)},&H00FFFFFF,&H00FFFFFF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,0,0,8,10,10,0,1\n`;
+ass += `Style: Obrigado,Segoe UI Light,${Math.round(H / 9)},&H00FFFFFF,&H00FFFFFF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,0,0,5,10,10,0,1\n`;
+ass += `Style: Rolo,Segoe UI,${Math.round(H / 16)},&H00FFFFFF,&H00FFFFFF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,0,0,8,10,10,0,1\n`;
 ass += `Style: Sub,Segoe UI,${Math.round(H / 34)},&H00D9B39F,&H00FFFFFF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,0,0,8,10,10,${H * 0.58},1\n\n[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n`;
 if (LEGENDA) for (const e of events.filter((e) => e.type === 'line')) {
   const quem = (e.name || (e.who === 'prof' ? 'Soussa' : 'Guis')).toUpperCase();
@@ -136,9 +139,13 @@ if (fim) {
   if (fim.title) ass += `Dialogue: 1,${ts(fim.t + 0.4)},${ts(ate)},Titulo,,0,0,0,,{\\fad(1000,300)}${fim.title}\n`;
   ass += `Dialogue: 1,${ts(fim.t + (fim.title ? 1.6 : 0.4))},${ts(ate)},Sub,,0,0,0,,{${fim.title ? '' : `\\an5\\pos(${W / 2},${H / 2})`}\\fad(1000,300)}${fim.sub.join('\\N')}\n`;
 }
+// agradecimento final, sozinho e grande
+for (const e of events.filter((e) => e.type === 'thanks')) {
+  ass += `Dialogue: 3,${ts(e.t)},${ts(Math.min(DUR, e.t + e.dur))},Obrigado,,0,0,0,,{\\an5\\pos(${W / 2},${H / 2})\\fad(1200,2400)}${e.text}\n`;
+}
 // créditos finais subindo (pós-crédito)
 for (const r of events.filter((e) => e.type === 'roll')) {
-  const lh = Math.round(H / 15), total = H + r.lines.length * lh + lh;
+  const lh = Math.round(H / 10), total = H + r.lines.length * lh + lh;
   r.lines.forEach((l, i) => {
     if (!l) return;
     const y0 = H + lh + i * lh, y1 = y0 - total;

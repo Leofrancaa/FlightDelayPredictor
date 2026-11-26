@@ -118,6 +118,8 @@ const audioBuffers = {};
 async function loadBuffer(url) {
   try { const r = await fetch(url); if (!r.ok) return null; return await audioCtx.decodeAudioData(await r.arrayBuffer()); } catch { return null; }
 }
+let murmurGain = null;
+function murmur(on) { EVENTS.push({ t: vt, type: on ? 'murmurOn' : 'murmurOff' }); if (murmurGain) murmurGain.gain.setTargetAtTime(on ? 0.22 : 0, audioCtx.currentTime, 0.2); }
 function ambience() {
   // rain (filtered noise) + terminal murmur
   const len = audioCtx.sampleRate * 4, nb = audioCtx.createBuffer(1, len, audioCtx.sampleRate), d = nb.getChannelData(0);
@@ -125,7 +127,7 @@ function ambience() {
   const src = audioCtx.createBufferSource(); src.buffer = nb; src.loop = true;
   const lp = audioCtx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 1400;
   const g = audioCtx.createGain(); g.gain.value = 0.012; src.connect(lp).connect(g).connect(master); src.start();
-  if (audioBuffers.murmur) { const m = audioCtx.createBufferSource(); m.buffer = audioBuffers.murmur; m.loop = true; const mg = audioCtx.createGain(); mg.gain.value = 0.22; m.connect(mg).connect(master); m.start(); }
+  if (audioBuffers.murmur) { const m = audioCtx.createBufferSource(); m.buffer = audioBuffers.murmur; m.loop = true; const mg = audioCtx.createGain(); mg.gain.value = 0.22; m.connect(mg).connect(master); m.start(); murmurGain = mg; }
 }
 function thunder(delay = 0.6) {
   if (SIM || audioCtx.state !== 'running') return;
@@ -142,7 +144,9 @@ window.__st = () => ({ vt: +vt.toFixed(2), z: +prof.pos.z.toFixed(2), walk: !!pr
 function sfx(name, vol = 1) {
   EVENTS.push({ t: vt, type: 'sfx', file: name + '.mp3', vol });
   const b = audioBuffers['sfx_' + name]; if (!b || SIM || audioCtx.state !== 'running') return null;
-  const s = audioCtx.createBufferSource(); s.buffer = b; const g = audioCtx.createGain(); g.gain.value = vol; s.connect(g).connect(master); s.start(); return { s, g };
+  const s = audioCtx.createBufferSource(); s.buffer = b; const g = audioCtx.createGain(); g.gain.value = vol; let n = s;
+  if (name === 'an1') { const hp = audioCtx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 300; const lp = audioCtx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 3400; n.connect(hp).connect(lp); n = lp; }
+  n.connect(g).connect(master); s.start(); return { s, g };
 }
 // music with a muffled (behind the door) and a clear layer; keys: [t, muffledGain, clearGain] relative to start
 const BEAT = 0.5803, BEAT0 = 0.4;   // lopo_music.mp3: ~103 BPM, first downbeat at 0.40 s
@@ -573,7 +577,7 @@ const _pq = new THREE.Quaternion(), _pp = new THREE.Vector3(), _gy = new THREE.V
 function snapToGrip(ph, grip, t) {
   _gy.set(0, 1, 0).applyQuaternion(ph.quaternion);
   const want = grip.clone().addScaledVector(_gy, 0.045);
-  ph.position.lerp(want, 0.85 * Math.min(1, t * 1.5));
+  ph.position.lerp(want, 0.3 * Math.min(1, t * 1.5));
 }
 function updateProps(dt) {
   prof.phoneT = Math.max(0, Math.min(1, (prof.phoneT || 0) + (state.phone === 'ear' ? dt : -dt) / 0.9));
@@ -656,7 +660,7 @@ function updateActors(dt) {
   }
   nodToBeat();
   // procedural targets
-  const earPt = (a) => { const r = V(-Math.cos(a.yaw), 0, Math.sin(a.yaw)), f = V(Math.sin(a.yaw), 0, Math.cos(a.yaw)); return earPos(a).addScaledVector(r, 0.06).addScaledVector(f, 0.035).add(V(0, -0.055, 0)); };
+  const earPt = (a) => { const r = V(-Math.cos(a.yaw), 0, Math.sin(a.yaw)), f = V(Math.sin(a.yaw), 0, Math.cos(a.yaw)); return earPos(a).addScaledVector(r, 0.075).addScaledVector(f, 0.045).add(V(0, -0.035, 0)); };
   if ((state.phone === 'hand' && !state.typing) || state.phone === 'ear') { const f = fwdOf(prof), r = V(-Math.cos(prof.yaw), 0, Math.sin(prof.yaw)); const hold = prof.pos.clone().addScaledVector(f, 0.42).addScaledVector(r, 0.05).add(V(0, 1.18, 0)); prof.ikR.set(hold.lerp(earPt(prof), smooth(prof.phoneT || 0)), 1); }
   if (leo.onPhone) leo.ikR.set(earPt(leo), 1);
   if (prof.shake > 0) { prof.shake -= dt; const k = Math.max(0, prof.shake) / 0.8; prof.arm.rotation.z = Math.sin(prof.shake * 38) * 0.05 * k; if (prof.shake <= 0) prof.arm.rotation.z = 0; }
@@ -788,7 +792,7 @@ function resetWorld() {
   actors.forEach((a) => { a.ikL.weight = a.ikL.goal = 0; a.ikR.weight = a.ikR.goal = 0; a.look.weight = a.look.goal = 0; a.look.target = null; a.arm.rotation.x = a.arm.rotation.z = 0; });
   suit.position.copy(EXT_START).add(V(0.45, 0, 0.1)); suit.quaternion.setFromEuler(new THREE.Euler(0, Math.PI, 0));
   airport.setDelayed(false); land.doors(false); TX.setDoor(true);
-  hideRoll(); eyeContact(prof, false); setWorld('airport'); prof.seated = false; lopo.carry = false; musicT0 = null; state.party = 0;
+  hideRoll(); hideThanks(); if (state.world === 'cabin' && murmurGain) murmurGain.gain.value = 0.22; eyeContact(prof, false); setWorld('airport'); prof.seated = false; lopo.carry = false; musicT0 = null; state.party = 0;
   setTotem('idle'); grade.uniforms.uFade.value = 1; $('endcard').classList.remove('on'); showSub(null);
 }
 function placeAtKiosk() {
@@ -1048,13 +1052,19 @@ async function scene10() {
   turnTo(prof, PROF_YAW + 0.7); look(prof, null);
   phone.setChat([{ me: false, text: 'Amor ❤ chamando…' }]);
   state.phone = 'hand'; look(prof, M_PHONE); sfx('buzz', 0.4);
-  cut({ p0: rel(prof, 0.35, 1.58, 1.5), p1: rel(prof, 0.3, 1.58, 1.3), l0: headOf(prof, -0.1), dur: 10, fov: 28, focus: headOf(prof), aperture: 0.0026 });
+  // three-quarter from his right: the phone reads as a phone when it goes to the ear
+  cut({ p0: rel(prof, -0.7, 1.62, 1.25), p1: rel(prof, -0.62, 1.62, 1.08), l0: headOf(prof, -0.12), dur: 9, fov: 28, focus: headOf(prof), aperture: 0.0024 });
   await wait(1.1);
   state.phone = 'ear'; look(prof, null);
   await wait(1.0);
   await say('p6', { anim: false });
-  look(prof, M_BAG);
+  // "o presente vai chegar sequinho": he lifts the gift bag and looks at it, framed medium so we see it
+  const lift = () => prof.pos.clone().addScaledVector(fwdOf(prof), 0.32).addScaledVector(V(-Math.cos(prof.yaw), 0, Math.sin(prof.yaw)), -0.06).add(V(0, 1.34, 0));
+  prof.ikL.set(lift(), 1);
+  cut({ p0: rel(prof, 0.8, 1.38, 1.25), l0: () => prof.pos.clone().add(V(0, 1.28, 0.0)), fov: 36, focus: () => M_BAG.position.clone(), aperture: 0.0018 });
+  await wait(0.5); look(prof, M_BAG);
   await say('p7', { anim: false });
+  look(prof, null); prof.ikL.release();
 }
 
 // 11 — the board confirms
@@ -1092,18 +1102,25 @@ async function scene12() {
 function showRoll(lines, dur) {
   let el = $('roll'); if (!el) { el = document.createElement('div'); el.id = 'roll'; document.body.appendChild(el); }
   el.style.cssText = 'position:fixed;inset:0;overflow:hidden;pointer-events:none;z-index:30;font-family:Segoe UI,system-ui,sans-serif;color:#fff;text-align:center';
-  el.innerHTML = '<div id="rollin" style="position:absolute;left:0;right:0;top:100%;font-size:clamp(16px,2.2vw,34px);line-height:2.1">' + lines.map(([a, b]) => (b ? `<div><b style="font-weight:600">${a}</b><span style="opacity:.65"> · ${b}</span></div>` : `<div style="${a === 'ELENCO' ? 'letter-spacing:.3em;opacity:.8' : ''}">${a || '&nbsp;'}</div>`)).join('') + '</div>';
+  el.innerHTML = '<div id="rollin" style="position:absolute;left:0;right:0;top:100%;font-size:clamp(22px,3.3vw,52px);line-height:1.9">' + lines.map(([a, b]) => (b ? `<div><b style="font-weight:600">${a}</b><span style="opacity:.65"> · ${b}</span></div>` : `<div style="${a === 'ELENCO' ? 'letter-spacing:.3em;opacity:.8' : ''}">${a || '&nbsp;'}</div>`)).join('') + '</div>';
   const inner = $('rollin'); inner.style.transition = `transform ${dur}s linear`;
   requestAnimationFrame(() => requestAnimationFrame(() => { inner.style.transform = `translateY(calc(-100vh - 100%))`; }));
 }
 function hideRoll() { $('roll')?.remove(); }
+function showThanks(t) {
+  let el = $('thanks'); if (!el) { el = document.createElement('div'); el.id = 'thanks'; document.body.appendChild(el); }
+  el.style.cssText = 'position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:31;pointer-events:none;color:#fff;font:300 clamp(34px,6vw,96px)/1.2 Segoe UI,system-ui,sans-serif;text-align:center;opacity:0;transition:opacity 1.2s';
+  el.textContent = t; requestAnimationFrame(() => requestAnimationFrame(() => { el.style.opacity = 1; }));
+}
+function fadeThanks() { const el = $('thanks'); if (el) { el.style.transition = 'opacity 2.4s'; el.style.opacity = 0; } }
+function hideThanks() { $('thanks')?.remove(); }
 function eyeContact(a, on) { const av = a.head.avatar; av.avatarSpeakingEyeContact = on ? 1 : 0; av.avatarIdleEyeContact = on ? 1 : 0; av.avatarSpeakingHeadMove = on ? 0.08 : 0.45; av.avatarIgnoreCamera = !on; }
 
 // 13 — post-credits: the plane
 async function scene13() {
   const W = (x, y, z) => cabin.toWorld(x, y, z);
   $('endcard').classList.remove('on'); grade.uniforms.uFade.value = 0;
-  setWorld('cabin'); musicT0 = null; state.party = 0; state.partyK = 0;
+  setWorld('cabin'); murmur(false); musicT0 = null; state.party = 0; state.partyK = 0;
   prof.seated = false; prof.fall = null; prof.slip = 0; prof.head.setMood('neutral'); prof.wet = Math.min(prof.wet || 0.3, 0.3);
   state.phone = false; state.passMode = 'hidden'; prof.ikR.release(); prof.ikL.release();
   seat(kauai, 5, 'C'); seat(zuma, 8, 'D');
@@ -1181,28 +1198,32 @@ async function scene13() {
   cut({ p0: () => prof.headPos().add(V(0.25, 0.12, -0.55)), l0: () => lopo.headPos().add(V(0, -0.25, 0)), fov: 30, focus: () => lopo.headPos(), aperture: 0.0016, handheld: 0.006 });
   look(prof, lopo.head);
   await run; turnTo(lopo, Math.PI - 0.15); lopo.liftDeck = true; look(lopo, prof.head);
-  musicTo(0.03, 0.22, 0.3);   // music down so we hear him
+  musicTo(0.02, 0.12, 0.3);   // music down so we hear them
   await wait(0.35);
   await say('lp1');
-  musicTo(0.03, 0.85, 0.4);
   await wait(0.5);
   // 9) Soussa, to camera
   cut({ p0: () => prof.headPos().add(V(-0.04, -0.03, 1.0)), l0: headOf(prof, -0.03), fov: 24, focus: headOf(prof), aperture: 0.0032 });
   look(prof, lopo.head); await wait(0.9); look(prof, camera);
   eyeContact(prof, true);   // he turns to us: eyes on the lens, no wandering while he talks
-  musicTo(0.03, 0.28, 0.4);
+
   await say('p12');
-  musicTo(0.03, 1.0, 0.25);
+  musicTo(0.03, 1.0, 0.6);
   await wait(1.3);
   // the music takes over: fade to black, the final credits roll
   for (let i = 1; i <= 15; i++) { grade.uniforms.uFade.value = 1 - i / 15; await wait(1 / 15); }
-  const roll = [['ELENCO', ''], ...CREDITS, ['', ''], ['Kauai', 'investidor de bordo'], ['Zuma', 'aluno da USP'], ['Lopo', 'DJ (atrasado)'], ['', ''], ['Música', CFG.music || 'tocada pelo Lopo'], ['', ''], ['Obrigado por tudo, Soussa.', '']];
+  const roll = [['ELENCO', ''], ...CREDITS, ['', ''], ['Kauai', 'investidor de bordo'], ['Zuma', 'aluno da USP'], ['Lopo', 'DJ (atrasado)'], ['', ''], ['Música', 'Calma Guis']];
   const ROLL = 16;
   EVENTS.push({ t: vt, type: 'roll', dur: ROLL, lines: roll.map(([a, b]) => (b ? `${a}  ·  ${b}` : a)) });
   showRoll(roll, ROLL);
-  await wait(ROLL - 3);
-  musicTo(0, 0, 3); await wait(3.2);
-  musicStop(); hideRoll();
+  await wait(ROLL);
+  hideRoll();
+  // alone, big, while "Calma Guis" keeps playing
+  EVENTS.push({ t: vt, type: 'thanks', text: 'Obrigado por tudo, Soussa.', dur: 7.5 });
+  showThanks('Obrigado por tudo, Soussa.');
+  await wait(5);
+  musicTo(0, 0, 2.5); fadeThanks(); await wait(2.6);
+  musicStop(); hideThanks();
   await wait(0.4);
 }
 

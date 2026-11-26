@@ -54312,11 +54312,11 @@ var CFG = {
 var LINES = {
   p1: { who: "prof", audio: "p1.mp3", text: "Anivers\xE1rio de noventa e quatro anos do meu sogro\u2026 Se eu chegar atrasado, n\xE3o \xE9 ele que vai reclamar. \xC9 a minha esposa." },
   p2: { who: "prof", audio: "p2.mp3", text: "Mo\xE7o, esse totem a\xED diz se o meu voo vai atrasar?" },
-  a1: { who: "att", audio: "a1.mp3", text: "Diz sim, senhor. Me passa o cart\xE3o de embarque?" },
-  a2: { who: "att", audio: "a2.mp3", text: "Ele j\xE1 puxa o clima do aeroporto e a situa\xE7\xE3o do avi\xE3o que vai fazer o seu voo." },
-  a3: { who: "att", audio: "a3.mp3", text: "Olha\u2026 a chance maior \xE9 de atrasar mais de meia hora." },
+  a1: { who: "att", audio: "a1.mp3", text: "O Guis diz que sim, senhor. Passa o cart\xE3o de embarque pro Guis?" },
+  a2: { who: "att", audio: "a2.mp3", text: "Ele j\xE1 puxa o clima do aeroporto e a situa\xE7\xE3o do avi\xE3o que vai fazer o seu voo. O Guis garante, hohoho." },
+  a3: { who: "att", audio: "a3.mp3", text: "Olha\u2026 o Guis lamenta, mas a chance maior \xE9 de atrasar mais de meia hora. Very crazyness." },
   p3: { who: "prof", audio: "p3.mp3", text: "Mas por qu\xEA?" },
-  a4: { who: "att", audio: "a4.mp3", text: "Principalmente porque o avi\xE3o que vai fazer o seu voo saiu atrasado da \xFAltima cidade, tem trovoada aqui agora, e o aeroporto inteiro j\xE1 est\xE1 atrasando." },
+  a4: { who: "att", audio: "a4.mp3", text: "Principalmente porque o avi\xE3o que vai fazer o seu voo saiu atrasado da \xFAltima cidade, tem trovoada aqui agora, e o aeroporto inteiro j\xE1 est\xE1 atrasando. Palavra do Guis." },
   p4: { who: "prof", audio: "p4.mp3", text: "Noventa e quatro anos esperando\u2026 meu sogro aguenta mais meia hora. Tranquilo." },
   p5: { who: "prof", audio: "p5.mp3", text: "A minha esposa \xE9 que n\xE3o." },
   // roteiro v2 (camada C) — áudios provisórios até cada integrante gravar a própria fala
@@ -54891,6 +54891,11 @@ async function loadBuffer(url) {
     return null;
   }
 }
+var murmurGain = null;
+function murmur(on) {
+  EVENTS.push({ t: vt, type: on ? "murmurOn" : "murmurOff" });
+  if (murmurGain) murmurGain.gain.setTargetAtTime(on ? 0.22 : 0, audioCtx.currentTime, 0.2);
+}
 function ambience() {
   const len = audioCtx.sampleRate * 4, nb = audioCtx.createBuffer(1, len, audioCtx.sampleRate), d = nb.getChannelData(0);
   for (let i2 = 0; i2 < len; i2++) d[i2] = Math.random() * 2 - 1;
@@ -54912,6 +54917,7 @@ function ambience() {
     mg.gain.value = 0.22;
     m3.connect(mg).connect(master);
     m3.start();
+    murmurGain = mg;
   }
 }
 function thunder(delay = 0.6) {
@@ -54946,7 +54952,18 @@ function sfx(name, vol = 1) {
   s.buffer = b;
   const g = audioCtx.createGain();
   g.gain.value = vol;
-  s.connect(g).connect(master);
+  let n = s;
+  if (name === "an1") {
+    const hp = audioCtx.createBiquadFilter();
+    hp.type = "highpass";
+    hp.frequency.value = 300;
+    const lp = audioCtx.createBiquadFilter();
+    lp.type = "lowpass";
+    lp.frequency.value = 3400;
+    n.connect(hp).connect(lp);
+    n = lp;
+  }
+  n.connect(g).connect(master);
   s.start();
   return { s, g };
 }
@@ -55698,7 +55715,7 @@ var _gy = new Vector3();
 function snapToGrip(ph, grip, t) {
   _gy.set(0, 1, 0).applyQuaternion(ph.quaternion);
   const want = grip.clone().addScaledVector(_gy, 0.045);
-  ph.position.lerp(want, 0.85 * Math.min(1, t * 1.5));
+  ph.position.lerp(want, 0.3 * Math.min(1, t * 1.5));
 }
 function updateProps(dt) {
   prof.phoneT = Math.max(0, Math.min(1, (prof.phoneT || 0) + (state.phone === "ear" ? dt : -dt) / 0.9));
@@ -55802,7 +55819,7 @@ function updateActors(dt) {
   nodToBeat();
   const earPt = (a) => {
     const r2 = V(-Math.cos(a.yaw), 0, Math.sin(a.yaw)), f = V(Math.sin(a.yaw), 0, Math.cos(a.yaw));
-    return earPos(a).addScaledVector(r2, 0.06).addScaledVector(f, 0.035).add(V(0, -0.055, 0));
+    return earPos(a).addScaledVector(r2, 0.075).addScaledVector(f, 0.045).add(V(0, -0.035, 0));
   };
   if (state.phone === "hand" && !state.typing || state.phone === "ear") {
     const f = fwdOf(prof), r2 = V(-Math.cos(prof.yaw), 0, Math.sin(prof.yaw));
@@ -56026,6 +56043,8 @@ function resetWorld() {
   land.doors(false);
   TX.setDoor(true);
   hideRoll();
+  hideThanks();
+  if (state.world === "cabin" && murmurGain) murmurGain.gain.value = 0.22;
   eyeContact(prof, false);
   setWorld("airport");
   prof.seated = false;
@@ -56372,14 +56391,20 @@ async function scene10() {
   state.phone = "hand";
   look(prof, M_PHONE);
   sfx("buzz", 0.4);
-  cut({ p0: rel(prof, 0.35, 1.58, 1.5), p1: rel(prof, 0.3, 1.58, 1.3), l0: headOf(prof, -0.1), dur: 10, fov: 28, focus: headOf(prof), aperture: 26e-4 });
+  cut({ p0: rel(prof, -0.7, 1.62, 1.25), p1: rel(prof, -0.62, 1.62, 1.08), l0: headOf(prof, -0.12), dur: 9, fov: 28, focus: headOf(prof), aperture: 24e-4 });
   await wait(1.1);
   state.phone = "ear";
   look(prof, null);
   await wait(1);
   await say("p6", { anim: false });
+  const lift = () => prof.pos.clone().addScaledVector(fwdOf(prof), 0.32).addScaledVector(V(-Math.cos(prof.yaw), 0, Math.sin(prof.yaw)), -0.06).add(V(0, 1.34, 0));
+  prof.ikL.set(lift(), 1);
+  cut({ p0: rel(prof, 0.8, 1.38, 1.25), l0: () => prof.pos.clone().add(V(0, 1.28, 0)), fov: 36, focus: () => M_BAG.position.clone(), aperture: 18e-4 });
+  await wait(0.5);
   look(prof, M_BAG);
   await say("p7", { anim: false });
+  look(prof, null);
+  prof.ikL.release();
 }
 async function scene11() {
   state.phone = false;
@@ -56423,7 +56448,7 @@ function showRoll(lines, dur) {
     document.body.appendChild(el);
   }
   el.style.cssText = "position:fixed;inset:0;overflow:hidden;pointer-events:none;z-index:30;font-family:Segoe UI,system-ui,sans-serif;color:#fff;text-align:center";
-  el.innerHTML = '<div id="rollin" style="position:absolute;left:0;right:0;top:100%;font-size:clamp(16px,2.2vw,34px);line-height:2.1">' + lines.map(([a, b]) => b ? `<div><b style="font-weight:600">${a}</b><span style="opacity:.65"> \xB7 ${b}</span></div>` : `<div style="${a === "ELENCO" ? "letter-spacing:.3em;opacity:.8" : ""}">${a || "&nbsp;"}</div>`).join("") + "</div>";
+  el.innerHTML = '<div id="rollin" style="position:absolute;left:0;right:0;top:100%;font-size:clamp(22px,3.3vw,52px);line-height:1.9">' + lines.map(([a, b]) => b ? `<div><b style="font-weight:600">${a}</b><span style="opacity:.65"> \xB7 ${b}</span></div>` : `<div style="${a === "ELENCO" ? "letter-spacing:.3em;opacity:.8" : ""}">${a || "&nbsp;"}</div>`).join("") + "</div>";
   const inner = $("rollin");
   inner.style.transition = `transform ${dur}s linear`;
   requestAnimationFrame(() => requestAnimationFrame(() => {
@@ -56432,6 +56457,29 @@ function showRoll(lines, dur) {
 }
 function hideRoll() {
   $("roll")?.remove();
+}
+function showThanks(t) {
+  let el = $("thanks");
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "thanks";
+    document.body.appendChild(el);
+  }
+  el.style.cssText = "position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:31;pointer-events:none;color:#fff;font:300 clamp(34px,6vw,96px)/1.2 Segoe UI,system-ui,sans-serif;text-align:center;opacity:0;transition:opacity 1.2s";
+  el.textContent = t;
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    el.style.opacity = 1;
+  }));
+}
+function fadeThanks() {
+  const el = $("thanks");
+  if (el) {
+    el.style.transition = "opacity 2.4s";
+    el.style.opacity = 0;
+  }
+}
+function hideThanks() {
+  $("thanks")?.remove();
 }
 function eyeContact(a, on) {
   const av = a.head.avatar;
@@ -56445,6 +56493,7 @@ async function scene13() {
   $("endcard").classList.remove("on");
   grade.uniforms.uFade.value = 0;
   setWorld("cabin");
+  murmur(false);
   musicT0 = null;
   state.party = 0;
   state.partyK = 0;
@@ -56576,33 +56625,36 @@ async function scene13() {
   turnTo(lopo, Math.PI - 0.15);
   lopo.liftDeck = true;
   look(lopo, prof.head);
-  musicTo(0.03, 0.22, 0.3);
+  musicTo(0.02, 0.12, 0.3);
   await wait(0.35);
   await say("lp1");
-  musicTo(0.03, 0.85, 0.4);
   await wait(0.5);
   cut({ p0: () => prof.headPos().add(V(-0.04, -0.03, 1)), l0: headOf(prof, -0.03), fov: 24, focus: headOf(prof), aperture: 32e-4 });
   look(prof, lopo.head);
   await wait(0.9);
   look(prof, camera);
   eyeContact(prof, true);
-  musicTo(0.03, 0.28, 0.4);
   await say("p12");
-  musicTo(0.03, 1, 0.25);
+  musicTo(0.03, 1, 0.6);
   await wait(1.3);
   for (let i2 = 1; i2 <= 15; i2++) {
     grade.uniforms.uFade.value = 1 - i2 / 15;
     await wait(1 / 15);
   }
-  const roll = [["ELENCO", ""], ...CREDITS, ["", ""], ["Kauai", "investidor de bordo"], ["Zuma", "aluno da USP"], ["Lopo", "DJ (atrasado)"], ["", ""], ["M\xFAsica", CFG.music || "tocada pelo Lopo"], ["", ""], ["Obrigado por tudo, Soussa.", ""]];
+  const roll = [["ELENCO", ""], ...CREDITS, ["", ""], ["Kauai", "investidor de bordo"], ["Zuma", "aluno da USP"], ["Lopo", "DJ (atrasado)"], ["", ""], ["M\xFAsica", "Calma Guis"]];
   const ROLL = 16;
   EVENTS.push({ t: vt, type: "roll", dur: ROLL, lines: roll.map(([a, b]) => b ? `${a}  \xB7  ${b}` : a) });
   showRoll(roll, ROLL);
-  await wait(ROLL - 3);
-  musicTo(0, 0, 3);
-  await wait(3.2);
-  musicStop();
+  await wait(ROLL);
   hideRoll();
+  EVENTS.push({ t: vt, type: "thanks", text: "Obrigado por tudo, Soussa.", dur: 7.5 });
+  showThanks("Obrigado por tudo, Soussa.");
+  await wait(5);
+  musicTo(0, 0, 2.5);
+  fadeThanks();
+  await wait(2.6);
+  musicStop();
+  hideThanks();
   await wait(0.4);
 }
 var SCENES = [scene1, scene2, scene3, scene4, scene5, scene6, scene7, scene8, scene9, scene10, scene11, scene12, scene13];
