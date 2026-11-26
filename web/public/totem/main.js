@@ -55698,7 +55698,7 @@ var _gy = new Vector3();
 function snapToGrip(ph, grip, t) {
   _gy.set(0, 1, 0).applyQuaternion(ph.quaternion);
   const want = grip.clone().addScaledVector(_gy, 0.045);
-  ph.position.lerp(want, 0.85 * Math.min(1, t * 1.5));
+  ph.position.lerp(want, 0.3 * Math.min(1, t * 1.5));
 }
 function updateProps(dt) {
   prof.phoneT = Math.max(0, Math.min(1, (prof.phoneT || 0) + (state.phone === "ear" ? dt : -dt) / 0.9));
@@ -55802,7 +55802,7 @@ function updateActors(dt) {
   nodToBeat();
   const earPt = (a) => {
     const r2 = V(-Math.cos(a.yaw), 0, Math.sin(a.yaw)), f = V(Math.sin(a.yaw), 0, Math.cos(a.yaw));
-    return earPos(a).addScaledVector(r2, 0.06).addScaledVector(f, 0.035).add(V(0, -0.055, 0));
+    return earPos(a).addScaledVector(r2, 0.075).addScaledVector(f, 0.045).add(V(0, -0.035, 0));
   };
   if (state.phone === "hand" && !state.typing || state.phone === "ear") {
     const f = fwdOf(prof), r2 = V(-Math.cos(prof.yaw), 0, Math.sin(prof.yaw));
@@ -56372,14 +56372,20 @@ async function scene10() {
   state.phone = "hand";
   look(prof, M_PHONE);
   sfx("buzz", 0.4);
-  cut({ p0: rel(prof, 0.35, 1.58, 1.5), p1: rel(prof, 0.3, 1.58, 1.3), l0: headOf(prof, -0.1), dur: 10, fov: 28, focus: headOf(prof), aperture: 26e-4 });
+  cut({ p0: rel(prof, -0.7, 1.62, 1.25), p1: rel(prof, -0.62, 1.62, 1.08), l0: headOf(prof, -0.12), dur: 9, fov: 28, focus: headOf(prof), aperture: 24e-4 });
   await wait(1.1);
   state.phone = "ear";
   look(prof, null);
   await wait(1);
   await say("p6", { anim: false });
+  const lift = () => prof.pos.clone().addScaledVector(fwdOf(prof), 0.32).addScaledVector(V(-Math.cos(prof.yaw), 0, Math.sin(prof.yaw)), -0.06).add(V(0, 1.34, 0));
+  prof.ikL.set(lift(), 1);
+  cut({ p0: rel(prof, 0.8, 1.38, 1.25), l0: () => prof.pos.clone().add(V(0, 1.28, 0)), fov: 36, focus: () => M_BAG.position.clone(), aperture: 18e-4 });
+  await wait(0.5);
   look(prof, M_BAG);
   await say("p7", { anim: false });
+  look(prof, null);
+  prof.ikL.release();
 }
 async function scene11() {
   state.phone = false;
@@ -56423,7 +56429,7 @@ function showRoll(lines, dur) {
     document.body.appendChild(el);
   }
   el.style.cssText = "position:fixed;inset:0;overflow:hidden;pointer-events:none;z-index:30;font-family:Segoe UI,system-ui,sans-serif;color:#fff;text-align:center";
-  el.innerHTML = '<div id="rollin" style="position:absolute;left:0;right:0;top:100%;font-size:clamp(16px,2.2vw,34px);line-height:2.1">' + lines.map(([a, b]) => b ? `<div><b style="font-weight:600">${a}</b><span style="opacity:.65"> \xB7 ${b}</span></div>` : `<div style="${a === "ELENCO" ? "letter-spacing:.3em;opacity:.8" : ""}">${a || "&nbsp;"}</div>`).join("") + "</div>";
+  el.innerHTML = '<div id="rollin" style="position:absolute;left:0;right:0;top:100%;font-size:clamp(22px,3.3vw,52px);line-height:1.9">' + lines.map(([a, b]) => b ? `<div><b style="font-weight:600">${a}</b><span style="opacity:.65"> \xB7 ${b}</span></div>` : `<div style="${a === "ELENCO" ? "letter-spacing:.3em;opacity:.8" : ""}">${a || "&nbsp;"}</div>`).join("") + "</div>";
   const inner = $("rollin");
   inner.style.transition = `transform ${dur}s linear`;
   requestAnimationFrame(() => requestAnimationFrame(() => {

@@ -124,7 +124,7 @@ const fs_ = Math.round(H / 22);
 let ass = `[Script Info]\nScriptType: v4.00+\nPlayResX: ${W}\nPlayResY: ${H}\n\n[V4+ Styles]\nFormat: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\n`;
 ass += `Style: Fala,Segoe UI,${fs_},&H00FFFFFF,&H00FFFFFF,&H00000000,&H80000000,0,0,0,0,100,100,0,0,1,${Math.max(2, fs_ / 14)},1,2,${W * 0.14},${W * 0.14},${H * 0.05},1\n`;
 ass += `Style: Titulo,Segoe UI Light,${Math.round(H / 11)},&H00FFFFFF,&H00FFFFFF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,0,0,5,10,10,0,1\n`;
-ass += `Style: Rolo,Segoe UI,${Math.round(H / 26)},&H00FFFFFF,&H00FFFFFF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,0,0,8,10,10,0,1\n`;
+ass += `Style: Rolo,Segoe UI,${Math.round(H / 16)},&H00FFFFFF,&H00FFFFFF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,0,0,8,10,10,0,1\n`;
 ass += `Style: Sub,Segoe UI,${Math.round(H / 34)},&H00D9B39F,&H00FFFFFF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,0,0,8,10,10,${H * 0.58},1\n\n[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n`;
 if (LEGENDA) for (const e of events.filter((e) => e.type === 'line')) {
   const quem = (e.name || (e.who === 'prof' ? 'Soussa' : 'Guis')).toUpperCase();
@@ -138,7 +138,7 @@ if (fim) {
 }
 // créditos finais subindo (pós-crédito)
 for (const r of events.filter((e) => e.type === 'roll')) {
-  const lh = Math.round(H / 15), total = H + r.lines.length * lh + lh;
+  const lh = Math.round(H / 10), total = H + r.lines.length * lh + lh;
   r.lines.forEach((l, i) => {
     if (!l) return;
     const y0 = H + lh + i * lh, y1 = y0 - total;
