@@ -54891,6 +54891,11 @@ async function loadBuffer(url) {
     return null;
   }
 }
+var murmurGain = null;
+function murmur(on) {
+  EVENTS.push({ t: vt, type: on ? "murmurOn" : "murmurOff" });
+  if (murmurGain) murmurGain.gain.setTargetAtTime(on ? 0.22 : 0, audioCtx.currentTime, 0.2);
+}
 function ambience() {
   const len = audioCtx.sampleRate * 4, nb = audioCtx.createBuffer(1, len, audioCtx.sampleRate), d = nb.getChannelData(0);
   for (let i2 = 0; i2 < len; i2++) d[i2] = Math.random() * 2 - 1;
@@ -54912,6 +54917,7 @@ function ambience() {
     mg.gain.value = 0.22;
     m3.connect(mg).connect(master);
     m3.start();
+    murmurGain = mg;
   }
 }
 function thunder(delay = 0.6) {
@@ -56026,6 +56032,8 @@ function resetWorld() {
   land.doors(false);
   TX.setDoor(true);
   hideRoll();
+  hideThanks();
+  if (state.world === "cabin" && murmurGain) murmurGain.gain.value = 0.22;
   eyeContact(prof, false);
   setWorld("airport");
   prof.seated = false;
@@ -56439,6 +56447,29 @@ function showRoll(lines, dur) {
 function hideRoll() {
   $("roll")?.remove();
 }
+function showThanks(t) {
+  let el = $("thanks");
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "thanks";
+    document.body.appendChild(el);
+  }
+  el.style.cssText = "position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:31;pointer-events:none;color:#fff;font:300 clamp(34px,6vw,96px)/1.2 Segoe UI,system-ui,sans-serif;text-align:center;opacity:0;transition:opacity 1.2s";
+  el.textContent = t;
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    el.style.opacity = 1;
+  }));
+}
+function fadeThanks() {
+  const el = $("thanks");
+  if (el) {
+    el.style.transition = "opacity 2.4s";
+    el.style.opacity = 0;
+  }
+}
+function hideThanks() {
+  $("thanks")?.remove();
+}
 function eyeContact(a, on) {
   const av = a.head.avatar;
   av.avatarSpeakingEyeContact = on ? 1 : 0;
@@ -56451,6 +56482,7 @@ async function scene13() {
   $("endcard").classList.remove("on");
   grade.uniforms.uFade.value = 0;
   setWorld("cabin");
+  murmur(false);
   musicT0 = null;
   state.party = 0;
   state.partyK = 0;
@@ -56600,15 +56632,20 @@ async function scene13() {
     grade.uniforms.uFade.value = 1 - i2 / 15;
     await wait(1 / 15);
   }
-  const roll = [["ELENCO", ""], ...CREDITS, ["", ""], ["Kauai", "investidor de bordo"], ["Zuma", "aluno da USP"], ["Lopo", "DJ (atrasado)"], ["", ""], ["M\xFAsica", CFG.music || "tocada pelo Lopo"], ["", ""], ["Obrigado por tudo, Soussa.", ""]];
+  const roll = [["ELENCO", ""], ...CREDITS, ["", ""], ["Kauai", "investidor de bordo"], ["Zuma", "aluno da USP"], ["Lopo", "DJ (atrasado)"], ["", ""], ["M\xFAsica", "Calma Guis"]];
   const ROLL = 16;
   EVENTS.push({ t: vt, type: "roll", dur: ROLL, lines: roll.map(([a, b]) => b ? `${a}  \xB7  ${b}` : a) });
   showRoll(roll, ROLL);
-  await wait(ROLL - 3);
-  musicTo(0, 0, 3);
-  await wait(3.2);
-  musicStop();
+  await wait(ROLL);
   hideRoll();
+  EVENTS.push({ t: vt, type: "thanks", text: "Obrigado por tudo, Soussa.", dur: 7.5 });
+  showThanks("Obrigado por tudo, Soussa.");
+  await wait(5);
+  musicTo(0, 0, 2.5);
+  fadeThanks();
+  await wait(2.6);
+  musicStop();
+  hideThanks();
   await wait(0.4);
 }
 var SCENES = [scene1, scene2, scene3, scene4, scene5, scene6, scene7, scene8, scene9, scene10, scene11, scene12, scene13];
