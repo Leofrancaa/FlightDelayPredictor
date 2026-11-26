@@ -54952,7 +54952,18 @@ function sfx(name, vol = 1) {
   s.buffer = b;
   const g = audioCtx.createGain();
   g.gain.value = vol;
-  s.connect(g).connect(master);
+  let n = s;
+  if (name === "an1") {
+    const hp = audioCtx.createBiquadFilter();
+    hp.type = "highpass";
+    hp.frequency.value = 300;
+    const lp = audioCtx.createBiquadFilter();
+    lp.type = "lowpass";
+    lp.frequency.value = 3400;
+    n.connect(hp).connect(lp);
+    n = lp;
+  }
+  n.connect(g).connect(master);
   s.start();
   return { s, g };
 }
@@ -56614,19 +56625,17 @@ async function scene13() {
   turnTo(lopo, Math.PI - 0.15);
   lopo.liftDeck = true;
   look(lopo, prof.head);
-  musicTo(0.03, 0.22, 0.3);
+  musicTo(0.02, 0.12, 0.3);
   await wait(0.35);
   await say("lp1");
-  musicTo(0.03, 0.85, 0.4);
   await wait(0.5);
   cut({ p0: () => prof.headPos().add(V(-0.04, -0.03, 1)), l0: headOf(prof, -0.03), fov: 24, focus: headOf(prof), aperture: 32e-4 });
   look(prof, lopo.head);
   await wait(0.9);
   look(prof, camera);
   eyeContact(prof, true);
-  musicTo(0.03, 0.28, 0.4);
   await say("p12");
-  musicTo(0.03, 1, 0.25);
+  musicTo(0.03, 1, 0.6);
   await wait(1.3);
   for (let i2 = 1; i2 <= 15; i2++) {
     grade.uniforms.uFade.value = 1 - i2 / 15;

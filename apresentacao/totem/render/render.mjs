@@ -99,7 +99,8 @@ for (const e of events.filter((e) => e.type === 'sfx' && e.t < DUR && e.vol > 0)
   const ms = Math.round(e.t * 1000);
   // chuva de fora: abaixa quando ele entra no terminal
   const vol = e.file === 'rain_out.mp3' && duck ? `volume='if(lt(t,${(duck.t - e.t).toFixed(2)}),${e.vol},${(e.vol * 0.35).toFixed(2)})':eval=frame` : `volume=${e.vol}`;
-  add(['-i', path.join(SITE, 'audio', e.file)], `${vol},adelay=${ms}|${ms}`);
+  const pa = e.file === 'an1.mp3' ? 'highpass=f=300,lowpass=f=3400,aecho=0.8:0.6:35:0.2,' : '';   // som de alto-falante do avião
+  add(['-i', path.join(SITE, 'audio', e.file)], `${pa}${vol},adelay=${ms}|${ms}`);
 }
 // música do pós-crédito: camada abafada (atrás da porta) + camada limpa, com envelope de volume
 const pw = (keys, i) => {   // envelope linear por partes -> expressão do ffmpeg (t = tempo desde o início da música)

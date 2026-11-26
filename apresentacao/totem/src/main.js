@@ -144,7 +144,9 @@ window.__st = () => ({ vt: +vt.toFixed(2), z: +prof.pos.z.toFixed(2), walk: !!pr
 function sfx(name, vol = 1) {
   EVENTS.push({ t: vt, type: 'sfx', file: name + '.mp3', vol });
   const b = audioBuffers['sfx_' + name]; if (!b || SIM || audioCtx.state !== 'running') return null;
-  const s = audioCtx.createBufferSource(); s.buffer = b; const g = audioCtx.createGain(); g.gain.value = vol; s.connect(g).connect(master); s.start(); return { s, g };
+  const s = audioCtx.createBufferSource(); s.buffer = b; const g = audioCtx.createGain(); g.gain.value = vol; let n = s;
+  if (name === 'an1') { const hp = audioCtx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 300; const lp = audioCtx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 3400; n.connect(hp).connect(lp); n = lp; }
+  n.connect(g).connect(master); s.start(); return { s, g };
 }
 // music with a muffled (behind the door) and a clear layer; keys: [t, muffledGain, clearGain] relative to start
 const BEAT = 0.5803, BEAT0 = 0.4;   // lopo_music.mp3: ~103 BPM, first downbeat at 0.40 s
@@ -1196,18 +1198,17 @@ async function scene13() {
   cut({ p0: () => prof.headPos().add(V(0.25, 0.12, -0.55)), l0: () => lopo.headPos().add(V(0, -0.25, 0)), fov: 30, focus: () => lopo.headPos(), aperture: 0.0016, handheld: 0.006 });
   look(prof, lopo.head);
   await run; turnTo(lopo, Math.PI - 0.15); lopo.liftDeck = true; look(lopo, prof.head);
-  musicTo(0.03, 0.22, 0.3);   // music down so we hear him
+  musicTo(0.02, 0.12, 0.3);   // music down so we hear them
   await wait(0.35);
   await say('lp1');
-  musicTo(0.03, 0.85, 0.4);
   await wait(0.5);
   // 9) Soussa, to camera
   cut({ p0: () => prof.headPos().add(V(-0.04, -0.03, 1.0)), l0: headOf(prof, -0.03), fov: 24, focus: headOf(prof), aperture: 0.0032 });
   look(prof, lopo.head); await wait(0.9); look(prof, camera);
   eyeContact(prof, true);   // he turns to us: eyes on the lens, no wandering while he talks
-  musicTo(0.03, 0.28, 0.4);
+
   await say('p12');
-  musicTo(0.03, 1.0, 0.25);
+  musicTo(0.03, 1.0, 0.6);
   await wait(1.3);
   // the music takes over: fade to black, the final credits roll
   for (let i = 1; i <= 15; i++) { grade.uniforms.uFade.value = 1 - i / 15; await wait(1 / 15); }
