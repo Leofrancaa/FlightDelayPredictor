@@ -71,11 +71,11 @@ export const CFG = {
 export const LINES = {
   p1: { who: 'prof', audio: 'p1.mp3', text: 'Aniversário de noventa e quatro anos do meu sogro… Se eu chegar atrasado, não é ele que vai reclamar. É a minha esposa.' },
   p2: { who: 'prof', audio: 'p2.mp3', text: 'Moço, esse totem aí diz se o meu voo vai atrasar?' },
-  a1: { who: 'att', audio: 'a1.mp3', text: 'Diz sim, senhor. Me passa o cartão de embarque?' },
+  a1: { who: 'att', audio: 'a1.mp3', text: 'O Guis diz que sim, senhor. Passa o cartão de embarque pro Guis?' },
   a2: { who: 'att', audio: 'a2.mp3', text: 'Ele já puxa o clima do aeroporto e a situação do avião que vai fazer o seu voo. O Guis garante, hohoho.' },
   a3: { who: 'att', audio: 'a3.mp3', text: 'Olha… o Guis lamenta, mas a chance maior é de atrasar mais de meia hora. Very crazyness.' },
   p3: { who: 'prof', audio: 'p3.mp3', text: 'Mas por quê?' },
-  a4: { who: 'att', audio: 'a4.mp3', text: 'Principalmente porque o avião que vai fazer o seu voo saiu atrasado da última cidade, tem trovoada aqui agora, e o aeroporto inteiro já está atrasando.' },
+  a4: { who: 'att', audio: 'a4.mp3', text: 'Principalmente porque o avião que vai fazer o seu voo saiu atrasado da última cidade, tem trovoada aqui agora, e o aeroporto inteiro já está atrasando. Palavra do Guis.' },
   p4: { who: 'prof', audio: 'p4.mp3', text: 'Noventa e quatro anos esperando… meu sogro aguenta mais meia hora. Tranquilo.' },
   p5: { who: 'prof', audio: 'p5.mp3', text: 'A minha esposa é que não.' },
   // roteiro v2 (camada C) — áudios provisórios até cada integrante gravar a própria fala
