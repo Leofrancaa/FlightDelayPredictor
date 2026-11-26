@@ -118,6 +118,8 @@ const audioBuffers = {};
 async function loadBuffer(url) {
   try { const r = await fetch(url); if (!r.ok) return null; return await audioCtx.decodeAudioData(await r.arrayBuffer()); } catch { return null; }
 }
+let murmurGain = null;
+function murmur(on) { EVENTS.push({ t: vt, type: on ? 'murmurOn' : 'murmurOff' }); if (murmurGain) murmurGain.gain.setTargetAtTime(on ? 0.22 : 0, audioCtx.currentTime, 0.2); }
 function ambience() {
   // rain (filtered noise) + terminal murmur
   const len = audioCtx.sampleRate * 4, nb = audioCtx.createBuffer(1, len, audioCtx.sampleRate), d = nb.getChannelData(0);
@@ -125,7 +127,7 @@ function ambience() {
   const src = audioCtx.createBufferSource(); src.buffer = nb; src.loop = true;
   const lp = audioCtx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 1400;
   const g = audioCtx.createGain(); g.gain.value = 0.012; src.connect(lp).connect(g).connect(master); src.start();
-  if (audioBuffers.murmur) { const m = audioCtx.createBufferSource(); m.buffer = audioBuffers.murmur; m.loop = true; const mg = audioCtx.createGain(); mg.gain.value = 0.22; m.connect(mg).connect(master); m.start(); }
+  if (audioBuffers.murmur) { const m = audioCtx.createBufferSource(); m.buffer = audioBuffers.murmur; m.loop = true; const mg = audioCtx.createGain(); mg.gain.value = 0.22; m.connect(mg).connect(master); m.start(); murmurGain = mg; }
 }
 function thunder(delay = 0.6) {
   if (SIM || audioCtx.state !== 'running') return;
@@ -788,7 +790,7 @@ function resetWorld() {
   actors.forEach((a) => { a.ikL.weight = a.ikL.goal = 0; a.ikR.weight = a.ikR.goal = 0; a.look.weight = a.look.goal = 0; a.look.target = null; a.arm.rotation.x = a.arm.rotation.z = 0; });
   suit.position.copy(EXT_START).add(V(0.45, 0, 0.1)); suit.quaternion.setFromEuler(new THREE.Euler(0, Math.PI, 0));
   airport.setDelayed(false); land.doors(false); TX.setDoor(true);
-  hideRoll(); eyeContact(prof, false); setWorld('airport'); prof.seated = false; lopo.carry = false; musicT0 = null; state.party = 0;
+  hideRoll(); hideThanks(); if (state.world === 'cabin' && murmurGain) murmurGain.gain.value = 0.22; eyeContact(prof, false); setWorld('airport'); prof.seated = false; lopo.carry = false; musicT0 = null; state.party = 0;
   setTotem('idle'); grade.uniforms.uFade.value = 1; $('endcard').classList.remove('on'); showSub(null);
 }
 function placeAtKiosk() {
@@ -1103,13 +1105,20 @@ function showRoll(lines, dur) {
   requestAnimationFrame(() => requestAnimationFrame(() => { inner.style.transform = `translateY(calc(-100vh - 100%))`; }));
 }
 function hideRoll() { $('roll')?.remove(); }
+function showThanks(t) {
+  let el = $('thanks'); if (!el) { el = document.createElement('div'); el.id = 'thanks'; document.body.appendChild(el); }
+  el.style.cssText = 'position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:31;pointer-events:none;color:#fff;font:300 clamp(34px,6vw,96px)/1.2 Segoe UI,system-ui,sans-serif;text-align:center;opacity:0;transition:opacity 1.2s';
+  el.textContent = t; requestAnimationFrame(() => requestAnimationFrame(() => { el.style.opacity = 1; }));
+}
+function fadeThanks() { const el = $('thanks'); if (el) { el.style.transition = 'opacity 2.4s'; el.style.opacity = 0; } }
+function hideThanks() { $('thanks')?.remove(); }
 function eyeContact(a, on) { const av = a.head.avatar; av.avatarSpeakingEyeContact = on ? 1 : 0; av.avatarIdleEyeContact = on ? 1 : 0; av.avatarSpeakingHeadMove = on ? 0.08 : 0.45; av.avatarIgnoreCamera = !on; }
 
 // 13 — post-credits: the plane
 async function scene13() {
   const W = (x, y, z) => cabin.toWorld(x, y, z);
   $('endcard').classList.remove('on'); grade.uniforms.uFade.value = 0;
-  setWorld('cabin'); musicT0 = null; state.party = 0; state.partyK = 0;
+  setWorld('cabin'); murmur(false); musicT0 = null; state.party = 0; state.partyK = 0;
   prof.seated = false; prof.fall = null; prof.slip = 0; prof.head.setMood('neutral'); prof.wet = Math.min(prof.wet || 0.3, 0.3);
   state.phone = false; state.passMode = 'hidden'; prof.ikR.release(); prof.ikL.release();
   seat(kauai, 5, 'C'); seat(zuma, 8, 'D');
@@ -1202,13 +1211,18 @@ async function scene13() {
   await wait(1.3);
   // the music takes over: fade to black, the final credits roll
   for (let i = 1; i <= 15; i++) { grade.uniforms.uFade.value = 1 - i / 15; await wait(1 / 15); }
-  const roll = [['ELENCO', ''], ...CREDITS, ['', ''], ['Kauai', 'investidor de bordo'], ['Zuma', 'aluno da USP'], ['Lopo', 'DJ (atrasado)'], ['', ''], ['Música', CFG.music || 'tocada pelo Lopo'], ['', ''], ['Obrigado por tudo, Soussa.', '']];
+  const roll = [['ELENCO', ''], ...CREDITS, ['', ''], ['Kauai', 'investidor de bordo'], ['Zuma', 'aluno da USP'], ['Lopo', 'DJ (atrasado)'], ['', ''], ['Música', 'Calma Guis']];
   const ROLL = 16;
   EVENTS.push({ t: vt, type: 'roll', dur: ROLL, lines: roll.map(([a, b]) => (b ? `${a}  ·  ${b}` : a)) });
   showRoll(roll, ROLL);
-  await wait(ROLL - 3);
-  musicTo(0, 0, 3); await wait(3.2);
-  musicStop(); hideRoll();
+  await wait(ROLL);
+  hideRoll();
+  // alone, big, while "Calma Guis" keeps playing
+  EVENTS.push({ t: vt, type: 'thanks', text: 'Obrigado por tudo, Soussa.', dur: 7.5 });
+  showThanks('Obrigado por tudo, Soussa.');
+  await wait(5);
+  musicTo(0, 0, 2.5); fadeThanks(); await wait(2.6);
+  musicStop(); hideThanks();
   await wait(0.4);
 }
 
