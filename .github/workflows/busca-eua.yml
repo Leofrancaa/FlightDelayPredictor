@@ -1,0 +1,67 @@
+# Grid search dos hiperparâmetros (treino 2022 → validação 2023), um job por horizonte em paralelo.
+# No fim, compara a melhor combinação com a atual no teste 2024 e publica reports/busca numa branch "dados/busca-<n>".
+name: Grid search EUA
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [feat/grid-search]
+    paths: [".github/workflows/busca-eua.yml", "module_decea/busca_eua.py"]
+
+permissions:
+  contents: write
+
+jobs:
+  busca:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    strategy:
+      fail-fast: false
+      matrix:
+        horizonte: [h1, h3, vespera]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - name: Baixar dados da Release dados-bts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p data/raw/bts data/raw/metar_eua tmp_metar
+          gh release download dados-bts --repo "$GITHUB_REPOSITORY" -p 'BTS_*.parquet' -D data/raw/bts
+          gh release download dados-bts --repo "$GITHUB_REPOSITORY" -p 'METAR_EUA_*.zip' -D tmp_metar
+          for z in tmp_metar/*.zip; do unzip -q -o -j "$z" '*.csv' -d data/raw/metar_eua; done
+      - name: Instalar dependências
+        run: uv sync
+      - name: Grid search
+        run: uv run python -m module_decea.busca_eua --horizonte ${{ matrix.horizonte }} 2>&1 | tee busca_${{ matrix.horizonte }}.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: busca-${{ matrix.horizonte }}
+          path: |
+            reports/busca/${{ matrix.horizonte }}.json
+            busca_${{ matrix.horizonte }}.log
+
+  publicar:
+    needs: busca
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: artefatos
+          merge-multiple: true
+      - name: Publicar resultados numa branch
+        run: |
+          mkdir -p reports/busca
+          cp artefatos/reports/busca/*.json reports/busca/ 2>/dev/null || cp artefatos/*.json reports/busca/
+          cp artefatos/*.log reports/busca/ 2>/dev/null || true
+          git config user.name "github-actions[bot]"
+          git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+          destino="dados/busca-${{ github.run_number }}"
+          git checkout -b "$destino"
+          git add reports/busca
+          git commit -m "dados: grid search EUA (run ${{ github.run_number }})"
+          git push origin "$destino"
+          echo "Resultados na branch $destino" >> "$GITHUB_STEP_SUMMARY"

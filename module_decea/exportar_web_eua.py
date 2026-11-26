@@ -203,6 +203,19 @@ def dia_anterior(v, metar, fusos):
     return out
 
 
+def variaveis_horizonte(v, todos, metar, fusos, h):
+    """Variáveis de cada horizonte, somadas à programação e ao histórico. h=None é a véspera."""
+    if h is None:
+        # Na véspera só entra o que se sabe no dia anterior. Nada que dependa da matrícula: a BTS registra o avião
+        # que de fato voou, e uma troca de avião por causa de atraso vazaria para a variável.
+        return [dia_anterior(v, metar, fusos)]
+    return [
+        B.recente(v, todos, h=h),
+        B.chegada_com_matricula(v, todos, extras=True, h=h),
+        clima_no_instante(v, metar, h),
+    ]
+
+
 def _float32(X):
     for c in X.columns:
         if X[c].dtype.kind in "fib":
@@ -272,16 +285,7 @@ def main():
         return out
 
     for k, (h, nome) in HORIZ.items():
-        if h is None:
-            # Na véspera só entra o que se sabe no dia anterior. Nada que dependa da matrícula: a BTS registra o avião
-            # que de fato voou, e uma troca de avião por causa de atraso vazaria para a variável.
-            extra = [dia_anterior(v, metar, fusos)]
-        else:
-            extra = [
-                B.recente(v, todos, h=h),
-                B.chegada_com_matricula(v, todos, extras=True, h=h),
-                clima_no_instante(v, metar, h),
-            ]
+        extra = variaveis_horizonte(v, todos, metar, fusos, h)
         X = pd.concat([prog, *extra], axis=1)[ok].reset_index(drop=True)
         del extra
         X, modelo, p, limiar = treinar(X, nome)
