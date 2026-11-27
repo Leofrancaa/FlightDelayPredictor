@@ -1,0 +1,22 @@
+[    85s] 1 h antes: 46 variáveis | treino 2,120,897 | validação 2,230,511 | teste 2,333,227
+[   430s] [0] {'learning_rate': 0.05, 'max_leaf_nodes': 31, 'min_samples_leaf': 100, 'l2_regularization': 1.0, 'max_features': 1.0} | PR-AUC 0.6229 @ 1000 | F1 0.5651
+[   741s] [1] {'learning_rate': 0.1, 'max_leaf_nodes': 31, 'min_samples_leaf': 100, 'max_features': 1.0, 'l2_regularization': 1.0} | PR-AUC 0.6216 @ 1000 | F1 0.5645
+[  1060s] [2] {'learning_rate': 0.1, 'max_leaf_nodes': 31, 'min_samples_leaf': 100, 'max_features': 0.5, 'l2_regularization': 1.0} | PR-AUC 0.6220 @ 1000 | F1 0.5643
+[  1403s] [3] {'learning_rate': 0.1, 'max_leaf_nodes': 31, 'min_samples_leaf': 1000, 'max_features': 1.0, 'l2_regularization': 1.0} | PR-AUC 0.6209 @ 1000 | F1 0.5638
+[  1742s] [4] {'learning_rate': 0.1, 'max_leaf_nodes': 31, 'min_samples_leaf': 1000, 'max_features': 0.5, 'l2_regularization': 1.0} | PR-AUC 0.6220 @ 1000 | F1 0.5644
+[  2087s] [5] {'learning_rate': 0.1, 'max_leaf_nodes': 63, 'min_samples_leaf': 100, 'max_features': 1.0, 'l2_regularization': 1.0} | PR-AUC 0.6202 @ 1000 | F1 0.5634
+[  2432s] [6] {'learning_rate': 0.1, 'max_leaf_nodes': 63, 'min_samples_leaf': 100, 'max_features': 0.5, 'l2_regularization': 1.0} | PR-AUC 0.6208 @ 1000 | F1 0.5636
+[  2814s] [7] {'learning_rate': 0.1, 'max_leaf_nodes': 63, 'min_samples_leaf': 1000, 'max_features': 1.0, 'l2_regularization': 1.0} | PR-AUC 0.6192 @ 1000 | F1 0.5619
+[  3195s] [8] {'learning_rate': 0.1, 'max_leaf_nodes': 63, 'min_samples_leaf': 1000, 'max_features': 0.5, 'l2_regularization': 1.0} | PR-AUC 0.6199 @ 1000 | F1 0.5626
+[  3567s] [9] {'learning_rate': 0.1, 'max_leaf_nodes': 127, 'min_samples_leaf': 100, 'max_features': 1.0, 'l2_regularization': 1.0} | PR-AUC 0.6173 @ 1000 | F1 0.5614
+[  3940s] [10] {'learning_rate': 0.1, 'max_leaf_nodes': 127, 'min_samples_leaf': 100, 'max_features': 0.5, 'l2_regularization': 1.0} | PR-AUC 0.6190 @ 1000 | F1 0.5621
+[  4392s] [11] {'learning_rate': 0.1, 'max_leaf_nodes': 127, 'min_samples_leaf': 1000, 'max_features': 1.0, 'l2_regularization': 1.0} | PR-AUC 0.6155 @ 1000 | F1 0.5594
+[  4840s] [12] {'learning_rate': 0.1, 'max_leaf_nodes': 127, 'min_samples_leaf': 1000, 'max_features': 0.5, 'l2_regularization': 1.0} | PR-AUC 0.6170 @ 1000 | F1 0.5612
+[  5251s] [13] {'learning_rate': 0.1, 'max_leaf_nodes': 255, 'min_samples_leaf': 100, 'max_features': 1.0, 'l2_regularization': 1.0} | PR-AUC 0.6136 @ 1000 | F1 0.5583
+[  5661s] [14] {'learning_rate': 0.1, 'max_leaf_nodes': 255, 'min_samples_leaf': 100, 'max_features': 0.5, 'l2_regularization': 1.0} | PR-AUC 0.6156 @ 1000 | F1 0.5603
+[  6227s] [15] {'learning_rate': 0.1, 'max_leaf_nodes': 255, 'min_samples_leaf': 1000, 'max_features': 1.0, 'l2_regularization': 1.0} | PR-AUC 0.6103 @ 1000 | F1 0.5551
+[  6796s] [16] {'learning_rate': 0.1, 'max_leaf_nodes': 255, 'min_samples_leaf': 1000, 'max_features': 0.5, 'l2_regularization': 1.0} | PR-AUC 0.6116 @ 1000 | F1 0.5560
+[  6796s] melhor na validação: {'learning_rate': 0.1, 'max_leaf_nodes': 255, 'min_samples_leaf': 100, 'max_features': 0.5, 'l2_regularization': 1.0, 'max_iter': 100} | PR-AUC 0.6237
+[  7529s] teste 2024 atual: PR-AUC 0.6378 | precisão 0.582 | recall 0.572
+[  7529s] teste 2024 melhor: PR-AUC 0.6398 | precisão 0.582 | recall 0.576
+[  7529s] pronto
